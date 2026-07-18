@@ -1,0 +1,276 @@
+/* Final presentation and interaction pass for the submission build. */
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.button {
+  position: relative;
+  overflow: hidden;
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease,
+    border-color 160ms ease, opacity 160ms ease;
+}
+
+.button:active {
+  transform: translateY(0) scale(0.985);
+}
+
+.button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+  transform: none;
+}
+
+.hero-card,
+.panel,
+.risk-panel,
+.action-card,
+.metric-grid,
+.score-hero,
+.form-shell form {
+  backface-visibility: hidden;
+}
+
+.hero-card {
+  transition: transform 300ms ease, box-shadow 300ms ease;
+}
+
+@media (hover: hover) {
+  .hero-card:hover {
+    transform: rotate(0deg) translateY(-4px);
+    box-shadow: 0 36px 85px #0007;
+  }
+
+  .action-card,
+  .panel,
+  .risk-panel article {
+    transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  }
+
+  .action-card:hover,
+  .panel:hover,
+  .risk-panel article:hover {
+    transform: translateY(-2px);
+    border-color: #c7d0d5;
+    box-shadow: 0 14px 35px rgba(7, 27, 45, 0.07);
+  }
+}
+
+.form-shell form {
+  border: 1px solid rgba(219, 225, 228, 0.75);
+}
+
+.field input,
+.field select,
+.field textarea {
+  min-height: 48px;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.field textarea {
+  min-height: 120px;
+}
+
+.checks label {
+  min-height: 48px;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.checks label:has(input:checked) {
+  border-color: var(--orange);
+  background: #fff8f3;
+}
+
+.progress {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.progress i {
+  box-shadow: 0 0 14px rgba(244, 123, 63, 0.35);
+}
+
+.score-hero {
+  box-shadow: 0 22px 60px rgba(7, 27, 45, 0.16);
+}
+
+.score-ring {
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 0 0 8px rgba(255,255,255,.035);
+}
+
+.metric-grid {
+  overflow: hidden;
+  background: #fff;
+}
+
+.metric-grid article {
+  min-width: 0;
+}
+
+.metric-grid strong,
+.report-title h1,
+.action-top strong,
+.panel h3 {
+  overflow-wrap: anywhere;
+}
+
+.urgent {
+  border-radius: 0 8px 8px 0;
+  box-shadow: 0 8px 24px rgba(158, 61, 37, 0.08);
+}
+
+.action-card {
+  background: linear-gradient(180deg, #fff 0%, #fdfdfc 100%);
+}
+
+.form-error {
+  border: 1px solid #f3c5b7;
+}
+
+.loading::after {
+  content: "Preparing Business Lifeline…";
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #d7e0e7;
+  font-size: 14px;
+  letter-spacing: .04em;
+}
+
+@media (max-width: 800px) {
+  .report-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: rgba(255,255,255,.96);
+    backdrop-filter: blur(12px);
+  }
+
+  .report-title {
+    gap: 18px;
+  }
+
+  .score-hero {
+    padding: 32px 28px;
+  }
+}
+
+@media (max-width: 560px) {
+  .landing nav,
+  .hero,
+  .steps,
+  .landing-footer,
+  .report-shell {
+    width: min(100% - 28px, 1180px);
+  }
+
+  .hero h1 {
+    font-size: clamp(54px, 18vw, 72px);
+  }
+
+  .hero-card {
+    transform: none;
+    border-radius: 12px;
+  }
+
+  .form-shell form {
+    width: calc(100% - 24px);
+    padding: 30px 18px;
+    margin-top: 28px;
+    border-radius: 14px;
+  }
+
+  .two-cols,
+  .money-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .form-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 15;
+    margin-inline: -18px;
+    padding: 16px 18px calc(16px + env(safe-area-inset-bottom));
+    background: rgba(255,255,255,.96);
+    backdrop-filter: blur(12px);
+  }
+
+  .form-actions .button {
+    flex: 1;
+    padding-inline: 14px;
+  }
+
+  .report-header {
+    height: auto;
+    min-height: 74px;
+    padding: 10px 0;
+    gap: 12px;
+  }
+
+  .report-header > div {
+    gap: 6px;
+  }
+
+  .report-header .button {
+    min-height: 42px;
+    padding-inline: 12px;
+    font-size: 12px;
+  }
+
+  .report-title {
+    padding-top: 34px;
+    align-items: flex-start;
+  }
+
+  .report-title h1 {
+    font-size: 40px;
+  }
+
+  .score-hero {
+    align-items: flex-start;
+    padding: 28px 22px;
+    border-radius: 12px;
+  }
+
+  .score-ring {
+    width: 112px;
+    height: 112px;
+    border-width: 7px;
+  }
+
+  .score-ring strong {
+    font-size: 44px;
+  }
+
+  .score-hero h2 {
+    font-size: 27px;
+  }
+
+  .metric-grid strong {
+    font-size: 23px;
+  }
+
+  .panel,
+  .risk-panel,
+  .action-card {
+    padding: 22px;
+  }
+
+  .plan-section {
+    margin-top: 48px;
+  }
+
+  .section-heading {
+    align-items: flex-start;
+  }
+}
