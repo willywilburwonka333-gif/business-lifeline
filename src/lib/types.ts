@@ -46,6 +46,26 @@ export type PlanAction = {
   reason: string;
 };
 
+export type AiPriority = {
+  title: string;
+  why: string;
+  timeframe: "Today" | "7 days" | "30 days" | "90 days";
+  expectedImpact: string;
+  caution: string;
+};
+
+export type AiAnalysis = {
+  diagnosis: string;
+  rootCauses: string[];
+  priorities: AiPriority[];
+  questions: string[];
+  professionalHelp: {
+    recommended: boolean;
+    reason: string;
+    professionalType: string;
+  };
+};
+
 export type BusinessReport = {
   metrics: HealthMetrics;
   warnings: string[];
@@ -56,4 +76,6 @@ export type BusinessReport = {
   sevenDays: PlanAction[];
   thirtyDays: PlanAction[];
   ninetyDays: PlanAction[];
+  aiAnalysis?: AiAnalysis;
+  aiStatus?: "ready" | "fallback";
 };
