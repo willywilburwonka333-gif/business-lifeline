@@ -17,6 +17,7 @@ import "./stage7-reliability.css";
 import "./judge-onboarding.css";
 import "./stage8-guide.css";
 import "./stage9-polish.css";
+import "./stage10-transparency.css";
 
 export const metadata: Metadata = {
   title: {
