@@ -1,5 +1,6 @@
 "use client";
 
+import { AnalysisProvenance } from "@/components/analysis-provenance";
 import { selectPlaybook } from "@/lib/recovery-playbooks";
 import type { SavedReport } from "@/lib/saved-report";
 import type { WorkspaceTab } from "@/lib/workspace";
@@ -34,7 +35,7 @@ export function WorkspaceDashboard({ saved, openTab }: { saved: SavedReport; ope
   const topRisks = [...report.warnings, ...report.risks].filter((item, index, all) => all.indexOf(item) === index).slice(0, 3);
   const scoreTone = metrics.overallScore >= 70 ? "good" : metrics.overallScore >= 45 ? "watch" : "danger";
   const playbook = selectPlaybook(data, report);
-  const primaryPressure = report.warnings[0] || report.risks[0] || playbook.summary;
+  const primaryPressure = report.aiAnalysis?.rootCauses?.[0] || report.warnings[0] || report.risks[0] || playbook.summary;
 
   const shortcuts: Array<{ tab: WorkspaceTab; title: string; copy: string }> = [
     { tab: "brain", title: "Business Brain", copy: "Understand the diagnosis and ask grounded questions." },
@@ -77,6 +78,8 @@ export function WorkspaceDashboard({ saved, openTab }: { saved: SavedReport; ope
           </button>
         </div>
       </section>
+
+      <AnalysisProvenance report={report} compact />
 
       <div className="workspace-metric-grid stage9-metrics">
         <article>
