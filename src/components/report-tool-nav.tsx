@@ -3,6 +3,7 @@ export function ReportToolNav() {
     ["snapshot", "Snapshot"],
     ["timeline", "Recovery"],
     ["coach", "Coach"],
+    ["brain", "Business Brain"],
     ["actions", "Action Centre"],
     ["scenarios", "Scenario Planner"],
     ["templates", "Templates"],
