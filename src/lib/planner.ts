@@ -84,5 +84,20 @@ export function generateReport(data: BusinessData): BusinessReport {
     action("Restructure debt where viable", "Medium", "High", "Hard", "Matching repayments to realistic cash generation reduces recurring pressure."),
     action("Create a written resilience plan", "Medium", "Medium", "Moderate", "Cash reserves, trigger points, and contingencies prevent a repeat crisis."),
   ];
-  return { metrics: m, warnings, strengths, risks, urgentHelp, today, sevenDays, thirtyDays, ninetyDays, industryRecommendations: industryGuidance(data.industry) };
+  const industryRecommendations = industryGuidance(data.industry);
+
+  const report: BusinessReport = {
+    metrics: m,
+    warnings,
+    strengths,
+    risks,
+    urgentHelp,
+    today,
+    sevenDays,
+    thirtyDays,
+    ninetyDays,
+    industryRecommendations,
+  };
+
+  return report;
 }
