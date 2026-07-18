@@ -18,6 +18,7 @@ import "./judge-onboarding.css";
 import "./stage8-guide.css";
 import "./stage9-polish.css";
 import "./stage10-transparency.css";
+import "./recovery-mobile-fix.css";
 
 export const metadata: Metadata = {
   title: {
