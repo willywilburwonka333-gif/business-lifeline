@@ -2,6 +2,7 @@ export function ReportToolNav() {
   const links = [
     ["snapshot", "Snapshot"],
     ["timeline", "Recovery"],
+    ["coach", "Coach"],
     ["actions", "Action Centre"],
     ["scenarios", "Scenario Planner"],
     ["templates", "Templates"],
