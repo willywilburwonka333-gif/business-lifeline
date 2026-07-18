@@ -1,12 +1,22 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { calculateHealth } from "./calculations.ts";
 import { demoBusiness } from "./demo.ts";
-import { generateReport } from "./planner.ts";
 import { parseSavedReport } from "./saved-report.ts";
 
 const validSavedReport = {
   data: demoBusiness,
-  report: generateReport(demoBusiness),
+  report: {
+    metrics: calculateHealth(demoBusiness),
+    warnings: ["Cash flow is under pressure."],
+    strengths: ["The business has trading history."],
+    risks: ["Current losses may reduce available cash."],
+    urgentHelp: false,
+    today: [],
+    sevenDays: [],
+    thirtyDays: [],
+    ninetyDays: [],
+  },
 };
 
 test("accepts a complete saved Business MRI report", () => {
