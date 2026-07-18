@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ActionCentre } from "@/components/action-centre";
 import { BusinessTemplates } from "@/components/business-templates";
 import { ExecutiveSnapshot } from "@/components/executive-snapshot";
+import { RecoveryCoach } from "@/components/recovery-coach";
 import { RecoveryTimeline } from "@/components/recovery-timeline";
 import { ReportToolNav } from "@/components/report-tool-nav";
 import { ScenarioPlanner } from "@/components/scenario-planner";
@@ -33,6 +34,7 @@ export function SavedScenarioPlanner() {
       <ReportToolNav />
       <div id="snapshot" className="report-tool-anchor"><ExecutiveSnapshot data={saved.data} report={saved.report} /></div>
       <div id="timeline" className="report-tool-anchor"><RecoveryTimeline saved={saved} /></div>
+      <div id="coach" className="report-tool-anchor"><RecoveryCoach data={saved.data} report={saved.report} /></div>
       <div id="today-sheet" className="report-tool-anchor"><TodayActionSheet data={saved.data} report={saved.report} /></div>
       <div id="actions" className="report-tool-anchor"><ActionCentre report={saved.report} /></div>
       <div id="scenarios" className="report-tool-anchor"><ScenarioPlanner data={saved.data} report={saved.report} /></div>
