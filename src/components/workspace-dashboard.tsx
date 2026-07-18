@@ -1,8 +1,7 @@
 "use client";
 
 import type { SavedReport } from "@/lib/saved-report";
-
-type WorkspaceTab = "dashboard" | "recovery" | "coach" | "brain" | "cashflow" | "operations" | "resources";
+import type { WorkspaceTab } from "@/lib/workspace";
 
 const currencyFor = (country: string) => {
   const value = country.toLowerCase();
