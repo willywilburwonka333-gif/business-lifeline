@@ -1,6 +1,7 @@
 /* Recovery workspace mobile containment and usability fixes */
 .workspace-panel,
 .workspace-section-stack,
+.workspace-section-stack > *,
 .recovery-timeline,
 .recovery-playbooks,
 .workspace-section-stack > .panel,
@@ -15,20 +16,6 @@
 .action-card {
   min-width: 0;
   max-width: 100%;
-}
-
-.workspace-panel,
-.workspace-section-stack,
-.recovery-timeline,
-.recovery-playbooks,
-.workspace-section-stack > .panel {
-  overflow: hidden;
-}
-
-.recovery-timeline *,
-.recovery-playbooks *,
-.workspace-section-stack > .panel * {
-  min-width: 0;
 }
 
 .recovery-timeline h3,
@@ -47,42 +34,83 @@
 }
 
 @media (max-width: 760px) {
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .workspace-shell {
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    overflow: visible !important;
+  }
+
+  .workspace-panel,
+  .workspace-section-stack,
+  .workspace-section-stack > *,
+  .recovery-timeline,
+  .recovery-playbooks,
+  .workspace-section-stack > .panel {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    overflow: hidden !important;
+  }
+
   .workspace-section-stack {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
     gap: 14px;
+  }
+
+  .recovery-timeline *,
+  .recovery-playbooks *,
+  .workspace-section-stack > .panel * {
+    box-sizing: border-box;
+    min-width: 0 !important;
+    max-width: 100%;
   }
 
   .recovery-timeline,
   .recovery-playbooks,
   .workspace-section-stack > .panel {
-    width: 100%;
-    padding: 18px 14px;
+    padding: 16px 12px !important;
     border-radius: 12px;
   }
 
   .recovery-timeline .section-heading,
   .recovery-playbooks .section-heading,
   .workspace-section-stack > .panel .section-heading {
-    display: block;
+    display: block !important;
+    width: 100%;
   }
 
   .recovery-timeline .section-heading h3,
   .recovery-playbooks .section-heading h3,
   .workspace-section-stack > .panel .section-heading h3 {
-    font-size: clamp(24px, 8vw, 30px);
-    line-height: 1.1;
+    width: 100%;
+    font-size: clamp(23px, 7vw, 29px);
+    line-height: 1.12;
   }
 
   .recovery-summary {
-    display: grid;
-    grid-template-columns: 1fr;
-    width: 100%;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
   }
 
   .recovery-summary article,
   .recovery-summary article:nth-child(n) {
-    width: 100%;
-    padding: 18px 14px;
-    border-left: 0;
+    width: 100% !important;
+    padding: 17px 12px !important;
+    border-left: 0 !important;
     border-top: 1px solid var(--line);
   }
 
@@ -91,118 +119,143 @@
   }
 
   .recovery-summary strong {
-    font-size: clamp(28px, 10vw, 42px);
+    font-size: clamp(28px, 9vw, 40px);
   }
 
   .recovery-chart {
-    display: flex;
-    width: 100%;
-    max-width: 100%;
-    gap: 14px;
-    padding: 18px 12px;
-    overflow-x: auto;
-    overflow-y: hidden;
+    display: flex !important;
+    width: 100% !important;
+    gap: 12px;
+    padding: 16px 10px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
     overscroll-behavior-inline: contain;
     -webkit-overflow-scrolling: touch;
   }
 
   .recovery-chart article {
-    flex: 0 0 88px;
-    width: 88px;
+    flex: 0 0 82px !important;
+    width: 82px !important;
   }
 
   .recovery-interpretation {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 14px;
-    width: 100%;
-    padding: 18px 14px;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px;
+    width: 100% !important;
+    padding: 16px 12px !important;
   }
 
   .recovery-interpretation .button {
-    width: 100%;
-    max-width: 100%;
-    white-space: normal;
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 12px !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
   }
 
   .playbook-hero {
-    display: grid;
-    grid-template-columns: 1fr;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
     gap: 14px;
-    width: 100%;
-    padding: 16px 14px;
+    width: 100% !important;
+    padding: 15px 12px !important;
   }
 
   .playbook-progress {
-    width: 100%;
-    min-width: 0;
-    padding: 16px;
+    display: grid !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding: 16px 12px !important;
+    justify-items: start !important;
+    text-align: left !important;
   }
 
   .playbook-grid {
-    grid-template-columns: minmax(0, 1fr);
-    width: 100%;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
     gap: 14px;
   }
 
+  .playbook-steps,
   .playbook-steps article {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    width: 100%;
-    padding: 16px 14px;
-    gap: 12px;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
   }
 
-  .playbook-steps label {
-    width: 100%;
+  .playbook-steps article {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    padding: 15px 12px !important;
+    gap: 11px;
+  }
+
+  .playbook-steps label,
+  .playbook-steps article > div,
+  .playbook-measures {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
   }
 
   .playbook-measures {
-    width: 100%;
-    position: static;
-    padding: 18px 14px;
+    position: static !important;
+    padding: 17px 12px !important;
   }
 
   .workspace-section-stack > .panel .metric-grid {
-    grid-template-columns: minmax(0, 1fr);
-    width: 100%;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
   }
 
   .workspace-section-stack > .panel .form-actions {
-    position: static;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: 100%;
-    gap: 8px;
-    margin: 18px 0 0;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-    backdrop-filter: none;
+    position: static !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    gap: 8px !important;
+    margin: 16px 0 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
   }
 
   .workspace-section-stack > .panel .form-actions .button {
-    width: 100%;
-    min-width: 0;
-    padding: 10px 8px;
-    white-space: normal;
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding: 11px 10px !important;
+    white-space: normal !important;
   }
 
   .workspace-section-stack > .panel .action-grid {
-    grid-template-columns: minmax(0, 1fr);
-    width: 100%;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
   }
 
   .workspace-section-stack > .panel .action-card {
-    width: 100%;
-    padding: 16px 14px;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding: 15px 12px !important;
+    overflow: hidden !important;
   }
 
   .workspace-section-stack > .panel .action-top {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
     gap: 8px;
+    width: 100%;
   }
 
   .workspace-section-stack > .panel .action-top .tag {
@@ -210,19 +263,19 @@
   }
 
   .workspace-section-stack > .panel .meta {
+    display: flex;
     flex-wrap: wrap;
+    width: 100%;
   }
 
   .workspace-section-stack > .panel .action-card > .button {
-    width: 100%;
-    max-width: 100%;
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
     margin-top: 14px;
-    white-space: normal;
-  }
-}
-
-@media (max-width: 390px) {
-  .workspace-section-stack > .panel .form-actions {
-    grid-template-columns: minmax(0, 1fr);
+    padding: 12px 10px !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
   }
 }
