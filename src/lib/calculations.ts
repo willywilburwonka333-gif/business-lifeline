@@ -24,15 +24,47 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
   const receivablesPressure = data.monthlyRevenue
     ? (data.overdueInvoices / data.monthlyRevenue) * 100
     : data.overdueInvoices > 0 ? 100 : 0;
+  const urgentArrears = data.overdueTax + data.overdueSuppliers;
+  const uncoveredArrears = Math.max(0, urgentArrears - data.cashAvailable);
+  const uncoveredArrearsPressure = data.monthlyRevenue
+    ? (uncoveredArrears / data.monthlyRevenue) * 100
+    : uncoveredArrears > 0 ? 100 : 0;
+
   const trendScores = { growing: 100, stable: 78, volatile: 42, declining: 22 };
   const revenueStability = trendScores[data.revenueTrend];
-  const cashFlowScore = clamp(50 + operatingMargin * 2 - Math.min(receivablesPressure, 50) * 0.35);
-  const runwayScore = runwayMonths === null ? (result >= 0 ? 100 : 0) : clamp(runwayMonths * 20);
-  const debtScore = clamp(100 - debtPressure * 1.5 - (data.overdueTax > 0 ? 12 : 0) - (data.overdueSuppliers > 0 ? 8 : 0));
-  const revenueScore = revenueStability;
-  const overallScore = Math.round(
-    cashFlowScore * 0.35 + runwayScore * 0.25 + debtScore * 0.22 + revenueScore * 0.18,
+  const cashFlowScore = clamp(
+    50 + operatingMargin * 2 - Math.min(receivablesPressure, 50) * 0.35,
   );
+  const runwayScore = runwayMonths === null
+    ? (result >= 0 ? 100 : 0)
+    : clamp(runwayMonths * 20);
+  const debtScore = clamp(
+    100 -
+      debtPressure * 1.5 -
+      (data.overdueTax > 0 ? 12 : 0) -
+      (data.overdueSuppliers > 0 ? 8 : 0) -
+      Math.min(uncoveredArrearsPressure, 50) * 0.8,
+  );
+  const revenueScore = revenueStability;
+
+  let overallScore = Math.round(
+    cashFlowScore * 0.35 +
+      runwayScore * 0.25 +
+      debtScore * 0.22 +
+      revenueScore * 0.18,
+  );
+
+  // A long theoretical runway must not hide obligations that are already overdue.
+  if (urgentArrears > data.cashAvailable && urgentArrears > 0) {
+    overallScore = Math.min(overallScore, result < 0 ? 39 : 49);
+  }
+  if (
+    result < 0 &&
+    data.revenueTrend === "declining" &&
+    (data.overdueTax > 0 || data.overdueSuppliers > 0)
+  ) {
+    overallScore = Math.min(overallScore, 35);
+  }
 
   return {
     monthlyOperatingResult: round(result, 2),
