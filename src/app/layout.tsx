@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./tools.css";
+import "./print.css";
 
 export const metadata: Metadata = {
   title: "Business Lifeline | Business MRI",
