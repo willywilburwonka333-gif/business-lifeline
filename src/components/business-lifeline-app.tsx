@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BusinessLifeline } from "@/components/business-lifeline";
 import { SavedScenarioPlanner } from "@/components/saved-scenario-planner";
 import { readSavedReport, REPORT_STORAGE_KEY, type SavedReport } from "@/lib/saved-report";
@@ -9,21 +9,32 @@ type AppState = SavedReport | null | undefined;
 
 export function BusinessLifelineApp() {
   const [saved, setSaved] = useState<AppState>(undefined);
+  const lastRaw = useRef<string | null>(null);
 
   useLayoutEffect(() => {
-    setSaved(readSavedReport());
+    const next = readSavedReport();
+    lastRaw.current = window.localStorage.getItem(REPORT_STORAGE_KEY);
+    setSaved(next);
   }, []);
 
   useEffect(() => {
-    const sync = () => setSaved(readSavedReport());
+    const sync = () => {
+      const raw = window.localStorage.getItem(REPORT_STORAGE_KEY);
+      if (raw === lastRaw.current) return;
+
+      const next = readSavedReport();
+      lastRaw.current = window.localStorage.getItem(REPORT_STORAGE_KEY);
+      setSaved(next);
+    };
+
     const onStorage = (event: StorageEvent) => {
       if (!event.key || event.key === REPORT_STORAGE_KEY) sync();
     };
 
     window.addEventListener("storage", onStorage);
 
-    // Storage events do not fire in the same tab. This lightweight check lets the
-    // controller replace the assessment with the workspace immediately after save.
+    // Storage events do not fire in the same tab. This lightweight check only
+    // reparses the report when the stored value has actually changed.
     const timer = window.setInterval(sync, 100);
 
     return () => {
@@ -34,6 +45,7 @@ export function BusinessLifelineApp() {
 
   const reset = () => {
     window.localStorage.removeItem(REPORT_STORAGE_KEY);
+    lastRaw.current = null;
     setSaved(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
