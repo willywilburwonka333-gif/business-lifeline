@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActionCentre } from "@/components/action-centre";
 import { BusinessBrain } from "@/components/business-brain";
 import { BusinessOperatingSystem } from "@/components/business-operating-system";
@@ -14,8 +14,23 @@ import { WorkspaceDashboard } from "@/components/workspace-dashboard";
 import type { SavedReport } from "@/lib/saved-report";
 import { workspaceTabs, type WorkspaceTab } from "@/lib/workspace";
 
+const DEMO_GUIDE_KEY = "business-lifeline-demo-guide-v1";
+const guideSteps: Array<{ tab: WorkspaceTab; title: string; copy: string }> = [
+  { tab: "dashboard", title: "Understand the crisis", copy: "See health, cash pressure, risks and immediate priorities." },
+  { tab: "brain", title: "See GPT-5.6 interpretation", copy: "Review grounded diagnosis, root causes and missing information." },
+  { tab: "cashflow", title: "Test a recovery", copy: "Change price, costs and collections to model the outcome." },
+  { tab: "recovery", title: "Open the playbook", copy: "Turn the diagnosis into today, 7-day, 30-day and 90-day action." },
+  { tab: "operations", title: "Run the turnaround", copy: "Move the plan into tasks, responsibilities and controls." },
+];
+
 export function SavedScenarioPlanner({ saved, onReset }: { saved: SavedReport; onReset: () => void }) {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("dashboard");
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideIndex, setGuideIndex] = useState(0);
+
+  useEffect(() => {
+    setGuideOpen(window.localStorage.getItem(DEMO_GUIDE_KEY) === "1");
+  }, []);
 
   const openTab = (tab: WorkspaceTab) => {
     setActiveTab(tab);
@@ -24,7 +39,23 @@ export function SavedScenarioPlanner({ saved, onReset }: { saved: SavedReport; o
     });
   };
 
+  const closeGuide = () => {
+    window.localStorage.removeItem(DEMO_GUIDE_KEY);
+    setGuideOpen(false);
+  };
+
+  const advanceGuide = () => {
+    const nextIndex = guideIndex + 1;
+    if (nextIndex >= guideSteps.length) {
+      closeGuide();
+      return;
+    }
+    setGuideIndex(nextIndex);
+    openTab(guideSteps[nextIndex].tab);
+  };
+
   const activeDefinition = workspaceTabs.find((tab) => tab.id === activeTab) ?? workspaceTabs[0];
+  const guide = guideSteps[guideIndex];
 
   return (
     <div className="workspace-shell">
@@ -53,6 +84,21 @@ export function SavedScenarioPlanner({ saved, onReset }: { saved: SavedReport; o
           ))}
         </div>
       </nav>
+
+      {guideOpen && (
+        <aside className="demo-guide no-print" aria-live="polite">
+          <div className="demo-guide-progress"><span style={{ width: `${((guideIndex + 1) / guideSteps.length) * 100}%` }} /></div>
+          <div className="demo-guide-copy">
+            <small>GUIDED DEMO · {guideIndex + 1} OF {guideSteps.length}</small>
+            <strong>{guide.title}</strong>
+            <p>{guide.copy}</p>
+          </div>
+          <div className="demo-guide-actions">
+            <button type="button" className="button ghost" onClick={closeGuide}>Exit guide</button>
+            <button type="button" className="button primary" onClick={advanceGuide}>{guideIndex === guideSteps.length - 1 ? "Finish demo" : "Next step"} <span>→</span></button>
+          </div>
+        </aside>
+      )}
 
       <main
         id={`workspace-panel-${activeTab}`}
