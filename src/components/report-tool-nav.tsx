@@ -4,6 +4,7 @@ export function ReportToolNav() {
     ["timeline", "Recovery"],
     ["coach", "Coach"],
     ["brain", "Business Brain"],
+    ["playbooks", "Playbooks"],
     ["actions", "Action Centre"],
     ["scenarios", "Scenario Planner"],
     ["templates", "Templates"],
