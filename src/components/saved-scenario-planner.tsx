@@ -43,6 +43,11 @@ export function SavedScenarioPlanner() {
     };
   }, []);
 
+  useEffect(() => {
+    document.body.classList.toggle("workspace-ready", Boolean(saved));
+    return () => document.body.classList.remove("workspace-ready");
+  }, [saved]);
+
   const openTab = (tab: WorkspaceTab) => {
     setActiveTab(tab);
     window.requestAnimationFrame(() => {
