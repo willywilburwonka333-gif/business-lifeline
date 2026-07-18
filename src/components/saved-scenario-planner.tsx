@@ -1,5 +1,6 @@
 "use client";
 
+import "@/app/workspace-shell.css";
 import { useEffect, useState } from "react";
 import { ActionCentre } from "@/components/action-centre";
 import { BusinessBrain } from "@/components/business-brain";
@@ -66,7 +67,7 @@ export function SavedScenarioPlanner() {
               role="tab"
               aria-selected={activeTab === tab.id}
               className={activeTab === tab.id ? "active" : ""}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => openTab(tab.id)}
             >
               <strong>{tab.label}</strong>
               <span>{tab.detail}</span>
