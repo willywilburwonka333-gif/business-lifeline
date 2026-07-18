@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
-import type { BusinessData, HealthMetrics } from "@/lib/types";
+import { calculateHealth } from "@/lib/calculations";
+import type { BusinessData } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-type AnalyseRequest = {
-  data: BusinessData;
-  metrics: HealthMetrics;
-};
+const MAX_BODY_BYTES = 32_000;
+const MAX_TEXT = 1_500;
+const MAX_NAME = 120;
+const MAX_FINANCIAL_VALUE = 1_000_000_000;
+const allowedTrends = new Set(["growing", "stable", "declining", "volatile"]);
+const allowedConcerns = new Set(["payroll", "tax", "legal", "debts", "closure", "none"]);
 
 const outputSchema = {
   type: "object",
@@ -57,10 +60,42 @@ const outputSchema = {
   },
 } as const;
 
-function isValidPayload(value: unknown): value is AnalyseRequest {
-  if (!value || typeof value !== "object") return false;
-  const payload = value as Partial<AnalyseRequest>;
-  return Boolean(payload.data && payload.metrics && typeof payload.data.businessName === "string");
+function validText(value: unknown, max = MAX_TEXT): value is string {
+  return typeof value === "string" && value.trim().length > 0 && value.length <= max;
+}
+
+function validNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= MAX_FINANCIAL_VALUE;
+}
+
+function parseBusinessData(value: unknown): BusinessData | null {
+  if (!value || typeof value !== "object") return null;
+  const data = value as Record<string, unknown>;
+  const numberKeys = [
+    "yearsOperating",
+    "employees",
+    "monthlyRevenue",
+    "fixedExpenses",
+    "variableExpenses",
+    "ownerDrawings",
+    "loanRepayments",
+    "cashAvailable",
+    "accountsReceivable",
+    "overdueInvoices",
+    "totalDebt",
+    "overdueTax",
+    "overdueSuppliers",
+  ] as const;
+
+  if (!validText(data.businessName, MAX_NAME) || !validText(data.industry, MAX_NAME) || !validText(data.country, MAX_NAME)) return null;
+  if (!validText(data.biggestProblem) || !validText(data.immediateGoal)) return null;
+  if (!numberKeys.every((key) => validNumber(data[key]))) return null;
+  if (!Number.isInteger(data.yearsOperating) || !Number.isInteger(data.employees)) return null;
+  if (!allowedTrends.has(String(data.revenueTrend))) return null;
+  if (!Array.isArray(data.urgentConcerns) || data.urgentConcerns.length > allowedConcerns.size) return null;
+  if (!data.urgentConcerns.every((item) => typeof item === "string" && allowedConcerns.has(item))) return null;
+
+  return data as BusinessData;
 }
 
 export async function POST(request: Request) {
@@ -70,12 +105,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "AI analysis is not configured." }, { status: 503 });
     }
 
-    const payload: unknown = await request.json();
-    if (!isValidPayload(payload)) {
+    const contentLength = Number(request.headers.get("content-length") || "0");
+    if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: "Business analysis request is too large." }, { status: 413 });
+    }
+
+    const raw = await request.text();
+    if (raw.length > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: "Business analysis request is too large." }, { status: 413 });
+    }
+
+    let payload: unknown;
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON request." }, { status: 400 });
+    }
+
+    const data = parseBusinessData((payload as { data?: unknown })?.data);
+    if (!data) {
       return NextResponse.json({ error: "Invalid business analysis request." }, { status: 400 });
     }
 
-    const { data, metrics } = payload;
+    const metrics = calculateHealth(data);
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -114,7 +166,7 @@ export async function POST(request: Request) {
           },
         },
       }),
-      signal: AbortSignal.timeout(25000),
+      signal: AbortSignal.timeout(25_000),
     });
 
     if (!response.ok) {
@@ -128,7 +180,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "AI analysis returned no usable result." }, { status: 502 });
     }
 
-    return NextResponse.json({ analysis: JSON.parse(result.output_text) });
+    return NextResponse.json({ analysis: JSON.parse(result.output_text), metrics });
   } catch (error) {
     console.error("Business analysis route error", error);
     return NextResponse.json({ error: "Unable to complete AI analysis right now." }, { status: 500 });
