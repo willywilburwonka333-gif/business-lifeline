@@ -3,6 +3,7 @@ import "./globals.css";
 import "./tools.css";
 import "./print.css";
 import "./status.css";
+import "./accessibility.css";
 
 export const metadata: Metadata = {
   title: "Business Lifeline | Business MRI",
@@ -16,7 +17,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <a className="skip-link" href="#main-content">Skip to main content</a>
+        {children}
+      </body>
     </html>
   );
 }
