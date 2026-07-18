@@ -1,6 +1,5 @@
 "use client";
 
-import "@/app/workspace-shell.css";
 import { useState } from "react";
 import { ActionCentre } from "@/components/action-centre";
 import { BusinessBrain } from "@/components/business-brain";
