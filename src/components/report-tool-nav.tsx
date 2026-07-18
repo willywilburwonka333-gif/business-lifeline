@@ -1,12 +1,13 @@
 export function ReportToolNav() {
   const links = [
     ["snapshot", "Snapshot"],
+    ["operating-system", "Business OS"],
     ["timeline", "Recovery"],
     ["coach", "Coach"],
     ["brain", "Business Brain"],
     ["playbooks", "Playbooks"],
     ["actions", "Action Centre"],
-    ["scenarios", "Scenario Planner"],
+    ["scenarios", "Cashflow Simulator"],
     ["templates", "Templates"],
   ];
 
@@ -14,7 +15,7 @@ export function ReportToolNav() {
     <nav className="report-tool-nav no-print" aria-label="Business report tools">
       <div>
         <p className="eyebrow">Business rescue workspace</p>
-        <strong>Move quickly between the tools that turn your report into action.</strong>
+        <strong>Move quickly between diagnosis, recovery and day-to-day business control.</strong>
       </div>
       <div className="report-tool-links">
         {links.map(([id, label]) => (
