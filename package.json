@@ -1,13 +1,14 @@
 {
   "name": "business-lifeline",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test --experimental-strip-types src/lib/calculations.test.ts src/lib/calculations-audit.test.ts src/lib/planner.test.ts src/lib/saved-report.test.ts src/lib/recovery-history.test.ts src/lib/cashflow-simulator.test.ts src/lib/recovery-playbooks.test.ts src/lib/business-os.test.ts"
+    "test": "node --test --experimental-strip-types src/lib/calculations.test.ts src/lib/calculations-audit.test.ts src/lib/planner.test.ts src/lib/saved-report.test.ts src/lib/recovery-history.test.ts src/lib/cashflow-simulator.test.ts src/lib/recovery-playbooks.test.ts src/lib/business-os.test.ts",
+    "check": "npm run test && npm run lint && npm run build"
   },
   "dependencies": {
     "next": "16.2.10",
