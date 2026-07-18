@@ -6,6 +6,7 @@ import { generateReport } from "@/lib/planner";
 import type { AiAnalysis, BusinessData, BusinessReport, PlanAction } from "@/lib/types";
 
 const STORAGE_KEY = "business-lifeline-mri-v2";
+
 const currencyFor = (country: string) => {
   const c = country.toLowerCase();
   if (c.includes("australia")) return "AUD";
@@ -15,18 +16,34 @@ const currencyFor = (country: string) => {
   if (c.includes("euro") || ["germany", "france", "italy", "spain", "ireland", "netherlands"].some(x => c.includes(x))) return "EUR";
   return "USD";
 };
-const money = (n: number, country: string) => new Intl.NumberFormat("en", { style: "currency", currency: currencyFor(country), maximumFractionDigits: 0 }).format(n);
+
+const money = (n: number, country: string) => new Intl.NumberFormat("en", {
+  style: "currency",
+  currency: currencyFor(country),
+  maximumFractionDigits: 0,
+}).format(n);
+
 const numberFields: { key: keyof BusinessData; label: string; help?: string }[] = [
-  { key: "monthlyRevenue", label: "Monthly revenue" }, { key: "fixedExpenses", label: "Fixed expenses" },
-  { key: "variableExpenses", label: "Variable expenses" }, { key: "ownerDrawings", label: "Owner drawings" },
-  { key: "loanRepayments", label: "Loan repayments" }, { key: "cashAvailable", label: "Cash available" },
+  { key: "monthlyRevenue", label: "Monthly revenue" },
+  { key: "fixedExpenses", label: "Fixed expenses" },
+  { key: "variableExpenses", label: "Variable expenses" },
+  { key: "ownerDrawings", label: "Owner drawings" },
+  { key: "loanRepayments", label: "Loan repayments" },
+  { key: "cashAvailable", label: "Cash available" },
   { key: "accountsReceivable", label: "Accounts receivable", help: "All money currently owed by customers." },
-  { key: "overdueInvoices", label: "Overdue customer invoices" }, { key: "totalDebt", label: "Total business debt" },
-  { key: "overdueTax", label: "Overdue tax" }, { key: "overdueSuppliers", label: "Overdue supplier bills" },
+  { key: "overdueInvoices", label: "Overdue customer invoices" },
+  { key: "totalDebt", label: "Total business debt" },
+  { key: "overdueTax", label: "Overdue tax" },
+  { key: "overdueSuppliers", label: "Overdue supplier bills" },
 ];
+
 const concerns = [
-  ["payroll", "Unable to pay staff"], ["tax", "Serious overdue tax"], ["legal", "Legal demands"],
-  ["debts", "Unable to pay debts as they fall due"], ["closure", "Imminent closure risk"], ["none", "None of these"],
+  ["payroll", "Unable to pay staff"],
+  ["tax", "Serious overdue tax"],
+  ["legal", "Legal demands"],
+  ["debts", "Unable to pay debts as they fall due"],
+  ["closure", "Imminent closure risk"],
+  ["none", "None of these"],
 ];
 
 function Field({ label, children, help }: { label: string; children: React.ReactNode; help?: string }) {
@@ -34,32 +51,117 @@ function Field({ label, children, help }: { label: string; children: React.React
 }
 
 function Actions({ title, eyebrow, actions }: { title: string; eyebrow: string; actions: PlanAction[] }) {
-  return <section className="plan-section"><div className="section-heading"><span>{eyebrow}</span><h3>{title}</h3></div><div className="action-grid">{actions.map(item =>
-    <article className="action-card" key={item.title}><div className="action-top"><strong>{item.title}</strong><span className={`tag ${item.urgency.toLowerCase()}`}>{item.urgency}</span></div><p>{item.reason}</p><div className="meta"><span>Impact <b>{item.impact}</b></span><span>Difficulty <b>{item.difficulty}</b></span></div></article>
-  )}</div></section>;
+  return <section className="plan-section">
+    <div className="section-heading"><span>{eyebrow}</span><h3>{title}</h3></div>
+    <div className="action-grid">{actions.map(item =>
+      <article className="action-card" key={item.title}>
+        <div className="action-top"><strong>{item.title}</strong><span className={`tag ${item.urgency.toLowerCase()}`}>{item.urgency}</span></div>
+        <p>{item.reason}</p>
+        <div className="meta"><span>Impact <b>{item.impact}</b></span><span>Difficulty <b>{item.difficulty}</b></span></div>
+      </article>
+    )}</div>
+  </section>;
 }
 
 function AiView({ analysis }: { analysis: AiAnalysis }) {
   return <>
     <section className="panel"><p className="eyebrow">AI turnaround analysis</p><h2>What is really happening</h2><p>{analysis.diagnosis}</p></section>
-    <section className="insight-grid"><article className="panel"><p className="eyebrow">Root causes</p><h3>Problems beneath the symptoms</h3><ul>{analysis.rootCauses.map(x => <li key={x}>{x}</li>)}</ul></article><article className="panel"><p className="eyebrow">Information to confirm</p><h3>Questions that could change the plan</h3><ul>{analysis.questions.length ? analysis.questions.map(x => <li key={x}>{x}</li>) : <li>No major information gaps were identified.</li>}</ul></article></section>
+    <section className="insight-grid">
+      <article className="panel"><p className="eyebrow">Root causes</p><h3>Problems beneath the symptoms</h3><ul>{analysis.rootCauses.map(x => <li key={x}>{x}</li>)}</ul></article>
+      <article className="panel"><p className="eyebrow">Information to confirm</p><h3>Questions that could change the plan</h3><ul>{analysis.questions.length ? analysis.questions.map(x => <li key={x}>{x}</li>) : <li>No major information gaps were identified.</li>}</ul></article>
+    </section>
     <section className="plan-section"><div className="section-heading"><span>GPT-prioritised response</span><h3>Your highest-value moves</h3></div><div className="action-grid">{analysis.priorities.map(item => <article className="action-card" key={`${item.timeframe}-${item.title}`}><div className="action-top"><strong>{item.title}</strong><span className="tag high">{item.timeframe}</span></div><p>{item.why}</p><div className="meta"><span>Expected impact <b>{item.expectedImpact}</b></span></div>{item.caution && <small>{item.caution}</small>}</article>)}</div></section>
     {analysis.professionalHelp.recommended && <aside className="urgent" role="alert"><b>{analysis.professionalHelp.professionalType} recommended</b><p>{analysis.professionalHelp.reason}</p></aside>}
   </>;
+}
+
+function getSeverity(data: BusinessData, report: BusinessReport) {
+  const score = report.metrics.overallScore;
+  const seriousConcern = data.urgentConcerns.some(x => ["payroll", "legal", "debts", "closure"].includes(x));
+  const overdueObligations = data.overdueTax + data.overdueSuppliers;
+  const cannotCoverOverdues = overdueObligations > data.cashAvailable;
+
+  if (seriousConcern || (score < 25 && cannotCoverOverdues)) {
+    return { key: "escalate", label: "Immediate escalation", note: "Current indicators suggest serious financial distress. Contact an appropriate professional immediately." };
+  }
+  if (score < 45 || report.urgentHelp) {
+    return { key: "critical", label: "Critical", note: "Significant financial stress is present. Professional advice should be considered now." };
+  }
+  if (score < 70) {
+    return { key: "pressure", label: "Under pressure", note: "Early action is recommended before the pressure becomes harder to reverse." };
+  }
+  return { key: "stable", label: "Stable", note: "Continue strengthening the business and review the numbers regularly." };
+}
+
+function getPressures(data: BusinessData, report: BusinessReport) {
+  const candidates: { label: string; weight: number }[] = [];
+  const m = report.metrics;
+  if (m.monthlyOperatingResult < 0) candidates.push({ label: "Negative cash flow", weight: 100 + Math.abs(m.monthlyOperatingResult) });
+  if (data.overdueTax > 0 || data.overdueSuppliers > 0) candidates.push({ label: "Overdue obligations", weight: 90 + data.overdueTax + data.overdueSuppliers });
+  if (m.expenseRatio > 100) candidates.push({ label: "Costs exceed revenue", weight: 80 + m.expenseRatio });
+  if (data.overdueInvoices > 0) candidates.push({ label: "Slow customer payments", weight: 70 + data.overdueInvoices });
+  if (m.debtPressure > 35) candidates.push({ label: "Debt pressure", weight: 60 + m.debtPressure });
+  if (data.revenueTrend === "declining") candidates.push({ label: "Falling revenue", weight: 75 });
+  if (data.revenueTrend === "volatile") candidates.push({ label: "Unstable revenue", weight: 65 });
+  if (candidates.length === 0) candidates.push({ label: "Resilience and growth", weight: 1 });
+  return candidates.sort((a, b) => b.weight - a.weight).map(x => x.label).slice(0, 4);
 }
 
 function ReportView({ data, report, onReset }: { data: BusinessData; report: BusinessReport; onReset: () => void }) {
   const { metrics: m } = report;
   const scoreTone = m.overallScore >= 70 ? "good" : m.overallScore >= 45 ? "watch" : "danger";
   const aiReady = report.aiStatus === "ready" && Boolean(report.aiAnalysis);
+  const severity = getSeverity(data, report);
+  const pressures = getPressures(data, report);
+  const topActions = report.today.slice(0, 3);
+  const obligations = data.overdueTax + data.overdueSuppliers;
+
   return <main id="main-content" className="report-shell">
-    <header className="report-header no-print"><a className="brand" href="#top"><span>BL</span> Business Lifeline</a><div><button className="button ghost" onClick={onReset}>Start Again</button><button className="button primary" onClick={() => window.print()}>Print Report</button></div></header>
+    <header className="report-header no-print"><a className="brand" href="#main-content"><span>BL</span> Business Lifeline</a><div><button className="button ghost" onClick={onReset}>Start Again</button><button className="button primary" onClick={() => window.print()}>Print Report</button></div></header>
     <div className="report-title"><div><p className="eyebrow">Business MRI report</p><h1>{data.businessName}</h1><p>{data.industry} · {data.country}</p></div><p className="report-date">Prepared {new Intl.DateTimeFormat("en", { dateStyle: "long" }).format(new Date())}</p></div>
+
+    <section className="executive-crisis-dashboard">
+      <div className="crisis-score-block">
+        <p className="eyebrow">Business health</p>
+        <div className={`score-ring ${scoreTone}`}><strong>{m.overallScore}</strong><span>/ 100</span></div>
+        <span className={`severity-badge ${severity.key}`}>{severity.label}</span>
+        <p>{severity.note}</p>
+      </div>
+      <div className="crisis-diagnosis">
+        <p className="eyebrow">Primary pressure</p>
+        <h2>{pressures[0]}</h2>
+        <p className="diagnosis-copy">This is the strongest pressure detected from the figures supplied. It is a decision-support finding, not a legal insolvency conclusion.</p>
+        <div className="pressure-list"><span>Contributing pressures</span>{pressures.slice(1).map(x => <b key={x}>{x}</b>)}</div>
+      </div>
+      <div className="crisis-actions">
+        <p className="eyebrow">Do these today</p>
+        <ol>{topActions.map(action => <li key={action.title}><span>✓</span><div><b>{action.title}</b><small>{action.reason}</small></div></li>)}</ol>
+      </div>
+    </section>
+
+    <section className="crisis-facts">
+      <article><span>Monthly result</span><strong className={m.monthlyOperatingResult < 0 ? "negative" : "positive"}>{money(m.monthlyOperatingResult, data.country)}</strong></article>
+      <article><span>Cash runway</span><strong>{m.runwayMonths === null ? "Cash positive" : `${m.runwayMonths} months`}</strong></article>
+      <article><span>Overdue obligations</span><strong>{money(obligations, data.country)}</strong></article>
+      <article><span>Professional help</span><strong>{report.urgentHelp ? "Recommended now" : m.overallScore < 70 ? "Consider early" : "Not urgent"}</strong></article>
+    </section>
+
+    <section className="nothing-changes-panel">
+      <div><p className="eyebrow">If nothing changes</p><h2>The current pressure continues.</h2></div>
+      <ul>
+        {m.monthlyOperatingResult < 0 && <li>The business continues losing {money(Math.abs(m.monthlyOperatingResult), data.country)} per month at the current settings.</li>}
+        {m.runwayMonths !== null && <li>Available cash covers approximately {m.runwayMonths} months of the current monthly loss.</li>}
+        {obligations > 0 && <li>{money(obligations, data.country)} in overdue tax and supplier obligations may become harder to negotiate.</li>}
+        <li>Review the plan after completing today&apos;s actions and whenever the figures materially change.</li>
+      </ul>
+    </section>
+
     <div className={`analysis-status ${aiReady ? "ready" : "fallback"}`} role="status"><span>{aiReady ? "AI-enhanced analysis completed" : "Rules-based safety report completed"}</span><small>{aiReady ? "Deterministic financial calculations plus personalised AI prioritisation" : "The core diagnosis and 90-day plan remain fully available without AI"}</small></div>
     {report.urgentHelp && <aside className="urgent" role="alert"><b>Urgent professional help recommended</b><p>Your answers indicate serious tax, payroll, legal, debt, or closure risk. Contact a qualified accountant, lawyer, turnaround adviser, or licensed insolvency professional now.</p></aside>}
+
     <section className="score-hero"><div className={`score-ring ${scoreTone}`}><strong>{m.overallScore}</strong><span>/ 100</span></div><div><p className="eyebrow">Overall business health</p><h2>{m.overallScore >= 70 ? "Stable, with room to strengthen" : m.overallScore >= 45 ? "Under pressure — act now" : "Critical — immediate action needed"}</h2><p>This score combines cash flow, runway, debt pressure, and revenue stability. It is a decision-support indicator, not a valuation or insolvency assessment.</p></div></section>
     <section className="metric-grid"><article><span>Monthly result</span><strong className={m.monthlyOperatingResult < 0 ? "negative" : "positive"}>{money(m.monthlyOperatingResult, data.country)}</strong><small>{m.operatingMargin}% operating margin</small></article><article><span>Cash runway</span><strong>{m.runwayMonths === null ? "Cash positive" : `${m.runwayMonths} months`}</strong><small>At the current monthly result</small></article><article><span>Expense ratio</span><strong>{m.expenseRatio}%</strong><small>Of monthly revenue</small></article><article><span>Debt pressure</span><strong>{m.debtPressure}%</strong><small>Of annualised revenue</small></article></section>
-    {report.aiAnalysis ? <AiView analysis={report.aiAnalysis} /> : <section className="panel"><p className="eyebrow">Rules-based safety plan</p><h3>AI analysis was unavailable</h3><p>Your financial calculations and rescue plan still completed successfully. Try a fresh MRI later for the personalised AI diagnosis.</p></section>}
+    {report.aiAnalysis ? <AiView analysis={report.aiAnalysis} /> : <section className="panel"><p className="eyebrow">Deterministic Business MRI</p><h3>Your core analysis is complete</h3><p>The financial diagnosis and rescue plan were generated from tested rules. AI-enhanced strategic analysis can be added when the service is available.</p></section>}
     <section className="insight-grid"><article className="panel"><p className="eyebrow">Main warnings</p><h3>What needs attention</h3><ul>{report.warnings.length ? report.warnings.map(x => <li key={x}>{x}</li>) : <li>No critical operating warnings detected.</li>}</ul></article><article className="panel"><p className="eyebrow">Strongest areas</p><h3>What you can build on</h3><ul className="strengths">{report.strengths.map(x => <li key={x}>{x}</li>)}</ul></article></section>
     <section className="risk-panel"><p className="eyebrow">Priority risks</p><h2>Top three risks</h2><div>{report.risks.length ? report.risks.map((x, i) => <article key={x}><span>0{i + 1}</span><p>{x}</p></article>) : <p>No major risks identified by the current rules.</p>}</div></section>
     <Actions title="Stop the immediate pressure" eyebrow="Actions for today" actions={report.today} />
@@ -99,14 +201,7 @@ export function BusinessLifeline() {
   const useDemo = async () => { setError(""); setAnalysing(true); const next = await buildCompleteReport(demoBusiness); saveAndShow(demoBusiness, next); setAnalysing(false); };
   const reset = () => { localStorage.removeItem(STORAGE_KEY); setData(emptyBusiness); setReport(null); setStep(0); setView("landing"); window.scrollTo(0, 0); };
   const nextStep = () => { const required = step === 0 ? [data.businessName, data.industry, data.country] : step === 2 ? [data.biggestProblem, data.immediateGoal] : ["ok"]; if (required.some(x => !String(x).trim())) { setError("Please complete every required field before continuing."); return; } setError(""); setStep(s => Math.min(2, s + 1)); window.scrollTo({ top: 0, behavior: "smooth" }); };
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!data.biggestProblem.trim() || !data.immediateGoal.trim()) { setError("Tell us your biggest problem and immediate goal to build the plan."); return; }
-    setError(""); setAnalysing(true);
-    const next = await buildCompleteReport(data);
-    saveAndShow(data, next);
-    setAnalysing(false);
-  };
+  const submit = async (event: React.FormEvent) => { event.preventDefault(); if (!data.biggestProblem.trim() || !data.immediateGoal.trim()) { setError("Tell us your biggest problem and immediate goal to build the plan."); return; } setError(""); setAnalysing(true); const next = await buildCompleteReport(data); saveAndShow(data, next); setAnalysing(false); };
 
   if (!loaded) return <main id="main-content" className="loading" aria-label="Loading Business Lifeline" />;
   if (view === "report" && report) return <ReportView data={data} report={report} onReset={reset} />;
