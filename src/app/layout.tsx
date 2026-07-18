@@ -11,6 +11,7 @@ import "./recovery-coach.css";
 import "./business-brain.css";
 import "./cashflow-simulator.css";
 import "./recovery-playbooks.css";
+import "./business-os.css";
 
 export const metadata: Metadata = {
   title: "Business Lifeline | Business MRI",
