@@ -1,8 +1,7 @@
 "use client";
 
 import "@/app/workspace-shell.css";
-import "@/app/workspace-fix.css";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ActionCentre } from "@/components/action-centre";
 import { BusinessBrain } from "@/components/business-brain";
 import { BusinessOperatingSystem } from "@/components/business-operating-system";
@@ -13,41 +12,11 @@ import { RecoveryTimeline } from "@/components/recovery-timeline";
 import { ScenarioPlanner } from "@/components/scenario-planner";
 import { TodayActionSheet } from "@/components/today-action-sheet";
 import { WorkspaceDashboard } from "@/components/workspace-dashboard";
-import { readSavedReport, type SavedReport } from "@/lib/saved-report";
+import type { SavedReport } from "@/lib/saved-report";
+import { workspaceTabs, type WorkspaceTab } from "@/lib/workspace";
 
-type WorkspaceTab = "dashboard" | "recovery" | "coach" | "brain" | "cashflow" | "operations" | "resources";
-
-const tabs: Array<{ id: WorkspaceTab; label: string; detail: string }> = [
-  { id: "dashboard", label: "Dashboard", detail: "Overview" },
-  { id: "recovery", label: "Recovery", detail: "Plan and timeline" },
-  { id: "coach", label: "Coach", detail: "Weekly follow-through" },
-  { id: "brain", label: "Business Brain", detail: "Grounded advice" },
-  { id: "cashflow", label: "Cashflow", detail: "Simulator" },
-  { id: "operations", label: "Operations", detail: "Business OS" },
-  { id: "resources", label: "Resources", detail: "Sheets and templates" },
-];
-
-export function SavedScenarioPlanner() {
-  const [saved, setSaved] = useState<SavedReport | null>(null);
+export function SavedScenarioPlanner({ saved, onReset }: { saved: SavedReport; onReset: () => void }) {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("dashboard");
-
-  useEffect(() => {
-    const sync = () => setSaved(readSavedReport());
-    sync();
-
-    const timer = window.setInterval(sync, 500);
-    window.addEventListener("storage", sync);
-
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener("storage", sync);
-    };
-  }, []);
-
-  useEffect(() => {
-    document.body.classList.toggle("workspace-ready", Boolean(saved));
-    return () => document.body.classList.remove("workspace-ready");
-  }, [saved]);
 
   const openTab = (tab: WorkspaceTab) => {
     setActiveTab(tab);
@@ -56,7 +25,7 @@ export function SavedScenarioPlanner() {
     });
   };
 
-  if (!saved) return null;
+  const activeDefinition = workspaceTabs.find((tab) => tab.id === activeTab) ?? workspaceTabs[0];
 
   return (
     <div className="workspace-shell">
@@ -64,14 +33,18 @@ export function SavedScenarioPlanner() {
         <div className="workspace-tabs-brand">
           <span>Business Lifeline</span>
           <strong>{saved.data.businessName}</strong>
+          <button className="workspace-reset" type="button" onClick={onReset}>Start a new MRI</button>
         </div>
         <div className="workspace-tab-list" role="tablist" aria-label="Workspace tabs">
-          {tabs.map((tab) => (
+          {workspaceTabs.map((tab) => (
             <button
+              id={`workspace-tab-${tab.id}`}
               key={tab.id}
               type="button"
               role="tab"
               aria-selected={activeTab === tab.id}
+              aria-controls={`workspace-panel-${tab.id}`}
+              tabIndex={activeTab === tab.id ? 0 : -1}
               className={activeTab === tab.id ? "active" : ""}
               onClick={() => openTab(tab.id)}
             >
@@ -82,7 +55,13 @@ export function SavedScenarioPlanner() {
         </div>
       </nav>
 
-      <main className="workspace-panel" role="tabpanel" aria-label={tabs.find((tab) => tab.id === activeTab)?.label}>
+      <main
+        id={`workspace-panel-${activeTab}`}
+        className="workspace-panel"
+        role="tabpanel"
+        aria-labelledby={`workspace-tab-${activeTab}`}
+        aria-label={activeDefinition?.label}
+      >
         {activeTab === "dashboard" && <WorkspaceDashboard saved={saved} openTab={openTab} />}
         {activeTab === "recovery" && (
           <div className="workspace-section-stack">
