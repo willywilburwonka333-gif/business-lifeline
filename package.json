@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test --experimental-strip-types src/lib/calculations.test.ts src/lib/calculations-audit.test.ts src/lib/planner.test.ts src/lib/saved-report.test.ts src/lib/recovery-history.test.ts src/lib/cashflow-simulator.test.ts src/lib/recovery-playbooks.test.ts src/lib/business-os.test.ts",
+    "test": "node --test --experimental-strip-types src/lib/calculations.test.ts src/lib/calculations-audit.test.ts src/lib/planner.test.ts src/lib/saved-report.test.ts src/lib/recovery-history.test.ts src/lib/cashflow-simulator.test.ts src/lib/recovery-playbooks.test.ts src/lib/business-os.test.ts src/lib/workspace.test.ts",
     "check": "npm run test && npm run lint && npm run build"
   },
   "dependencies": {
