@@ -6,28 +6,7 @@ import { BusinessTemplates } from "@/components/business-templates";
 import { ExecutiveSnapshot } from "@/components/executive-snapshot";
 import { ReportToolNav } from "@/components/report-tool-nav";
 import { ScenarioPlanner } from "@/components/scenario-planner";
-import type { BusinessData, BusinessReport } from "@/lib/types";
-
-const STORAGE_KEY = "business-lifeline-mri-v2";
-
-type SavedReport = {
-  data: BusinessData;
-  report: BusinessReport;
-};
-
-function readSavedReport(): SavedReport | null {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw) as Partial<SavedReport>;
-    if (!parsed.data || !parsed.report) return null;
-
-    return parsed as SavedReport;
-  } catch {
-    return null;
-  }
-}
+import { readSavedReport, type SavedReport } from "@/lib/saved-report";
 
 export function SavedScenarioPlanner() {
   const [saved, setSaved] = useState<SavedReport | null>(null);
