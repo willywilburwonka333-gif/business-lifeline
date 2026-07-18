@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./tools.css";
 import "./print.css";
@@ -15,8 +15,21 @@ import "./business-os.css";
 import "./workspace-shell.css";
 
 export const metadata: Metadata = {
-  title: "Business Lifeline | Business MRI",
-  description: "Diagnose business pressure and build a practical 90-day rescue plan.",
+  title: {
+    default: "Business Lifeline",
+    template: "%s | Business Lifeline",
+  },
+  description: "Run a Business MRI, diagnose financial pressure, and turn the result into a practical recovery plan and operating system.",
+  applicationName: "Business Lifeline",
+  keywords: ["business recovery", "cashflow", "small business", "business MRI", "turnaround planning"],
+  robots: { index: true, follow: true },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#071b2d",
 };
 
 export default function RootLayout({
