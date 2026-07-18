@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ActionCentre } from "@/components/action-centre";
 import { ScenarioPlanner } from "@/components/scenario-planner";
 import type { BusinessData, BusinessReport } from "@/lib/types";
 
@@ -45,6 +46,7 @@ export function SavedScenarioPlanner() {
 
   return (
     <div className="scenario-planner-shell">
+      <ActionCentre report={saved.report} />
       <ScenarioPlanner data={saved.data} report={saved.report} />
     </div>
   );
