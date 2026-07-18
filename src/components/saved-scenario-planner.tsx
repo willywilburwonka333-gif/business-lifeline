@@ -16,11 +16,13 @@ import { workspaceTabs, type WorkspaceTab } from "@/lib/workspace";
 
 const DEMO_GUIDE_KEY = "business-lifeline-demo-guide-v1";
 const guideSteps: Array<{ tab: WorkspaceTab; title: string; copy: string }> = [
-  { tab: "dashboard", title: "Understand the crisis", copy: "See health, cash pressure, risks and immediate priorities." },
-  { tab: "brain", title: "See GPT-5.6 interpretation", copy: "Review grounded diagnosis, root causes and missing information." },
-  { tab: "cashflow", title: "Test a recovery", copy: "Change price, costs and collections to model the outcome." },
-  { tab: "recovery", title: "Open the playbook", copy: "Turn the diagnosis into today, 7-day, 30-day and 90-day action." },
-  { tab: "operations", title: "Run the turnaround", copy: "Move the plan into tasks, responsibilities and controls." },
+  { tab: "dashboard", title: "Understand the crisis", copy: "See health, cash pressure, risks and the first priorities." },
+  { tab: "recovery", title: "Open the recovery plan", copy: "Use the timeline, recommended playbook and action centre." },
+  { tab: "coach", title: "Create weekly follow-through", copy: "Track completed actions, cash recovered and savings found." },
+  { tab: "brain", title: "Ask Business Brain", copy: "Review grounded GPT-5.6 interpretation and professional judgement points." },
+  { tab: "cashflow", title: "Test a recovery", copy: "Change price, costs, collections and funding to compare outcomes." },
+  { tab: "operations", title: "Run the turnaround", copy: "Move the plan into tasks, contacts, responsibilities and controls." },
+  { tab: "resources", title: "Execute difficult conversations", copy: "Use the one-page rescue sheet and pre-filled templates." },
 ];
 
 export function SavedScenarioPlanner({ saved, onReset }: { saved: SavedReport; onReset: () => void }) {
@@ -59,13 +61,13 @@ export function SavedScenarioPlanner({ saved, onReset }: { saved: SavedReport; o
 
   return (
     <div className="workspace-shell">
-      <nav className="workspace-tabs no-print" aria-label="Business Lifeline workspaces">
+      <nav className="workspace-tabs no-print" aria-label="Business Lifeline stages">
         <div className="workspace-tabs-brand">
           <span>Business Lifeline</span>
           <strong>{saved.data.businessName}</strong>
           <button className="workspace-reset" type="button" onClick={onReset}>Start a new MRI</button>
         </div>
-        <div className="workspace-tab-list" role="tablist" aria-label="Workspace tabs">
+        <div className="workspace-tab-list" role="tablist" aria-label="Recovery stages">
           {workspaceTabs.map((tab) => (
             <button
               id={`workspace-tab-${tab.id}`}
@@ -78,6 +80,7 @@ export function SavedScenarioPlanner({ saved, onReset }: { saved: SavedReport; o
               className={activeTab === tab.id ? "active" : ""}
               onClick={() => openTab(tab.id)}
             >
+              <small>Stage {tab.stage}</small>
               <strong>{tab.label}</strong>
               <span>{tab.detail}</span>
             </button>
@@ -89,13 +92,13 @@ export function SavedScenarioPlanner({ saved, onReset }: { saved: SavedReport; o
         <aside className="demo-guide no-print" aria-live="polite">
           <div className="demo-guide-progress"><span style={{ width: `${((guideIndex + 1) / guideSteps.length) * 100}%` }} /></div>
           <div className="demo-guide-copy">
-            <small>GUIDED DEMO · {guideIndex + 1} OF {guideSteps.length}</small>
+            <small>GUIDED DEMO · STAGE {guideIndex + 1} OF {guideSteps.length}</small>
             <strong>{guide.title}</strong>
             <p>{guide.copy}</p>
           </div>
           <div className="demo-guide-actions">
             <button type="button" className="button ghost" onClick={closeGuide}>Exit guide</button>
-            <button type="button" className="button primary" onClick={advanceGuide}>{guideIndex === guideSteps.length - 1 ? "Finish demo" : "Next step"} <span>→</span></button>
+            <button type="button" className="button primary" onClick={advanceGuide}>{guideIndex === guideSteps.length - 1 ? "Finish demo" : "Next stage"} <span>→</span></button>
           </div>
         </aside>
       )}
@@ -120,7 +123,7 @@ export function SavedScenarioPlanner({ saved, onReset }: { saved: SavedReport; o
         {activeTab === "cashflow" && <ScenarioPlanner data={saved.data} report={saved.report} />}
         {activeTab === "operations" && <BusinessOperatingSystem saved={saved} />}
         {activeTab === "resources" && (
-          <div className="workspace-section-stack">
+          <div className="workspace-section-stack resources-stage">
             <TodayActionSheet data={saved.data} report={saved.report} />
             <BusinessTemplates data={saved.data} />
           </div>
