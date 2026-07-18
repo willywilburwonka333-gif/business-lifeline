@@ -4,6 +4,7 @@ import "./tools.css";
 import "./print.css";
 import "./status.css";
 import "./accessibility.css";
+import "./mobile.css";
 
 export const metadata: Metadata = {
   title: "Business Lifeline | Business MRI",
