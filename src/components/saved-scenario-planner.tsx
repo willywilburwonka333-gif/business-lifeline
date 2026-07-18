@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ActionCentre } from "@/components/action-centre";
 import { BusinessTemplates } from "@/components/business-templates";
+import { ExecutiveSnapshot } from "@/components/executive-snapshot";
 import { ScenarioPlanner } from "@/components/scenario-planner";
 import type { BusinessData, BusinessReport } from "@/lib/types";
 
@@ -47,6 +48,7 @@ export function SavedScenarioPlanner() {
 
   return (
     <div className="scenario-planner-shell">
+      <ExecutiveSnapshot data={saved.data} report={saved.report} />
       <ActionCentre report={saved.report} />
       <ScenarioPlanner data={saved.data} report={saved.report} />
       <BusinessTemplates data={saved.data} />
