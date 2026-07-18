@@ -37,5 +37,5 @@ test("Business OS summary reports execution and control coverage", () => {
   assert.equal(summary.openTasks, 1);
   assert.equal(summary.completion, 50);
   assert.equal(summary.nextActions, 1);
-  assert.equal(summary.currentDocuments, 2);
+  assert.equal(summary.currentDocuments, 1);
 });
