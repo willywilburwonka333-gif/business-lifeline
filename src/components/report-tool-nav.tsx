@@ -1,6 +1,7 @@
 export function ReportToolNav() {
   const links = [
     ["snapshot", "Snapshot"],
+    ["timeline", "Recovery"],
     ["actions", "Action Centre"],
     ["scenarios", "Scenario Planner"],
     ["templates", "Templates"],
