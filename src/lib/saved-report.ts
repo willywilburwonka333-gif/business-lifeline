@@ -1,4 +1,4 @@
-import type { BusinessData, BusinessReport, HealthMetrics, PlanAction } from "@/lib/types";
+import type { BusinessData, BusinessReport, HealthMetrics, PlanAction } from "./types";
 
 export const REPORT_STORAGE_KEY = "business-lifeline-mri-v2";
 
