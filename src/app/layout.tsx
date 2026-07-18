@@ -8,6 +8,7 @@ import "./mobile.css";
 import "./submission-polish.css";
 import "./executive-dashboard.css";
 import "./recovery-coach.css";
+import "./business-brain.css";
 
 export const metadata: Metadata = {
   title: "Business Lifeline | Business MRI",
