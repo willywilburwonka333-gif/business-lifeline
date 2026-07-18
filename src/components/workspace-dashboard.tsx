@@ -1,5 +1,6 @@
 "use client";
 
+import { selectPlaybook } from "@/lib/recovery-playbooks";
 import type { SavedReport } from "@/lib/saved-report";
 import type { WorkspaceTab } from "@/lib/workspace";
 
@@ -19,53 +20,79 @@ const money = (value: number, country: string) =>
     maximumFractionDigits: 0,
   }).format(value);
 
+const healthLabel = (score: number) => {
+  if (score >= 70) return "Stable";
+  if (score >= 45) return "Under pressure";
+  return "Critical";
+};
+
 export function WorkspaceDashboard({ saved, openTab }: { saved: SavedReport; openTab: (tab: WorkspaceTab) => void }) {
   const { data, report } = saved;
-  const overdue = data.overdueInvoices;
+  const metrics = report.metrics;
   const obligations = data.overdueTax + data.overdueSuppliers;
-  const topActions = [...report.today, ...report.sevenDays].slice(0, 4);
-  const topRisks = [...report.warnings, ...report.risks].slice(0, 4);
-  const scoreTone = report.metrics.overallScore >= 70 ? "good" : report.metrics.overallScore >= 45 ? "watch" : "danger";
+  const topActions = [...report.today, ...report.sevenDays].slice(0, 3);
+  const topRisks = [...report.warnings, ...report.risks].filter((item, index, all) => all.indexOf(item) === index).slice(0, 3);
+  const scoreTone = metrics.overallScore >= 70 ? "good" : metrics.overallScore >= 45 ? "watch" : "danger";
+  const playbook = selectPlaybook(data, report);
+  const primaryPressure = report.warnings[0] || report.risks[0] || playbook.summary;
 
-  const shortcuts: Array<{ tab: WorkspaceTab; title: string; copy: string; action: string }> = [
-    { tab: "recovery", title: "Recovery plan", copy: "Timeline, playbook and priority actions.", action: "Open recovery" },
-    { tab: "coach", title: "Recovery coach", copy: "Track calls, savings and money recovered.", action: "Open coach" },
-    { tab: "brain", title: "Business Brain", copy: "Ask questions grounded in this MRI.", action: "Ask the Brain" },
-    { tab: "cashflow", title: "Cashflow simulator", copy: "Test pricing, sales, costs and collections.", action: "Run a scenario" },
-    { tab: "operations", title: "Business OS", copy: "Run tasks, contacts, team and controls.", action: "Open operations" },
-    { tab: "resources", title: "Resources", copy: "Templates and printable action sheets.", action: "Open resources" },
+  const shortcuts: Array<{ tab: WorkspaceTab; title: string; copy: string }> = [
+    { tab: "brain", title: "Business Brain", copy: "Understand the diagnosis and ask grounded questions." },
+    { tab: "cashflow", title: "Cashflow simulator", copy: "Test the financial effect of recovery decisions." },
+    { tab: "operations", title: "Business OS", copy: "Turn the plan into owned, trackable weekly work." },
+    { tab: "coach", title: "Recovery coach", copy: "Record progress, savings and money recovered." },
+    { tab: "resources", title: "Resources", copy: "Use practical templates and the printable action sheet." },
   ];
 
   return (
-    <section className="workspace-dashboard" aria-label="Business overview dashboard">
-      <header className="workspace-dashboard-hero">
-        <div>
-          <span className="workspace-kicker">Business command dashboard</span>
+    <section className="workspace-dashboard stage9-dashboard" aria-label="Business overview dashboard">
+      <header className="workspace-dashboard-hero stage9-hero">
+        <div className="stage9-hero-copy">
+          <span className="workspace-kicker">Business recovery command centre</span>
           <h2>{data.businessName}</h2>
           <p>{data.immediateGoal || "Stabilise the business and restore control."}</p>
+          <div className="stage9-hero-actions">
+            <button className="button primary" type="button" onClick={() => openTab("recovery")}>Start recovery</button>
+            <button className="button stage9-secondary" type="button" onClick={() => openTab("cashflow")}>Test a scenario</button>
+          </div>
         </div>
         <div className={`workspace-score ${scoreTone}`}>
-          <small>Health score</small>
-          <strong>{report.metrics.overallScore}</strong>
+          <small>Business health</small>
+          <strong>{metrics.overallScore}</strong>
           <span>/100</span>
+          <b>{healthLabel(metrics.overallScore)}</b>
         </div>
       </header>
 
-      <div className="workspace-metric-grid">
+      <section className="stage9-pressure" aria-label="Primary pressure and recommended playbook">
+        <div>
+          <span>Primary pressure</span>
+          <strong>{primaryPressure}</strong>
+        </div>
+        <div>
+          <span>Recommended pathway</span>
+          <button type="button" onClick={() => openTab("recovery")}>
+            <strong>{playbook.name}</strong>
+            <small>{playbook.severity} priority · Open playbook →</small>
+          </button>
+        </div>
+      </section>
+
+      <div className="workspace-metric-grid stage9-metrics">
         <article>
           <span>Monthly result</span>
-          <strong className={report.metrics.monthlyOperatingResult < 0 ? "negative" : "positive"}>{money(report.metrics.monthlyOperatingResult, data.country)}</strong>
-          <small>{report.metrics.monthlyOperatingResult < 0 ? "Operating loss needs action" : "Currently cash-generative"}</small>
+          <strong className={metrics.monthlyOperatingResult < 0 ? "negative" : "positive"}>{money(metrics.monthlyOperatingResult, data.country)}</strong>
+          <small>{metrics.monthlyOperatingResult < 0 ? "Loss at current settings" : "Positive at current settings"}</small>
         </article>
         <article>
-          <span>Cash available</span>
-          <strong>{money(data.cashAvailable, data.country)}</strong>
-          <small>{report.metrics.runwayMonths === null ? "Positive monthly result" : `${report.metrics.runwayMonths} months estimated runway`}</small>
+          <span>Cash runway</span>
+          <strong>{metrics.runwayMonths === null ? "Cash positive" : `${metrics.runwayMonths} months`}</strong>
+          <small>{money(data.cashAvailable, data.country)} currently available</small>
         </article>
         <article>
           <span>Overdue invoices</span>
-          <strong>{money(overdue, data.country)}</strong>
-          <small>{overdue > 0 ? "Potential near-term cash source" : "No overdue invoices recorded"}</small>
+          <strong>{money(data.overdueInvoices, data.country)}</strong>
+          <small>{data.overdueInvoices > 0 ? "Potential cash to collect" : "Nothing overdue recorded"}</small>
         </article>
         <article>
           <span>Overdue obligations</span>
@@ -74,11 +101,11 @@ export function WorkspaceDashboard({ saved, openTab }: { saved: SavedReport; ope
         </article>
       </div>
 
-      <div className="workspace-dashboard-columns">
-        <section className="workspace-summary-card">
+      <div className="workspace-dashboard-columns stage9-main-grid">
+        <section className="workspace-summary-card stage9-priorities">
           <div className="workspace-card-heading">
-            <div><span>Do next</span><h3>Immediate priorities</h3></div>
-            <button type="button" onClick={() => openTab("recovery")}>View full plan</button>
+            <div><span>Act first</span><h3>Top three priorities</h3></div>
+            <button type="button" onClick={() => openTab("recovery")}>Full recovery plan →</button>
           </div>
           <div className="workspace-priority-list">
             {topActions.length ? topActions.map((action, index) => (
@@ -91,26 +118,31 @@ export function WorkspaceDashboard({ saved, openTab }: { saved: SavedReport; ope
           </div>
         </section>
 
-        <section className="workspace-summary-card">
+        <section className="workspace-summary-card stage9-risks">
           <div className="workspace-card-heading">
             <div><span>Watch closely</span><h3>Main risks</h3></div>
-            <button type="button" onClick={() => openTab("brain")}>Ask Business Brain</button>
+            <button type="button" onClick={() => openTab("brain")}>Ask Business Brain →</button>
           </div>
           <ul className="workspace-risk-list">
             {topRisks.length ? topRisks.map((risk, index) => <li key={`${risk}-${index}`}>{risk}</li>) : <li>No major risks were recorded in this MRI.</li>}
           </ul>
-          {report.urgentHelp && <aside className="workspace-alert"><strong>Professional help is recommended.</strong><span>Use the Recovery tab to see the escalation guidance.</span></aside>}
+          {report.urgentHelp && (
+            <aside className="workspace-alert">
+              <strong>Professional help is recommended now.</strong>
+              <span>The Recovery tab contains the escalation guidance.</span>
+            </aside>
+          )}
         </section>
       </div>
 
-      <section className="workspace-shortcuts">
-        <div className="workspace-section-heading"><span>Workspaces</span><h3>Choose what you need to do</h3></div>
+      <section className="workspace-shortcuts stage9-shortcuts">
+        <div className="workspace-section-heading"><span>Next workspaces</span><h3>Move from insight to action</h3></div>
         <div className="workspace-shortcut-grid">
           {shortcuts.map((item) => (
             <button key={item.tab} type="button" onClick={() => openTab(item.tab)}>
               <strong>{item.title}</strong>
               <span>{item.copy}</span>
-              <b>{item.action} →</b>
+              <b>Open →</b>
             </button>
           ))}
         </div>
