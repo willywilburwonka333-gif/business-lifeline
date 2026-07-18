@@ -21,6 +21,7 @@ export type BusinessData = {
   biggestProblem: string;
   immediateGoal: string;
   urgentConcerns: string[];
+  pressureFactors?: string[];
 };
 
 export type HealthMetrics = {
@@ -76,6 +77,7 @@ export type BusinessReport = {
   sevenDays: PlanAction[];
   thirtyDays: PlanAction[];
   ninetyDays: PlanAction[];
+  industryRecommendations: string[];
   aiAnalysis?: AiAnalysis;
   aiStatus?: "ready" | "fallback";
 };
