@@ -1,0 +1,151 @@
+/* Final submission polish — consistent seven-stage product system */
+.workspace-shell,
+.workspace-shell button,
+.workspace-shell input,
+.workspace-shell textarea,
+.workspace-shell select {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.workspace-shell h1,
+.workspace-shell h2,
+.workspace-shell h3,
+.workspace-shell h4,
+.workspace-shell strong {
+  font-family: Arial, Helvetica, sans-serif;
+  letter-spacing: -0.025em;
+}
+
+.workspace-tab-list > button {
+  min-width: 176px;
+  gap: 4px;
+  align-content: center;
+}
+.workspace-tab-list > button small {
+  display: block;
+  color: #f3a47d;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.workspace-tab-list > button.active small { color: #b64e28; }
+.workspace-tab-list > button strong,
+.workspace-tab-list > button span {
+  max-width: 100%;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+.workspace-tab-list > button strong { line-height: 1.08; }
+.workspace-tab-list > button span { line-height: 1.25; }
+
+/* Replace legacy internal stage labels with the same seven-stage order. */
+.stage9-hero .workspace-kicker { font-size: 0; }
+.stage9-hero .workspace-kicker::after { content: "STAGE 1 · COMMAND DASHBOARD"; font-size: 11px; }
+.recovery-timeline > .section-heading::before,
+.recovery-playbooks > .section-heading::before,
+.workspace-section-stack > .panel > .section-heading::before,
+.resources-stage::before {
+  display: block;
+  margin-bottom: 9px;
+  color: var(--orange);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.recovery-timeline > .section-heading::before { content: "STAGE 2 · RECOVERY PLAN"; }
+.recovery-playbooks > .section-heading::before { content: "STAGE 2 · RECOMMENDED PLAYBOOK"; }
+.workspace-section-stack > .panel > .section-heading::before { content: "STAGE 2 · ACTION CENTRE"; }
+.resources-stage::before { content: "STAGE 7 · RESOURCES AND TEMPLATES"; margin: 0 0 -2px 4px; }
+.recovery-coach .section-heading > span,
+.business-brain .section-heading .eyebrow,
+.scenario-planner .section-heading > span { font-size: 0 !important; }
+.recovery-coach .section-heading > span::after { content: "STAGE 3 · RECOVERY COACH"; font-size: 11px; }
+.business-brain .section-heading .eyebrow::after { content: "STAGE 4 · BUSINESS BRAIN"; font-size: 11px; }
+.scenario-planner .section-heading > span::after { content: "STAGE 5 · CASHFLOW SIMULATOR"; font-size: 11px; }
+
+/* Financial urgency is visible at a glance. */
+.workspace-score.danger,
+.workspace-score.danger strong,
+.workspace-score.danger b,
+.recovery-summary .negative,
+.stage9-metrics .negative,
+.sheet-metrics .negative { color: #a92f2a !important; }
+.workspace-score.danger { border-color: #d8564e !important; box-shadow: inset 6px 0 0 #d8564e; }
+.workspace-score.good,
+.workspace-score.good strong,
+.workspace-score.good b,
+.positive { color: #247557 !important; }
+.stage9-metrics article:has(.negative),
+.recovery-summary article:has(.negative) { background: #fff7f5; }
+.stage9-metrics article:has(.positive),
+.recovery-summary article:has(.positive) { background: #f3faf6; }
+
+/* Business Brain must read as a primary action. */
+.business-brain .brain-form .button.primary,
+.stage9-risks .workspace-card-heading button {
+  background: var(--orange);
+  border-color: var(--orange);
+  color: #fff;
+  font-weight: 850;
+}
+.stage9-risks .workspace-card-heading button { padding: 10px 14px; border-radius: 8px; }
+
+/* Repeated completion actions should not dominate the recovery content. */
+.action-card > .button.primary {
+  min-height: 44px;
+  background: #fff7f2;
+  border: 1px solid #ef9b71;
+  color: #a94426;
+  box-shadow: none;
+  font-weight: 800;
+}
+.action-card > .button.primary:hover { background: #ffede4; }
+.action-card > .button.ghost[aria-pressed="true"] {
+  background: #edf7f1;
+  border-color: #9bc8b0;
+  color: #23684d;
+}
+
+/* Copy confirmation toast */
+.copy-toast {
+  position: fixed;
+  z-index: 100;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, calc(env(safe-area-inset-bottom) + 18px));
+  max-width: min(360px, calc(100vw - 36px));
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: #071b2d;
+  color: #fff;
+  box-shadow: 0 16px 45px rgba(7,27,45,.28);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+@media (max-width: 760px) {
+  .workspace-tabs { padding-bottom: 14px; }
+  .workspace-tab-list { gap: 10px; scroll-padding-inline: 14px; }
+  .workspace-tab-list > button {
+    flex: 0 0 min(70vw, 250px);
+    min-width: min(70vw, 250px);
+    min-height: 112px;
+    padding: 18px 20px;
+  }
+  .workspace-tab-list > button strong { font-size: 18px; }
+  .workspace-tab-list > button span { font-size: 13px; }
+  .workspace-panel h2,
+  .workspace-panel h3 { line-height: 1.08; }
+  .stage9-hero h2 { font-size: clamp(38px, 12vw, 54px); }
+  .business-brain .brain-form .button.primary,
+  .action-card > .button { width: 100%; }
+}
+
+@media (max-width: 390px) {
+  .workspace-tab-list > button {
+    flex-basis: 74vw;
+    min-width: 74vw;
+  }
+}
