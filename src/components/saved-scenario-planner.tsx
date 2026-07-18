@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ActionCentre } from "@/components/action-centre";
 import { BusinessBrain } from "@/components/business-brain";
+import { BusinessOperatingSystem } from "@/components/business-operating-system";
 import { BusinessTemplates } from "@/components/business-templates";
 import { ExecutiveSnapshot } from "@/components/executive-snapshot";
 import { RecoveryCoach } from "@/components/recovery-coach";
@@ -35,6 +36,7 @@ export function SavedScenarioPlanner() {
     <div className="scenario-planner-shell">
       <ReportToolNav />
       <div id="snapshot" className="report-tool-anchor"><ExecutiveSnapshot data={saved.data} report={saved.report} /></div>
+      <div id="operating-system" className="report-tool-anchor"><BusinessOperatingSystem saved={saved} /></div>
       <div id="timeline" className="report-tool-anchor"><RecoveryTimeline saved={saved} /></div>
       <div id="coach" className="report-tool-anchor"><RecoveryCoach data={saved.data} report={saved.report} /></div>
       <div id="brain" className="report-tool-anchor"><BusinessBrain saved={saved} /></div>
