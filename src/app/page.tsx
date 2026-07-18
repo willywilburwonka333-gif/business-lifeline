@@ -4,10 +4,10 @@ import { SavedScenarioPlanner } from "@/components/saved-scenario-planner";
 
 export default function Home() {
   return (
-    <>
+    <div id="main-content" tabIndex={-1}>
       <SavedReportGuard />
       <BusinessLifeline />
       <SavedScenarioPlanner />
-    </>
+    </div>
   );
 }
