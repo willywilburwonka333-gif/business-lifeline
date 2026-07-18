@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import { AnalysisProvenance } from "@/components/analysis-provenance";
 import type { SavedReport } from "@/lib/saved-report";
 import { readRecoveryHistory } from "@/lib/recovery-history";
 import { coachProgress, readCoachCheckIn } from "@/lib/recovery-coach";
@@ -13,7 +14,7 @@ type BrainAnswer = {
   professionalHelp: { recommended: boolean; type: string; reason: string };
 };
 
-type ConversationItem = { question: string; answer: BrainAnswer };
+type ConversationItem = { question: string; answer: BrainAnswer; source: "gpt" | "rules" };
 
 const suggestions = [
   "What should I do first this week?",
@@ -37,7 +38,7 @@ function localFallback(saved: SavedReport, question: string): BrainAnswer {
       `Cash available: ${data.cashAvailable.toLocaleString("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 0 })}.`,
       `Monthly operating result: ${monthly.toLocaleString("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 0 })}.`,
     ],
-    nextSteps: urgent ? [urgent.title, "Use the Scenario Planner to test the financial effect before committing."] : ["Review the MRI priorities and test the decision in the Scenario Planner."],
+    nextSteps: urgent ? [urgent.title, "Use the Cashflow Simulator to test the financial effect before committing."] : ["Review the MRI priorities and test the decision in the Cashflow Simulator."],
     watchOutFor: report.warnings.slice(0, 3),
     professionalHelp: {
       recommended: report.urgentHelp,
@@ -90,11 +91,11 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
       if (!response.ok) throw new Error("Business Brain is temporarily unavailable.");
       const payload = (await response.json()) as { answer?: BrainAnswer };
       if (!payload.answer) throw new Error("Business Brain returned no usable answer.");
-      setConversation((current) => [...current, { question: cleaned, answer: payload.answer! }].slice(-6));
+      setConversation((current) => [...current, { question: cleaned, answer: payload.answer!, source: "gpt" }].slice(-6));
       setQuestion("");
     } catch (caught) {
       const fallback = localFallback(saved, cleaned);
-      setConversation((current) => [...current, { question: cleaned, answer: fallback }].slice(-6));
+      setConversation((current) => [...current, { question: cleaned, answer: fallback, source: "rules" }].slice(-6));
       setQuestion("");
       setError(caught instanceof Error ? `${caught.message} Showing a calculation-based answer instead.` : "Showing a calculation-based answer instead.");
     } finally {
@@ -106,9 +107,11 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
     <section className="business-brain" aria-labelledby="business-brain-title">
       <div className="section-heading">
         <div><p className="eyebrow">Stage 3 · Contextual adviser</p><h3 id="business-brain-title">Business Brain</h3></div>
-        <span className="brain-context-badge">Using this business&apos;s MRI</span>
+        <span className="brain-context-badge">Grounded in this MRI</span>
       </div>
-      <p className="template-note">Ask a decision question. The answer is grounded in the saved MRI, recovery checkpoints, coach progress, risks and rescue plan.</p>
+      <p className="template-note">Ask a real decision question. GPT-5.6 interprets the saved MRI, recovery checkpoints, coach progress, risks and rescue plan. The financial figures remain calculation-based.</p>
+
+      <AnalysisProvenance report={saved.report} compact />
 
       <div className="brain-context-grid" aria-label="Business Brain context">
         <article><span>Health</span><strong>{contextSummary.health}/100</strong></article>
@@ -124,21 +127,21 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
       <form className="brain-form no-print" onSubmit={ask}>
         <label htmlFor="brain-question">Ask about a real business decision</label>
         <textarea id="brain-question" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={1000} rows={4} placeholder="Example: Can I afford to hire another employee right now?" />
-        <button className="button primary" type="submit" disabled={loading || question.trim().length < 3}>{loading ? "Thinking with your MRI…" : "Ask Business Brain"}</button>
+        <button className="button primary" type="submit" disabled={loading || question.trim().length < 3}>{loading ? "Interpreting the MRI…" : "Ask Business Brain"}</button>
       </form>
 
       {error && <p className="brain-error" role="status">{error}</p>}
 
       <div className="brain-conversation" aria-live="polite">
-        {conversation.length === 0 && <div className="brain-empty"><strong>No question asked yet.</strong><p>Start with one decision that is keeping you awake. Business Brain will explain what the current figures support, what they do not prove, and what to do next.</p></div>}
+        {conversation.length === 0 && <div className="brain-empty"><strong>No question asked yet.</strong><p>Start with one decision that is keeping you awake. Business Brain will separate what the figures support, what requires judgement and what should be verified professionally.</p></div>}
         {conversation.map((item, index) => (
           <article className="brain-answer" key={`${item.question}-${index}`}>
             <p className="brain-question"><span>You asked</span>{item.question}</p>
-            <div className="brain-main-answer"><span>Business Brain</span><p>{item.answer.answer}</p></div>
+            <div className="brain-main-answer"><span>{item.source === "gpt" ? "GPT-5.6 interpretation" : "Calculation-based fallback"}</span><p>{item.answer.answer}</p></div>
             <div className="brain-answer-grid">
-              <section><h4>Why this answer</h4><ul>{item.answer.reasoningSummary.map((line) => <li key={line}>{line}</li>)}</ul></section>
-              <section><h4>Next steps</h4><ol>{item.answer.nextSteps.map((line) => <li key={line}>{line}</li>)}</ol></section>
-              {item.answer.watchOutFor.length > 0 && <section><h4>Watch out for</h4><ul>{item.answer.watchOutFor.map((line) => <li key={line}>{line}</li>)}</ul></section>}
+              <section><h4>Facts used</h4><ul>{item.answer.reasoningSummary.map((line) => <li key={line}>{line}</li>)}</ul></section>
+              <section><h4>Recommended next steps</h4><ol>{item.answer.nextSteps.map((line) => <li key={line}>{line}</li>)}</ol></section>
+              {item.answer.watchOutFor.length > 0 && <section><h4>Risks and unknowns</h4><ul>{item.answer.watchOutFor.map((line) => <li key={line}>{line}</li>)}</ul></section>}
             </div>
             <aside className={item.answer.professionalHelp.recommended ? "brain-escalation warning" : "brain-escalation"}>
               <strong>{item.answer.professionalHelp.recommended ? "Professional help recommended" : "Professional judgement point"}</strong>
