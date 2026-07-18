@@ -135,7 +135,7 @@ export async function POST(request: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || "gpt-5",
+        model: process.env.OPENAI_MODEL || "gpt-5.6",
         store: false,
         input: [
           {
