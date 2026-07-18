@@ -5,17 +5,29 @@ import { ActionCentre } from "@/components/action-centre";
 import { BusinessBrain } from "@/components/business-brain";
 import { BusinessOperatingSystem } from "@/components/business-operating-system";
 import { BusinessTemplates } from "@/components/business-templates";
-import { ExecutiveSnapshot } from "@/components/executive-snapshot";
 import { RecoveryCoach } from "@/components/recovery-coach";
 import { RecoveryPlaybooks } from "@/components/recovery-playbooks";
 import { RecoveryTimeline } from "@/components/recovery-timeline";
-import { ReportToolNav } from "@/components/report-tool-nav";
 import { ScenarioPlanner } from "@/components/scenario-planner";
 import { TodayActionSheet } from "@/components/today-action-sheet";
+import { WorkspaceDashboard } from "@/components/workspace-dashboard";
 import { readSavedReport, type SavedReport } from "@/lib/saved-report";
+
+type WorkspaceTab = "dashboard" | "recovery" | "coach" | "brain" | "cashflow" | "operations" | "resources";
+
+const tabs: Array<{ id: WorkspaceTab; label: string; detail: string }> = [
+  { id: "dashboard", label: "Dashboard", detail: "Overview" },
+  { id: "recovery", label: "Recovery", detail: "Plan and timeline" },
+  { id: "coach", label: "Coach", detail: "Weekly follow-through" },
+  { id: "brain", label: "Business Brain", detail: "Grounded advice" },
+  { id: "cashflow", label: "Cashflow", detail: "Simulator" },
+  { id: "operations", label: "Operations", detail: "Business OS" },
+  { id: "resources", label: "Resources", detail: "Sheets and templates" },
+];
 
 export function SavedScenarioPlanner() {
   const [saved, setSaved] = useState<SavedReport | null>(null);
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>("dashboard");
 
   useEffect(() => {
     const sync = () => setSaved(readSavedReport());
@@ -30,21 +42,59 @@ export function SavedScenarioPlanner() {
     };
   }, []);
 
+  const openTab = (tab: WorkspaceTab) => {
+    setActiveTab(tab);
+    window.requestAnimationFrame(() => {
+      document.querySelector(".workspace-tabs")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
   if (!saved) return null;
 
   return (
-    <div className="scenario-planner-shell">
-      <ReportToolNav />
-      <div id="snapshot" className="report-tool-anchor"><ExecutiveSnapshot data={saved.data} report={saved.report} /></div>
-      <div id="operating-system" className="report-tool-anchor"><BusinessOperatingSystem saved={saved} /></div>
-      <div id="timeline" className="report-tool-anchor"><RecoveryTimeline saved={saved} /></div>
-      <div id="coach" className="report-tool-anchor"><RecoveryCoach data={saved.data} report={saved.report} /></div>
-      <div id="brain" className="report-tool-anchor"><BusinessBrain saved={saved} /></div>
-      <div id="playbooks" className="report-tool-anchor"><RecoveryPlaybooks saved={saved} /></div>
-      <div id="today-sheet" className="report-tool-anchor"><TodayActionSheet data={saved.data} report={saved.report} /></div>
-      <div id="actions" className="report-tool-anchor"><ActionCentre report={saved.report} /></div>
-      <div id="scenarios" className="report-tool-anchor"><ScenarioPlanner data={saved.data} report={saved.report} /></div>
-      <div id="templates" className="report-tool-anchor"><BusinessTemplates data={saved.data} /></div>
+    <div className="workspace-shell">
+      <nav className="workspace-tabs no-print" aria-label="Business Lifeline workspaces">
+        <div className="workspace-tabs-brand">
+          <span>Business Lifeline</span>
+          <strong>{saved.data.businessName}</strong>
+        </div>
+        <div className="workspace-tab-list" role="tablist" aria-label="Workspace tabs">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              className={activeTab === tab.id ? "active" : ""}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <strong>{tab.label}</strong>
+              <span>{tab.detail}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      <main className="workspace-panel" role="tabpanel" aria-label={tabs.find((tab) => tab.id === activeTab)?.label}>
+        {activeTab === "dashboard" && <WorkspaceDashboard saved={saved} openTab={openTab} />}
+        {activeTab === "recovery" && (
+          <div className="workspace-section-stack">
+            <RecoveryTimeline saved={saved} />
+            <RecoveryPlaybooks saved={saved} />
+            <ActionCentre report={saved.report} />
+          </div>
+        )}
+        {activeTab === "coach" && <RecoveryCoach data={saved.data} report={saved.report} />}
+        {activeTab === "brain" && <BusinessBrain saved={saved} />}
+        {activeTab === "cashflow" && <ScenarioPlanner data={saved.data} report={saved.report} />}
+        {activeTab === "operations" && <BusinessOperatingSystem saved={saved} />}
+        {activeTab === "resources" && (
+          <div className="workspace-section-stack">
+            <TodayActionSheet data={saved.data} report={saved.report} />
+            <BusinessTemplates data={saved.data} />
+          </div>
+        )}
+      </main>
     </div>
   );
 }
