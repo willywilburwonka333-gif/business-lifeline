@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { applyCashflowAssumptions, emptyCashflowAssumptions, rankSimulationImpacts, type CashflowAssumptions } from "@/lib/cashflow-simulator";
 import { generateReport } from "@/lib/planner";
+import { buildRecoveryOutcome } from "@/lib/recovery-outcome";
 import type { BusinessData, BusinessReport } from "@/lib/types";
 
 const currencyFor = (country: string) => country.toLowerCase().includes("australia") ? "AUD" : country.toLowerCase().includes("new zealand") ? "NZD" : country.toLowerCase().includes("united kingdom") ? "GBP" : country.toLowerCase().includes("canada") ? "CAD" : "USD";
@@ -48,6 +49,7 @@ export function ScenarioPlanner({ data, report }: { data: BusinessData; report: 
   const originalRunway = report.metrics.runwayMonths;
   const projectedRunway = projected.metrics.runwayMonths;
   const runwayDelta = originalRunway === null || projectedRunway === null ? null : Number((projectedRunway - originalRunway).toFixed(1));
+  const outcome = useMemo(() => buildRecoveryOutcome(data, report, projectedData, projected, assumptions), [data, report, projectedData, projected, assumptions]);
 
   const interpretation = !changed
     ? "Adjust the recovery levers to model a realistic plan. The figures update immediately."
@@ -103,6 +105,25 @@ export function ScenarioPlanner({ data, report }: { data: BusinessData; report: 
           </div>
 
           <aside className={`scenario-interpretation ${resultDelta < 0 || scoreDelta < 0 ? "warning" : ""}`}><b>What this scenario means</b><p>{interpretation}</p></aside>
+
+          {changed && (
+            <section className={`recovery-outcome ${outcome.status}`} aria-live="polite">
+              <div className="recovery-outcome-heading">
+                <div><span>Recovery outcome</span><h4>{outcome.headline}</h4></div>
+                <b>{scenarioName.trim() || "Recovery option"}</b>
+              </div>
+              <div className="recovery-outcome-metrics">
+                <article><span>Monthly improvement</span><strong>{money(outcome.monthlyImprovement, data.country)}</strong></article>
+                <article><span>Projected result</span><strong>{money(outcome.projectedMonthlyResult, data.country)}</strong></article>
+                <article><span>Projected cash</span><strong>{money(outcome.projectedCash, data.country)}</strong></article>
+                <article><span>Runway change</span><strong>{outcome.runwayChange === null ? (projectedRunway === null ? "Cash positive" : "Not comparable") : signed(outcome.runwayChange, " months")}</strong></article>
+              </div>
+              <div className="recovery-outcome-plan">
+                <section><span>Validate next</span><ol>{outcome.nextActions.map((action) => <li key={action}>{action}</li>)}</ol></section>
+                <aside><span>Next review</span><strong>{outcome.reviewWindow}</strong><p>{outcome.professionalRecommendation}</p></aside>
+              </div>
+            </section>
+          )}
 
           <div className="impact-ranking">
             <div><span>Ranked impact</span><h4>What moves the result most</h4></div>
