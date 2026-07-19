@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { BusinessOsScrollAssist } from "@/components/business-os-scroll-assist";
 import { ConnectionStatus } from "@/components/connection-status";
 import "./globals.css";
 import "./tools.css";
@@ -37,5 +38,5 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#071b2d" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body><a className="skip-link" href="#main-content">Skip to main content</a><ConnectionStatus />{children}</body></html>;
+  return <html lang="en"><body><a className="skip-link" href="#main-content">Skip to main content</a><ConnectionStatus /><BusinessOsScrollAssist />{children}</body></html>;
 }
