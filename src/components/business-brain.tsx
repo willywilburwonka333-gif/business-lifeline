@@ -3,7 +3,6 @@
 import { FormEvent, useMemo, useState } from "react";
 import { AnalysisProvenance } from "@/components/analysis-provenance";
 import type { SavedReport } from "@/lib/saved-report";
-import { readRecoveryHistory } from "@/lib/recovery-history";
 import { coachProgress, readCoachCheckIn } from "@/lib/recovery-coach";
 
 type BrainAnswer = {
@@ -48,11 +47,39 @@ function localFallback(saved: SavedReport, question: string): BrainAnswer {
   };
 }
 
+function exportLocalData() {
+  const records: Record<string, unknown> = {};
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const key = window.localStorage.key(index);
+    if (!key?.startsWith("business-lifeline-")) continue;
+    const raw = window.localStorage.getItem(key);
+    try { records[key] = raw ? JSON.parse(raw) : null; } catch { records[key] = raw; }
+  }
+  const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), records }, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `business-lifeline-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function deleteLocalData() {
+  const keys: string[] = [];
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const key = window.localStorage.key(index);
+    if (key?.startsWith("business-lifeline-")) keys.push(key);
+  }
+  keys.forEach((key) => window.localStorage.removeItem(key));
+  window.location.reload();
+}
+
 export function BusinessBrain({ saved }: { saved: SavedReport }) {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [conversation, setConversation] = useState<ConversationItem[]>([]);
+  const [aiConsent, setAiConsent] = useState(false);
 
   const contextSummary = useMemo(() => {
     const coach = readCoachCheckIn();
@@ -68,25 +95,44 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
     event.preventDefault();
     const cleaned = question.trim();
     if (cleaned.length < 3 || loading) return;
+    if (!aiConsent) {
+      setError("Please confirm the AI privacy notice before sending business information for analysis.");
+      return;
+    }
+
     setLoading(true);
     setError("");
-
-    const recovery = readRecoveryHistory().slice(-8);
     const coach = readCoachCheckIn();
+    const context = {
+      industry: saved.data.industry,
+      country: saved.data.country,
+      monthlyRevenue: saved.data.monthlyRevenue,
+      monthlyOperatingResult: saved.report.metrics.monthlyOperatingResult,
+      cashAvailable: saved.data.cashAvailable,
+      totalDebt: saved.data.totalDebt,
+      overdueTax: saved.data.overdueTax,
+      overdueSuppliers: saved.data.overdueSuppliers,
+      revenueTrend: saved.data.revenueTrend,
+      urgentConcerns: saved.data.urgentConcerns,
+      pressureFactors: saved.data.pressureFactors ?? [],
+      metrics: {
+        overallScore: saved.report.metrics.overallScore,
+        runwayMonths: saved.report.metrics.runwayMonths,
+        operatingMargin: saved.report.metrics.operatingMargin,
+        expenseRatio: saved.report.metrics.expenseRatio,
+        debtPressure: saved.report.metrics.debtPressure,
+      },
+      warnings: saved.report.warnings.slice(0, 5),
+      risks: saved.report.risks.slice(0, 5),
+      today: saved.report.today.slice(0, 5).map(({ title, urgency, impact, difficulty, reason }) => ({ title, urgency, impact, difficulty, reason })),
+      coachProgress: coachProgress(coach, saved.report),
+    };
 
     try {
       const response = await fetch("/api/brain", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question: cleaned,
-          context: {
-            data: saved.data,
-            report: saved.report,
-            recovery,
-            coach: { ...coach, progress: coachProgress(coach, saved.report) },
-          },
-        }),
+        headers: { "Content-Type": "application/json", "X-Business-Lifeline-AI-Consent": "true" },
+        body: JSON.stringify({ question: cleaned, context, consent: true }),
       });
       if (!response.ok) throw new Error("Business Brain is temporarily unavailable.");
       const payload = (await response.json()) as { answer?: BrainAnswer };
@@ -111,7 +157,21 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
         <div><p className="eyebrow">Stage 3 · Contextual adviser</p><h3 id="business-brain-title">Business Brain</h3></div>
         <span className="brain-context-badge">Grounded in this MRI</span>
       </div>
-      <p className="template-note">Ask a real decision question. GPT-5.6 interprets the saved MRI, recovery checkpoints, coach progress, risks and rescue plan. The financial figures remain calculation-based.</p>
+      <p className="template-note">Ask a real decision question. Business Brain uses a minimised set of MRI figures and risks. Your business name, recovery notes and full history are not sent.</p>
+
+      <section className="panel" aria-labelledby="privacy-controls-title">
+        <p className="eyebrow">Privacy and control</p>
+        <h4 id="privacy-controls-title">You decide when information leaves this device</h4>
+        <p>Your saved records remain in this browser. When you use Business Brain, the displayed minimised business context and your question are securely sent through Business Lifeline to OpenAI. Requests are configured with model storage disabled.</p>
+        <label className="field">
+          <span><input type="checkbox" checked={aiConsent} onChange={(event) => setAiConsent(event.target.checked)} /> I understand and consent to this AI transmission for the question I submit.</span>
+        </label>
+        <div className="form-actions no-print">
+          <button type="button" className="button ghost" onClick={exportLocalData}>Export my local data</button>
+          <button type="button" className="button ghost" onClick={() => { if (window.confirm("Delete all Business Lifeline data stored in this browser? This cannot be undone.")) deleteLocalData(); }}>Delete all local data</button>
+        </div>
+        <small>Do not enter passwords, banking credentials, identity documents, tax file numbers, customer or employee personal information, or confidential contracts.</small>
+      </section>
 
       <AnalysisProvenance report={saved.report} compact />
 
@@ -129,7 +189,7 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
       <form className="brain-form no-print" onSubmit={ask}>
         <label htmlFor="brain-question">Ask about a real business decision</label>
         <textarea id="brain-question" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={1000} rows={4} placeholder="Example: Can I afford to hire another employee right now?" />
-        <button className="button primary" type="submit" disabled={loading || question.trim().length < 3}>{loading ? "Interpreting the MRI…" : "Ask Business Brain"}</button>
+        <button className="button primary" type="submit" disabled={loading || question.trim().length < 3 || !aiConsent}>{loading ? "Interpreting the MRI…" : "Ask Business Brain"}</button>
       </form>
 
       {error && <p className="brain-error" role="status">{error}</p>}
@@ -139,7 +199,7 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
         {conversation.map((item, index) => (
           <article className="brain-answer" key={`${item.question}-${index}`}>
             <p className="brain-question"><span>You asked</span>{item.question}</p>
-            <div className="brain-main-answer"><span>{item.source === "gpt" ? "GPT-5.6 interpretation" : "Calculation-based fallback"}</span><p>{item.answer.answer}</p></div>
+            <div className="brain-main-answer"><span>{item.source === "gpt" ? "AI interpretation" : "Calculation-based fallback"}</span><p>{item.answer.answer}</p></div>
             <div className="brain-answer-grid">
               <section><h4>Facts used</h4><ul>{item.answer.reasoningSummary.map((line) => <li key={line}>{line}</li>)}</ul></section>
               <section><h4>Recommended next steps</h4><ol>{item.answer.nextSteps.map((line) => <li key={line}>{line}</li>)}</ol></section>
