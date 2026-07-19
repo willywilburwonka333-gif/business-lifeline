@@ -4,17 +4,65 @@ import { useEffect, useMemo, useState } from "react";
 import { createBusinessOs, newOsId, osSummary, readBusinessOs, writeBusinessOs, type BusinessOsState, type OsContact, type OsTask, type OsTeamMember } from "@/lib/business-os";
 import type { SavedReport } from "@/lib/saved-report";
 
-const money = (value: number, country: string) => new Intl.NumberFormat("en", { style: "currency", currency: country.toLowerCase().includes("australia") ? "AUD" : "USD", maximumFractionDigits: 0 }).format(value);
+const currencyFor = (country: string) => country.toLowerCase().includes("australia") ? "AUD" : "USD";
+const currencySymbol = (country: string) => country.toLowerCase().includes("australia") ? "A$" : "$";
+const money = (value: number, country: string) => new Intl.NumberFormat("en", { style: "currency", currency: currencyFor(country), maximumFractionDigits: 0 }).format(value);
+const number = (value: number) => new Intl.NumberFormat("en", { maximumFractionDigits: 0 }).format(value);
+const parseMoney = (value: string) => Math.max(0, Number(value.replace(/[^0-9.-]/g, "")) || 0);
+const isRiverbendDemo = (saved: SavedReport) => saved.data.businessName.trim().toLowerCase() === "riverbend café";
+
+type TargetInputProps = {
+  label: string;
+  value: number;
+  country: string;
+  onChange: (value: number) => void;
+  onSave: () => void;
+};
+
+function TargetInput({ label, value, country, onChange, onSave }: TargetInputProps) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(number(value));
+
+  useEffect(() => {
+    if (!editing) setDraft(number(value));
+  }, [editing, value]);
+
+  const commit = () => {
+    const next = parseMoney(draft);
+    onChange(next);
+    setDraft(number(next));
+    setEditing(false);
+    window.setTimeout(onSave, 0);
+  };
+
+  return (
+    <label className="os-money-target">
+      <span>{label}</span>
+      <div>
+        <b>{currencySymbol(country)}</b>
+        <input
+          inputMode="numeric"
+          value={editing ? draft : number(value)}
+          onFocus={() => { setEditing(true); setDraft(String(value)); }}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={commit}
+          onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }}
+          aria-label={`${label} target in ${currencyFor(country)}`}
+        />
+      </div>
+    </label>
+  );
+}
 
 export function BusinessOperatingSystem({ saved }: { saved: SavedReport }) {
   const [state, setState] = useState<BusinessOsState>(() => createBusinessOs(saved));
   const [tab, setTab] = useState<"command" | "tasks" | "contacts" | "team" | "documents">("command");
   const [message, setMessage] = useState("");
+  const demo = isRiverbendDemo(saved);
 
   useEffect(() => setState(readBusinessOs(saved)), [saved]);
   const summary = useMemo(() => osSummary(state), [state]);
   const save = (next: BusinessOsState, note = "Business OS saved.") => { setState(next); writeBusinessOs(next); setMessage(note); window.setTimeout(() => setMessage(""), 1800); };
-  const update = <K extends keyof BusinessOsState>(key: K, value: BusinessOsState[K]) => save({ ...state, [key]: value });
 
   const addTask = () => {
     const task: OsTask = { id: newOsId("task"), title: "New priority", owner: "Owner", due: "This week", priority: "Normal", done: false };
@@ -36,6 +84,8 @@ export function BusinessOperatingSystem({ saved }: { saved: SavedReport }) {
         <div className="business-os-actions"><button className="button primary" type="button" onClick={addTask}>Add task</button><button className="button ghost" type="button" onClick={addContact}>Add contact</button></div>
       </header>
 
+      {demo && <aside className="os-demo-note"><strong>Example demo progress</strong><span>Riverbend includes one completed task, three sample relationships and one current control document so judges can see the operating system in motion. Reset from MRI restores this example state.</span></aside>}
+
       <div className="os-kpi-strip">
         <article><span>Health score</span><strong>{saved.report.metrics.overallScore}/100</strong><small>MRI baseline</small></article>
         <article><span>Task completion</span><strong>{summary.completion}%</strong><small>{summary.openTasks} still open</small></article>
@@ -49,7 +99,11 @@ export function BusinessOperatingSystem({ saved }: { saved: SavedReport }) {
 
       {tab === "command" && <div className="os-command-grid">
         <article className="os-panel os-focus"><span>This week’s focus</span><textarea value={state.weekFocus} onChange={(e) => setState({ ...state, weekFocus: e.target.value })} onBlur={() => writeBusinessOs(state)} /><p>Keep this to one outcome that matters most.</p></article>
-        <article className="os-panel"><span>Monthly targets</span><label>Revenue<input type="number" min="0" value={state.revenueTarget} onChange={(e) => setState({ ...state, revenueTarget: Math.max(0, Number(e.target.value) || 0) })} onBlur={() => writeBusinessOs(state)} /></label><label>Cash available<input type="number" min="0" value={state.cashTarget} onChange={(e) => setState({ ...state, cashTarget: Math.max(0, Number(e.target.value) || 0) })} onBlur={() => writeBusinessOs(state)} /></label><label>Invoices collected<input type="number" min="0" value={state.invoiceCollectionTarget} onChange={(e) => setState({ ...state, invoiceCollectionTarget: Math.max(0, Number(e.target.value) || 0) })} onBlur={() => writeBusinessOs(state)} /></label></article>
+        <article className="os-panel os-targets"><span>Monthly targets</span>
+          <TargetInput label="Revenue" value={state.revenueTarget} country={saved.data.country} onChange={(value) => setState((current) => ({ ...current, revenueTarget: value }))} onSave={() => writeBusinessOs(state)} />
+          <TargetInput label="Cash available" value={state.cashTarget} country={saved.data.country} onChange={(value) => setState((current) => ({ ...current, cashTarget: value }))} onSave={() => writeBusinessOs(state)} />
+          <TargetInput label="Invoices collected" value={state.invoiceCollectionTarget} country={saved.data.country} onChange={(value) => setState((current) => ({ ...current, invoiceCollectionTarget: value }))} onSave={() => writeBusinessOs(state)} />
+        </article>
         <article className="os-panel"><span>Operating alerts</span><ul><li className={summary.criticalTasks ? "warning" : "good"}>{summary.criticalTasks ? `${summary.criticalTasks} critical task${summary.criticalTasks === 1 ? "" : "s"} unresolved` : "No critical tasks unresolved"}</li><li className={saved.report.metrics.monthlyOperatingResult < 0 ? "warning" : "good"}>{saved.report.metrics.monthlyOperatingResult < 0 ? `Monthly operating loss of ${money(Math.abs(saved.report.metrics.monthlyOperatingResult), saved.data.country)}` : "Monthly operating result is positive"}</li><li className={saved.data.overdueTax + saved.data.overdueSuppliers > 0 ? "warning" : "good"}>{saved.data.overdueTax + saved.data.overdueSuppliers > 0 ? `${money(saved.data.overdueTax + saved.data.overdueSuppliers, saved.data.country)} overdue obligations` : "No overdue tax or supplier balance recorded"}</li></ul></article>
         <article className="os-panel"><span>Control coverage</span><div className="os-coverage"><b>{state.documents.filter((d) => d.current).length}/{state.documents.length}</b><p>core documents current</p></div><div className="os-coverage"><b>{state.team.length}</b><p>responsibility owners assigned</p></div><div className="os-coverage"><b>{state.contacts.length}</b><p>key relationships tracked</p></div></article>
       </div>}
@@ -62,7 +116,7 @@ export function BusinessOperatingSystem({ saved }: { saved: SavedReport }) {
 
       {tab === "documents" && <div className="os-module"><div className="os-module-head"><div><h4>Business control documents</h4><p>Mark the evidence and operating records that are current and usable.</p></div></div><div className="os-document-grid">{state.documents.map((document) => <label className={document.current ? "current" : ""} key={document.id}><input type="checkbox" checked={document.current} onChange={(e) => save({ ...state, documents: state.documents.map((x) => x.id === document.id ? { ...x, current: e.target.checked } : x) })}/><span>{document.category}</span><strong>{document.name}</strong><small>{document.current ? "Current" : "Needs attention"}</small></label>)}</div></div>}
 
-      <footer className="os-footer"><span>{message || `Last updated ${new Date(state.updatedAt).toLocaleString()}`}</span><button className="button ghost" type="button" onClick={() => save(createBusinessOs(saved), "Business OS reset from the current MRI.")}>Reset from MRI</button></footer>
+      <footer className="os-footer"><span>{message || `Last updated ${new Date(state.updatedAt).toLocaleString()}`}</span><button className="button ghost" type="button" onClick={() => save(createBusinessOs(saved), demo ? "Riverbend example progress restored from the MRI." : "Business OS reset from the current MRI.")}>Reset from MRI</button></footer>
     </section>
   );
 }
