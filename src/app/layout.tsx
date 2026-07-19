@@ -21,6 +21,7 @@ import "./stage10-transparency.css";
 import "./recovery-mobile-fix.css";
 import "./final-submission-polish.css";
 import "./final-submission-details.css";
+import "./legal.css";
 
 export const metadata: Metadata = {
   title: { default: "Business Lifeline", template: "%s | Business Lifeline" },
