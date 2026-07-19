@@ -20,36 +20,18 @@ import "./stage9-polish.css";
 import "./stage10-transparency.css";
 import "./recovery-mobile-fix.css";
 import "./final-submission-polish.css";
+import "./final-submission-details.css";
 
 export const metadata: Metadata = {
-  title: {
-    default: "Business Lifeline",
-    template: "%s | Business Lifeline",
-  },
+  title: { default: "Business Lifeline", template: "%s | Business Lifeline" },
   description: "Run a Business MRI, diagnose financial pressure, and turn the result into a practical recovery plan and operating system.",
   applicationName: "Business Lifeline",
   keywords: ["business recovery", "cashflow", "small business", "business MRI", "turnaround planning"],
   robots: { index: true, follow: true },
 };
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-  themeColor: "#071b2d",
-};
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#071b2d" };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="en">
-      <body>
-        <a className="skip-link" href="#main-content">Skip to main content</a>
-        {children}
-      </body>
-    </html>
-  );
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return <html lang="en"><body><a className="skip-link" href="#main-content">Skip to main content</a>{children}</body></html>;
 }
