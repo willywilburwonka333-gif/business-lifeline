@@ -15,6 +15,7 @@ export function LegalFooter() {
           {LEGAL_LINKS.map(([slug, label]) => (
             <Link key={slug} href={`/legal/${slug}`}>{label}</Link>
           ))}
+          <Link href="/status">Service Status</Link>
         </nav>
         <p className="legal-footer__notice">
           Decision support only — not legal, accounting, tax, financial or insolvency advice.

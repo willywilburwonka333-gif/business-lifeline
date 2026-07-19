@@ -26,6 +26,7 @@ import "./final-submission-details.css";
 import "./legal.css";
 import "./mri-ai-consent.css";
 import "./reliability.css";
+import "./service-status.css";
 
 export const metadata: Metadata = {
   title: { default: "Business Lifeline", template: "%s | Business Lifeline" },
