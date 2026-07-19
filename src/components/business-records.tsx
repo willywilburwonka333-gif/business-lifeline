@@ -59,7 +59,7 @@ function readStored(): BusinessRecord[] {
   }
 }
 
-export function BusinessRecords() {
+export function BusinessRecords({ compact = false }: { compact?: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [records, setRecords] = useState<BusinessRecord[]>([]);
   const [ready, setReady] = useState(false);
@@ -98,6 +98,24 @@ export function BusinessRecords() {
     setRecords((current) => current.map((record) => record.id === id ? { ...record, ...updates } : record));
   };
 
+  if (compact) {
+    return (
+      <section className="records-mri-compact" aria-label="Upload records before the Business MRI">
+        <input ref={inputRef} type="file" multiple accept={acceptedTypes} onChange={(event) => event.target.files && addFiles(event.target.files)} hidden />
+        <div>
+          <p className="eyebrow">MAKE THE MRI EASIER</p>
+          <h2>Already have reports? Add them before you begin.</h2>
+          <p>Upload a P&amp;L, balance sheet, debtors, creditors, payroll or timesheet export so the information is ready in your Business Lifeline record register.</p>
+          <small>This foundation records the files now. Automatic reading and pre-filling of MRI figures is the next build.</small>
+        </div>
+        <div className="records-mri-actions">
+          <button type="button" className="button outline" onClick={() => inputRef.current?.click()}>Upload business records</button>
+          <span><strong>{summary.total}</strong> file{summary.total === 1 ? "" : "s"} ready</span>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <div className="records-shell">
       <section className="records-hero">
@@ -129,7 +147,7 @@ export function BusinessRecords() {
       </section>
 
       <section className="records-needed">
-        <div><strong>Best files to add first</strong><span>Profit & loss · Balance sheet · Aged debtors · Aged creditors</span></div>
+        <div><strong>Best files to add first</strong><span>Profit &amp; loss · Balance sheet · Aged debtors · Aged creditors</span></div>
         <div><strong>Then add</strong><span>Payroll summary · Timesheet export · Tax statements · Major contracts</span></div>
       </section>
 
