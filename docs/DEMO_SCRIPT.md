@@ -1,133 +1,102 @@
-# Business Lifeline Demo Script
+# Business Lifeline — Final Build Week Demo Script
 
 ## Target length
 
-2 minutes 30 seconds to 3 minutes.
+**90 seconds.** Keep the product moving and show only the strongest proof points.
 
-## Recording preparation
+## Before recording
 
-- Use a desktop browser at normal zoom.
-- Clear the existing Business Lifeline report before recording.
-- Confirm the Riverbend Café demo opens successfully.
-- Keep the browser window large enough that the tab bar and Dashboard are visible.
-- Close unrelated tabs and notifications.
-- Do one silent rehearsal before recording.
+1. Confirm the latest Vercel deployment is Ready.
+2. Confirm the OpenAI account has credit and Business Brain returns a real GPT-5.6 answer.
+3. Open the site in a fresh private desktop browser.
+4. Press **Open Riverbend Café Demo**.
+5. In Operations, press **Reset from MRI** once so the clearly labelled example progress is loaded.
+6. Close notifications, unrelated tabs and password-manager overlays.
+7. Rehearse once without recording.
 
-## Script and shot list
+## 90-second shot list and narration
 
-### 0:00–0:15 — The problem
+### 0:00–0:10 — Problem and product
 
-**Screen:** Judge landing page.
-
-**Narration:**
-
-“Small-business owners often realise they are in trouble before they understand why. Their information is scattered, professional help can arrive too late, and the wrong first decision can make the situation worse.”
-
-### 0:15–0:30 — The product
-
-**Screen:** Keep the landing page visible and point toward the four-stage journey.
+**Screen:** Landing page, then press **Open Riverbend Café Demo**.
 
 **Narration:**
 
-“Business Lifeline is an AI-assisted Business MRI and recovery operating system. It diagnoses financial pressure, prioritises immediate action, tests recovery options, and helps the owner run the turnaround.”
+“Small-business owners often know they are in trouble before they understand why. Business Lifeline is an AI-assisted Business MRI and recovery operating system that turns financial pressure into an executable turnaround.”
 
-### 0:30–0:45 — Open the demo
+### 0:10–0:23 — MRI foundation and Dashboard
 
-**Action:** Press **Open Riverbend Café Demo**.
-
-**Narration:**
-
-“Riverbend Café is losing money each month, has overdue tax and supplier bills, and is still waiting on customer invoices. The demo loads the real product, not a separate mock-up.”
-
-### 0:45–1:10 — Dashboard
-
-**Screen:** Dashboard.
-
-Point out:
-
-- health score
-- monthly result
-- cash runway
-- overdue invoices
-- overdue obligations
-- recommended playbook
-- top three actions
+**Screen:** Dashboard. Show the red health score, monthly loss and overdue obligations.
 
 **Narration:**
 
-“The deterministic engine calculates the business health score, monthly result, runway, debt pressure, and receivables pressure. The Dashboard then shows the owner what needs attention first and recommends the most relevant recovery pathway.”
+“Riverbend Café scores 35 out of 100, loses A$1,500 a month and has A$18,000 in overdue tax and supplier obligations. These figures are calculated deterministically, not invented by AI.”
 
-### 1:10–1:35 — GPT-5.6
+### 0:23–0:34 — Recovery
 
-**Action:** Open **Business Brain**.
-
-Use the suggested question: **What should I do first this week?**
+**Screen:** Open **Stage 2 — Recovery**. Briefly show the Tax Debt playbook and action centre.
 
 **Narration:**
 
-“GPT-5.6 does not invent the financial figures. It interprets the tested calculations alongside the owner’s context, explains the likely root causes and trade-offs, identifies missing information, and shows when professional judgement is required.”
+“The MRI selects a specialised recovery pathway and orders the work by urgency, impact and difficulty, so the owner knows what must happen today and this week.”
 
-While the answer is visible, point out:
+### 0:34–0:48 — Cashflow
 
-- source label
-- facts used
-- next steps
-- risks and unknowns
-- professional judgement point
-
-### 1:35–2:05 — Cashflow Simulator
-
-**Action:** Open **Cashflow**.
-
-Enter a concise recovery combination, for example:
+**Screen:** Open **Stage 5 — Cashflow**. Enter:
 
 - Price change: `4`
 - Fixed-cost change: `-5`
-- Owner drawings change: `-1000`
 - Overdue invoices collected: `5000`
 
-**Narration:**
-
-“The owner can test multiple recovery levers together before acting. Business Lifeline separates recurring operating improvement from one-off cash relief, so collecting invoices or adding funding does not falsely appear to fix an underlying monthly loss.”
-
-Point out:
-
-- baseline versus projected result
-- monthly improvement
-- projected cash
-- runway change
-- validation actions
-- next review period
-
-### 2:05–2:25 — Recovery execution
-
-**Action:** Open **Recovery**, then **Operations**.
+Show the outcome panel.
 
 **Narration:**
 
-“The result becomes a specialised recovery playbook, then moves into the Business Operating System as tasks, contacts, responsibilities, targets, and controls. The product continues beyond diagnosis into execution.”
+“The simulator tests several recovery levers together and separates recurring operating improvement from one-off cash relief, so collecting invoices does not falsely appear to fix an underlying monthly loss.”
 
-### 2:25–2:45 — Trust and close
+### 0:48–1:03 — Business Brain
 
-**Screen:** Dashboard transparency section or Business Brain provenance section.
+**Screen:** Open **Stage 4 — Business Brain**. Ask:
 
-**Narration:**
+> What should Riverbend Café do first this week, and why?
 
-“Business Lifeline clearly separates deterministic facts from GPT-5.6 interpretation. It does not declare insolvency or replace accounting, legal, tax, or financial advice. Serious warning signs are escalated to qualified professionals, and the rules-based system remains available if AI is offline.”
-
-### Final line
+Show the real answer and source label.
 
 **Narration:**
 
-“Business Lifeline does not just tell an owner that the business is struggling. It shows what is wrong, what to do today, what could change the outcome, and how to run the recovery.”
+“GPT-5.6 interprets the tested figures and business context, explains trade-offs, identifies missing information and shows where professional judgement is required. A clearly labelled rules-based fallback remains available if AI is offline.”
+
+### 1:03–1:20 — Operations
+
+**Screen:** Open **Stage 6 — Operations**. Show example progress, operating alerts, Control Coverage, one completed task and the three sample relationships.
+
+**Narration:**
+
+“The plan then becomes an operating system: owned tasks, relationships, responsibilities, documents, targets and control coverage. The owner does not start from a blank page.”
+
+### 1:20–1:27 — Resources
+
+**Screen:** Open **Stage 7 — Resources**. Copy the ATO or supplier template and show the confirmation toast.
+
+**Narration:**
+
+“Pre-filled templates turn advice into the difficult conversations that recovery actually requires.”
+
+### 1:27–1:30 — Close
+
+**Screen:** Return to Dashboard or remain on Resources.
+
+**Narration:**
+
+“Business Lifeline does not just diagnose the problem. It gives the owner the operating system to fix it.”
 
 ## Recording rules
 
-- Do not attempt to demonstrate every feature.
-- Do not scroll quickly through long pages.
-- Keep the cursor deliberate.
-- Pause briefly after each tab opens.
-- Show one meaningful Business Brain question only.
-- Show one meaningful simulator combination only.
-- Do not claim guaranteed recovery or professional-advice status.
-- Record again if a loading error, browser notification, or visual glitch appears.
+- Do not demonstrate every feature.
+- Do not use fast scrolling.
+- Pause briefly after each stage opens.
+- Show only one GPT-5.6 question.
+- Show only one simulator combination.
+- Keep the **Example demo progress** label visible when showing preloaded Operations data.
+- Never claim guaranteed recovery, insolvency diagnosis or professional-advice status.
+- Record again if AI fails, a notification appears or any screen clips horizontally.
