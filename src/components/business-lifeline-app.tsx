@@ -47,13 +47,13 @@ function ReportModeChoice({
     <main id="main-content" className="mri-mode-shell">
       <header className="mri-mode-header">
         <button className="brand button-reset" onClick={onBack}><span>BL</span> Business Lifeline</button>
-        <small>Business MRI · Privacy choice</small>
+        <small>Business MRI · Setup</small>
       </header>
 
       <section className="mri-mode-panel" aria-labelledby="mri-mode-title">
-        <p className="eyebrow">Before we begin</p>
-        <h1 id="mri-mode-title">Choose how your report is prepared.</h1>
-        <p className="mri-mode-lead">Both choices produce your health score, urgent actions and 90-day rescue plan. You can keep everything calculation-only or add optional AI prioritisation.</p>
+        <p className="eyebrow">STEP 1 OF 4 · SET UP YOUR MRI</p>
+        <h1 id="mri-mode-title">Add records and choose your privacy setting.</h1>
+        <p className="mri-mode-lead">Upload reports to pre-fill what we can, then choose how your final report is prepared. After this screen, you go straight into the MRI questions.</p>
 
         <BusinessRecords compact />
 
@@ -91,9 +91,9 @@ function ReportModeChoice({
         )}
 
         <div className="mri-mode-actions">
-          <button type="button" className="button ghost" onClick={onBack}>← Back</button>
+          <button type="button" className="button ghost" onClick={onBack}>← Back to home</button>
           <button type="button" className="button primary" onClick={onContinue} disabled={!aiAllowed}>
-            Continue to My Business MRI <span>→</span>
+            Start MRI Questions <span>→</span>
           </button>
         </div>
         {mode === "ai" && !consent && <p className="mri-consent-hint" role="status">Tick the consent box to continue with AI-enhanced analysis.</p>}
