@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BusinessLifeline } from "@/components/business-lifeline";
+import { BusinessRecords } from "@/components/business-records";
 import { JudgeLanding } from "@/components/judge-landing";
 import { SavedScenarioPlanner } from "@/components/saved-scenario-planner";
 import { demoBusiness } from "@/lib/demo";
@@ -53,6 +54,8 @@ function ReportModeChoice({
         <p className="eyebrow">Before we begin</p>
         <h1 id="mri-mode-title">Choose how your report is prepared.</h1>
         <p className="mri-mode-lead">Both choices produce your health score, urgent actions and 90-day rescue plan. You can keep everything calculation-only or add optional AI prioritisation.</p>
+
+        <BusinessRecords compact />
 
         <div className="mri-mode-options" role="radiogroup" aria-label="Report preparation choice">
           <label className={`mri-mode-card ${mode === "private" ? "selected" : ""}`}>
