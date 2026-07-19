@@ -81,7 +81,7 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
       { heading: "Support", paragraphs: [`Early Access support is available through ${BUSINESS.supportEmail}. Response times are not guaranteed, but urgent access, billing and privacy matters will be prioritised.`] },
     ],
   },
-  acceptable-use: {
+  "acceptable-use": {
     title: "Acceptable Use Policy",
     summary: "Activities that are prohibited to protect businesses, the platform and the public.",
     sections: [
