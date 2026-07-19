@@ -103,7 +103,7 @@ export function RunModeFoundation({ saved }: { saved: SavedReport }) {
           <p>Business Lifeline now stays with the business beyond the rescue plan—tracking weekly pressure, responsibilities, jobs, customers and obligations in one operating workspace.</p>
         </div>
         <div className="run-mode-scorecard" aria-label="Run mode summary">
-          <span><strong>{saved.report.healthScore}</strong><small>MRI health score</small></span>
+          <span><strong>{saved.report.metrics.overallScore}</strong><small>MRI health score</small></span>
           <span><strong>{attentionCount}</strong><small>Needs attention</small></span>
           <span><strong>{completedCount}</strong><small>Controls completed</small></span>
         </div>
