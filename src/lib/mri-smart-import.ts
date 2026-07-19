@@ -1,3 +1,4 @@
+import { emptyBusiness } from "@/lib/demo";
 import type { BusinessData } from "@/lib/types";
 
 export const MRI_IMPORT_KEY = "business-lifeline-mri-smart-import-v1";
@@ -81,4 +82,13 @@ export function readSmartImport(): SmartImportDraft | null {
 
 export function writeSmartImport(draft: SmartImportDraft) {
   window.localStorage.setItem(MRI_IMPORT_KEY, JSON.stringify(draft));
+  const importedData = draft.fields.reduce<Partial<BusinessData>>((values, field) => {
+    (values as Record<string, unknown>)[String(field.key)] = field.value;
+    return values;
+  }, {});
+  window.localStorage.setItem("business-lifeline-mri-v2", JSON.stringify({
+    data: { ...emptyBusiness, ...importedData },
+    report: null,
+    importedFields: draft.fields,
+  }));
 }
