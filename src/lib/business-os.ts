@@ -19,20 +19,34 @@ export type BusinessOsState = {
 };
 
 const id = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const isRiverbendDemo = (saved: SavedReport) => saved.data.businessName.trim().toLowerCase() === "riverbend café";
 
 export function createBusinessOs(saved: SavedReport, now = new Date()): BusinessOsState {
   const firstActions = [...saved.report.today, ...saved.report.sevenDays].slice(0, 4);
+  const demo = isRiverbendDemo(saved);
+
   return {
     updatedAt: now.toISOString(),
     weekFocus: saved.data.immediateGoal || "Protect cash and complete the highest-impact recovery actions.",
     revenueTarget: Math.max(0, saved.data.monthlyRevenue),
     cashTarget: Math.max(0, saved.data.cashAvailable + Math.max(0, -saved.report.metrics.monthlyOperatingResult)),
     invoiceCollectionTarget: Math.max(0, saved.data.overdueInvoices),
-    tasks: firstActions.map((action, index) => ({ id: `mri-${index}`, title: action.title, owner: "Owner", due: "This week", priority: action.urgency === "Critical" ? "Critical" : action.urgency === "High" ? "High" : "Normal", done: false })),
-    contacts: [],
+    tasks: firstActions.map((action, index) => ({
+      id: `mri-${index}`,
+      title: action.title,
+      owner: "Owner",
+      due: index < 2 ? "Today" : "This week",
+      priority: action.urgency === "Critical" ? "Critical" : action.urgency === "High" ? "High" : "Normal",
+      done: demo && index === 0,
+    })),
+    contacts: demo ? [
+      { id: "demo-ato", name: "ATO payment support", type: "Adviser", nextAction: "Confirm lodgements and request arrangement", value: saved.data.overdueTax },
+      { id: "demo-supplier", name: "Key food supplier", type: "Supplier", nextAction: "Agree weekly payment schedule", value: saved.data.overdueSuppliers },
+      { id: "demo-customer", name: "Largest overdue customer", type: "Customer", nextAction: "Confirm payment date", value: saved.data.overdueInvoices },
+    ] : [],
     team: saved.data.employees > 0 ? [{ id: "owner", name: "Owner", responsibility: "Recovery leadership", weeklyOutcome: saved.data.immediateGoal }] : [],
     documents: [
-      { id: "cashflow", name: "13-week cashflow forecast", category: "Finance", current: false },
+      { id: "cashflow", name: "13-week cashflow forecast", category: "Finance", current: demo },
       { id: "pnl", name: "Current profit and loss", category: "Finance", current: false },
       { id: "tax", name: "Tax account and payment arrangements", category: "Tax", current: saved.data.overdueTax === 0 },
       { id: "contracts", name: "Key customer and supplier contracts", category: "Legal", current: false },
