@@ -8,6 +8,7 @@ import { BusinessTemplates } from "@/components/business-templates";
 import { RecoveryCoach } from "@/components/recovery-coach";
 import { RecoveryPlaybooks } from "@/components/recovery-playbooks";
 import { RecoveryTimeline } from "@/components/recovery-timeline";
+import { RunModeFoundation } from "@/components/run-mode-foundation";
 import { ScenarioPlanner } from "@/components/scenario-planner";
 import { TodayActionSheet } from "@/components/today-action-sheet";
 import { WorkspaceDashboard } from "@/components/workspace-dashboard";
@@ -22,6 +23,7 @@ const guideSteps: Array<{ tab: WorkspaceTab; title: string; copy: string }> = [
   { tab: "brain", title: "Ask Business Brain", copy: "Review grounded GPT-5.6 interpretation and professional judgement points." },
   { tab: "cashflow", title: "Test a recovery", copy: "Change price, costs, collections and funding to compare outcomes." },
   { tab: "operations", title: "Run the turnaround", copy: "Move the plan into tasks, contacts, responsibilities and controls." },
+  { tab: "run", title: "Keep operating", copy: "Use the permanent weekly workspace after the immediate crisis is stabilised." },
   { tab: "resources", title: "Execute difficult conversations", copy: "Use the one-page rescue sheet and pre-filled templates." },
 ];
 
@@ -68,7 +70,7 @@ export function SavedScenarioPlanner({ saved, onReset }: { saved: SavedReport; o
           <small className="workspace-foundation">Foundation complete · Business MRI</small>
           <button className="workspace-reset" type="button" onClick={onReset}>Start a new MRI</button>
         </div>
-        <div className="workspace-tab-list" role="tablist" aria-label="Seven-stage recovery workspace">
+        <div className="workspace-tab-list" role="tablist" aria-label="Eight-stage business recovery and operating workspace">
           {workspaceTabs.map((tab) => (
             <button
               id={`workspace-tab-${tab.id}`}
@@ -123,6 +125,7 @@ export function SavedScenarioPlanner({ saved, onReset }: { saved: SavedReport; o
         {activeTab === "brain" && <BusinessBrain saved={saved} />}
         {activeTab === "cashflow" && <ScenarioPlanner data={saved.data} report={saved.report} />}
         {activeTab === "operations" && <BusinessOperatingSystem saved={saved} />}
+        {activeTab === "run" && <RunModeFoundation saved={saved} />}
         {activeTab === "resources" && (
           <div className="workspace-section-stack resources-stage">
             <TodayActionSheet data={saved.data} report={saved.report} />
