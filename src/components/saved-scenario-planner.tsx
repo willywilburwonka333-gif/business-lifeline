@@ -65,9 +65,10 @@ export function SavedScenarioPlanner({ saved, onReset }: { saved: SavedReport; o
         <div className="workspace-tabs-brand">
           <span>Business Lifeline</span>
           <strong>{saved.data.businessName}</strong>
+          <small className="workspace-foundation">Foundation complete · Business MRI</small>
           <button className="workspace-reset" type="button" onClick={onReset}>Start a new MRI</button>
         </div>
-        <div className="workspace-tab-list" role="tablist" aria-label="Recovery stages">
+        <div className="workspace-tab-list" role="tablist" aria-label="Seven-stage recovery workspace">
           {workspaceTabs.map((tab) => (
             <button
               id={`workspace-tab-${tab.id}`}
