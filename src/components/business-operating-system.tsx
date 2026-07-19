@@ -15,11 +15,10 @@ type TargetInputProps = {
   label: string;
   value: number;
   country: string;
-  onChange: (value: number) => void;
-  onSave: () => void;
+  onCommit: (value: number) => void;
 };
 
-function TargetInput({ label, value, country, onChange, onSave }: TargetInputProps) {
+function TargetInput({ label, value, country, onCommit }: TargetInputProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(number(value));
 
@@ -29,10 +28,9 @@ function TargetInput({ label, value, country, onChange, onSave }: TargetInputPro
 
   const commit = () => {
     const next = parseMoney(draft);
-    onChange(next);
+    onCommit(next);
     setDraft(number(next));
     setEditing(false);
-    window.setTimeout(onSave, 0);
   };
 
   return (
@@ -100,9 +98,9 @@ export function BusinessOperatingSystem({ saved }: { saved: SavedReport }) {
       {tab === "command" && <div className="os-command-grid">
         <article className="os-panel os-focus"><span>This week’s focus</span><textarea value={state.weekFocus} onChange={(e) => setState({ ...state, weekFocus: e.target.value })} onBlur={() => writeBusinessOs(state)} /><p>Keep this to one outcome that matters most.</p></article>
         <article className="os-panel os-targets"><span>Monthly targets</span>
-          <TargetInput label="Revenue" value={state.revenueTarget} country={saved.data.country} onChange={(value) => setState((current) => ({ ...current, revenueTarget: value }))} onSave={() => writeBusinessOs(state)} />
-          <TargetInput label="Cash available" value={state.cashTarget} country={saved.data.country} onChange={(value) => setState((current) => ({ ...current, cashTarget: value }))} onSave={() => writeBusinessOs(state)} />
-          <TargetInput label="Invoices collected" value={state.invoiceCollectionTarget} country={saved.data.country} onChange={(value) => setState((current) => ({ ...current, invoiceCollectionTarget: value }))} onSave={() => writeBusinessOs(state)} />
+          <TargetInput label="Revenue" value={state.revenueTarget} country={saved.data.country} onCommit={(value) => save({ ...state, revenueTarget: value }, "Revenue target updated.")} />
+          <TargetInput label="Cash available" value={state.cashTarget} country={saved.data.country} onCommit={(value) => save({ ...state, cashTarget: value }, "Cash target updated.")} />
+          <TargetInput label="Invoices collected" value={state.invoiceCollectionTarget} country={saved.data.country} onCommit={(value) => save({ ...state, invoiceCollectionTarget: value }, "Invoice target updated.")} />
         </article>
         <article className="os-panel"><span>Operating alerts</span><ul><li className={summary.criticalTasks ? "warning" : "good"}>{summary.criticalTasks ? `${summary.criticalTasks} critical task${summary.criticalTasks === 1 ? "" : "s"} unresolved` : "No critical tasks unresolved"}</li><li className={saved.report.metrics.monthlyOperatingResult < 0 ? "warning" : "good"}>{saved.report.metrics.monthlyOperatingResult < 0 ? `Monthly operating loss of ${money(Math.abs(saved.report.metrics.monthlyOperatingResult), saved.data.country)}` : "Monthly operating result is positive"}</li><li className={saved.data.overdueTax + saved.data.overdueSuppliers > 0 ? "warning" : "good"}>{saved.data.overdueTax + saved.data.overdueSuppliers > 0 ? `${money(saved.data.overdueTax + saved.data.overdueSuppliers, saved.data.country)} overdue obligations` : "No overdue tax or supplier balance recorded"}</li></ul></article>
         <article className="os-panel"><span>Control coverage</span><div className="os-coverage"><b>{state.documents.filter((d) => d.current).length}/{state.documents.length}</b><p>core documents current</p></div><div className="os-coverage"><b>{state.team.length}</b><p>responsibility owners assigned</p></div><div className="os-coverage"><b>{state.contacts.length}</b><p>key relationships tracked</p></div></article>
