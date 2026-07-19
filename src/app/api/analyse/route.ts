@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { calculateHealth } from "@/lib/calculations";
+import { enforceRateLimit, hasExplicitAiConsent, privateResponseHeaders, rejectCrossSiteRequest } from "@/lib/api-security";
 import type { BusinessData } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -18,12 +19,7 @@ const outputSchema = {
   required: ["diagnosis", "rootCauses", "priorities", "questions", "professionalHelp"],
   properties: {
     diagnosis: { type: "string" },
-    rootCauses: {
-      type: "array",
-      minItems: 1,
-      maxItems: 5,
-      items: { type: "string" },
-    },
+    rootCauses: { type: "array", minItems: 1, maxItems: 5, items: { type: "string" } },
     priorities: {
       type: "array",
       minItems: 3,
@@ -41,12 +37,7 @@ const outputSchema = {
         },
       },
     },
-    questions: {
-      type: "array",
-      minItems: 0,
-      maxItems: 5,
-      items: { type: "string" },
-    },
+    questions: { type: "array", minItems: 0, maxItems: 5, items: { type: "string" } },
     professionalHelp: {
       type: "object",
       additionalProperties: false,
@@ -72,19 +63,9 @@ function parseBusinessData(value: unknown): BusinessData | null {
   if (!value || typeof value !== "object") return null;
   const data = value as Record<string, unknown>;
   const numberKeys = [
-    "yearsOperating",
-    "employees",
-    "monthlyRevenue",
-    "fixedExpenses",
-    "variableExpenses",
-    "ownerDrawings",
-    "loanRepayments",
-    "cashAvailable",
-    "accountsReceivable",
-    "overdueInvoices",
-    "totalDebt",
-    "overdueTax",
-    "overdueSuppliers",
+    "yearsOperating", "employees", "monthlyRevenue", "fixedExpenses", "variableExpenses",
+    "ownerDrawings", "loanRepayments", "cashAvailable", "accountsReceivable", "overdueInvoices",
+    "totalDebt", "overdueTax", "overdueSuppliers",
   ] as const;
 
   if (!validText(data.businessName, MAX_NAME) || !validText(data.industry, MAX_NAME) || !validText(data.country, MAX_NAME)) return null;
@@ -94,95 +75,97 @@ function parseBusinessData(value: unknown): BusinessData | null {
   if (!allowedTrends.has(String(data.revenueTrend))) return null;
   if (!Array.isArray(data.urgentConcerns) || data.urgentConcerns.length > allowedConcerns.size) return null;
   if (!data.urgentConcerns.every((item) => typeof item === "string" && allowedConcerns.has(item))) return null;
-
   return data as BusinessData;
 }
 
 export async function POST(request: Request) {
   try {
+    const crossSite = rejectCrossSiteRequest(request);
+    if (crossSite) return crossSite;
+    const limited = enforceRateLimit(request, "analyse");
+    if (limited) return limited;
+
     const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "AI analysis is not configured." }, { status: 503 });
-    }
+    if (!apiKey) return NextResponse.json({ error: "AI analysis is not configured." }, { status: 503, headers: privateResponseHeaders() });
 
     const contentLength = Number(request.headers.get("content-length") || "0");
     if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
-      return NextResponse.json({ error: "Business analysis request is too large." }, { status: 413 });
+      return NextResponse.json({ error: "Business analysis request is too large." }, { status: 413, headers: privateResponseHeaders() });
     }
 
     const raw = await request.text();
-    if (raw.length > MAX_BODY_BYTES) {
-      return NextResponse.json({ error: "Business analysis request is too large." }, { status: 413 });
-    }
+    if (raw.length > MAX_BODY_BYTES) return NextResponse.json({ error: "Business analysis request is too large." }, { status: 413, headers: privateResponseHeaders() });
 
     let payload: unknown;
-    try {
-      payload = JSON.parse(raw);
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON request." }, { status: 400 });
+    try { payload = JSON.parse(raw); } catch {
+      return NextResponse.json({ error: "Invalid JSON request." }, { status: 400, headers: privateResponseHeaders() });
     }
 
-    const data = parseBusinessData((payload as { data?: unknown })?.data);
-    if (!data) {
-      return NextResponse.json({ error: "Invalid business analysis request." }, { status: 400 });
+    if (!hasExplicitAiConsent(request, payload)) {
+      return NextResponse.json(
+        { error: "AI consent is required. The calculation-based report remains available without AI." },
+        { status: 403, headers: privateResponseHeaders() },
+      );
     }
+
+    const data = parseBusinessData((payload as { data?: unknown }).data);
+    if (!data) return NextResponse.json({ error: "Invalid business analysis request." }, { status: 400, headers: privateResponseHeaders() });
 
     const metrics = calculateHealth(data);
+    const minimisedBusiness = {
+      industry: data.industry,
+      country: data.country,
+      yearsOperating: data.yearsOperating,
+      employees: data.employees,
+      monthlyRevenue: data.monthlyRevenue,
+      fixedExpenses: data.fixedExpenses,
+      variableExpenses: data.variableExpenses,
+      ownerDrawings: data.ownerDrawings,
+      loanRepayments: data.loanRepayments,
+      cashAvailable: data.cashAvailable,
+      accountsReceivable: data.accountsReceivable,
+      overdueInvoices: data.overdueInvoices,
+      totalDebt: data.totalDebt,
+      overdueTax: data.overdueTax,
+      overdueSuppliers: data.overdueSuppliers,
+      revenueTrend: data.revenueTrend,
+      urgentConcerns: data.urgentConcerns,
+      pressureFactors: data.pressureFactors ?? [],
+      biggestProblem: data.biggestProblem,
+      immediateGoal: data.immediateGoal,
+    };
+
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: process.env.OPENAI_MODEL || "gpt-5.6",
         store: false,
         input: [
           {
             role: "system",
-            content: [
-              {
-                type: "input_text",
-                text: "You are Business Lifeline, a careful small-business turnaround decision-support assistant. Analyse only the supplied facts and deterministic metrics. Never invent figures, laws, tax rules, guarantees, or insolvency conclusions. Use plain language. Prioritise immediate cash preservation, lawful communication, revenue quality, cost control, and professional escalation where appropriate. This is decision support, not accounting, legal, financial, or insolvency advice.",
-              },
-            ],
+            content: [{
+              type: "input_text",
+              text: "You are Business Lifeline, a careful small-business turnaround decision-support assistant. Analyse only the supplied facts and deterministic metrics. Never invent figures, laws, tax rules, guarantees, or insolvency conclusions. Use plain language. Prioritise immediate cash preservation, lawful communication, revenue quality, cost control, and professional escalation where appropriate. Refuse requests to conceal illegal activity, falsify records, evade regulators, launder money, or facilitate unlawful trade. This is decision support, not accounting, legal, financial, or insolvency advice.",
+            }],
           },
-          {
-            role: "user",
-            content: [
-              {
-                type: "input_text",
-                text: JSON.stringify({ business: data, calculatedMetrics: metrics }),
-              },
-            ],
-          },
+          { role: "user", content: [{ type: "input_text", text: JSON.stringify({ business: minimisedBusiness, calculatedMetrics: metrics }) }] },
         ],
-        text: {
-          format: {
-            type: "json_schema",
-            name: "business_lifeline_analysis",
-            strict: true,
-            schema: outputSchema,
-          },
-        },
+        text: { format: { type: "json_schema", name: "business_lifeline_analysis", strict: true, schema: outputSchema } },
       }),
       signal: AbortSignal.timeout(25_000),
     });
 
     if (!response.ok) {
-      const detail = await response.text();
-      console.error("OpenAI analysis failed", response.status, detail.slice(0, 500));
-      return NextResponse.json({ error: "AI analysis is temporarily unavailable." }, { status: 502 });
+      console.error("OpenAI analysis failed", response.status);
+      return NextResponse.json({ error: "AI analysis is temporarily unavailable." }, { status: 502, headers: privateResponseHeaders() });
     }
 
     const result = (await response.json()) as { output_text?: string };
-    if (!result.output_text) {
-      return NextResponse.json({ error: "AI analysis returned no usable result." }, { status: 502 });
-    }
-
-    return NextResponse.json({ analysis: JSON.parse(result.output_text), metrics });
+    if (!result.output_text) return NextResponse.json({ error: "AI analysis returned no usable result." }, { status: 502, headers: privateResponseHeaders() });
+    return NextResponse.json({ analysis: JSON.parse(result.output_text), metrics }, { headers: privateResponseHeaders() });
   } catch (error) {
-    console.error("Business analysis route error", error);
-    return NextResponse.json({ error: "Unable to complete AI analysis right now." }, { status: 500 });
+    console.error("Business analysis route error", error instanceof Error ? error.message : "unknown");
+    return NextResponse.json({ error: "Unable to complete AI analysis right now." }, { status: 500, headers: privateResponseHeaders() });
   }
 }
