@@ -137,11 +137,13 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
       if (!response.ok) throw new Error("Business Brain is temporarily unavailable.");
       const payload = (await response.json()) as { answer?: BrainAnswer };
       if (!payload.answer) throw new Error("Business Brain returned no usable answer.");
-      setConversation((current) => [...current, { question: cleaned, answer: payload.answer as BrainAnswer, source: "gpt" }].slice(-6));
+      const nextItem: ConversationItem = { question: cleaned, answer: payload.answer, source: "gpt" };
+      setConversation((current) => [...current, nextItem].slice(-6));
       setQuestion("");
     } catch (caught) {
       const fallback = localFallback(saved, cleaned);
-      setConversation((current) => [...current, { question: cleaned, answer: fallback, source: "rules" }].slice(-6));
+      const nextItem: ConversationItem = { question: cleaned, answer: fallback, source: "rules" };
+      setConversation((current) => [...current, nextItem].slice(-6));
       setQuestion("");
       setError(caught instanceof Error ? `${caught.message} Showing a calculation-based answer instead.` : "Showing a calculation-based answer instead.");
     } finally {
