@@ -13,7 +13,8 @@ type BrainAnswer = {
   professionalHelp: { recommended: boolean; type: string; reason: string };
 };
 
-type ConversationItem = { question: string; answer: BrainAnswer; source: "gpt" | "rules" };
+type ConversationSource = "openai" | "gemini" | "rules";
+type ConversationItem = { question: string; answer: BrainAnswer; source: ConversationSource };
 
 const suggestions = [
   "What should I do first this week?",
@@ -45,6 +46,12 @@ function localFallback(saved: SavedReport, question: string): BrainAnswer {
       reason: report.urgentHelp ? "The MRI contains urgent warning signs that should not rely on automated guidance alone." : "Not automatically required from the supplied figures, but obtain professional advice before a high-impact legal, tax, staffing or debt decision.",
     },
   };
+}
+
+function sourceLabel(source: ConversationSource) {
+  if (source === "openai") return "AI interpretation · GPT-5.6";
+  if (source === "gemini") return "AI interpretation · Gemini fallback";
+  return "Calculation-based fallback";
 }
 
 function exportLocalData() {
@@ -135,9 +142,9 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
         body: JSON.stringify({ question: cleaned, context, consent: true }),
       });
       if (!response.ok) throw new Error("Business Brain is temporarily unavailable.");
-      const payload = (await response.json()) as { answer?: BrainAnswer };
-      if (!payload.answer) throw new Error("Business Brain returned no usable answer.");
-      const nextItem: ConversationItem = { question: cleaned, answer: payload.answer, source: "gpt" };
+      const payload = (await response.json()) as { answer?: BrainAnswer; provider?: "openai" | "gemini" };
+      if (!payload.answer || !payload.provider) throw new Error("Business Brain returned no usable answer.");
+      const nextItem: ConversationItem = { question: cleaned, answer: payload.answer, source: payload.provider };
       setConversation((current) => [...current, nextItem].slice(-6));
       setQuestion("");
     } catch (caught) {
@@ -162,7 +169,7 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
       <section className="panel" aria-labelledby="privacy-controls-title">
         <p className="eyebrow">Privacy and control</p>
         <h4 id="privacy-controls-title">You decide when information leaves this device</h4>
-        <p>Your saved records remain in this browser. When you use Business Brain, the displayed minimised business context and your question are securely sent through Business Lifeline to OpenAI. Requests are configured with model storage disabled.</p>
+        <p>Your saved records remain in this browser. When you use Business Brain, the displayed minimised business context and your question are securely sent through Business Lifeline to OpenAI, or to Gemini when OpenAI is unavailable. The response clearly identifies which provider was used.</p>
         <label className="field">
           <span><input type="checkbox" checked={aiConsent} onChange={(event) => setAiConsent(event.target.checked)} /> I understand and consent to this AI transmission for the question I submit.</span>
         </label>
@@ -199,7 +206,7 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
         {conversation.map((item, index) => (
           <article className="brain-answer" key={`${item.question}-${index}`}>
             <p className="brain-question"><span>You asked</span>{item.question}</p>
-            <div className="brain-main-answer"><span>{item.source === "gpt" ? "AI interpretation" : "Calculation-based fallback"}</span><p>{item.answer.answer}</p></div>
+            <div className="brain-main-answer"><span>{sourceLabel(item.source)}</span><p>{item.answer.answer}</p></div>
             <div className="brain-answer-grid">
               <section><h4>Facts used</h4><ul>{item.answer.reasoningSummary.map((line) => <li key={line}>{line}</li>)}</ul></section>
               <section><h4>Recommended next steps</h4><ol>{item.answer.nextSteps.map((line) => <li key={line}>{line}</li>)}</ol></section>
