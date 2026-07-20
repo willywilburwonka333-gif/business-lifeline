@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ActionCentre } from "@/components/action-centre";
 import { BusinessBrain } from "@/components/business-brain";
 import { BusinessOperatingSystem } from "@/components/business-operating-system";
@@ -21,7 +21,6 @@ const DEMO_GUIDE_KEY = "business-lifeline-demo-guide-v1";
 
 type MainArea = "mri" | "lifeline" | "operating";
 type ToolId = "diagnosis" | "evidence" | "recovery" | "coach" | "brain" | "cashflow" | "resources" | "command" | "run" | "documents";
-
 type ToolDefinition = { id: ToolId; label: string; detail: string };
 type AreaDefinition = { id: MainArea; label: string; verb: string; detail: string; tools: ToolDefinition[] };
 
@@ -67,12 +66,8 @@ const areaForTool = (tool: ToolId): MainArea => areas.find((area) => area.tools.
 export function SavedScenarioPlanner({ saved, onReset }: { saved: SavedReport; onReset: () => void }) {
   const [activeArea, setActiveArea] = useState<MainArea>("mri");
   const [activeTool, setActiveTool] = useState<ToolId>("diagnosis");
-  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(() => typeof window !== "undefined" && window.localStorage.getItem(DEMO_GUIDE_KEY) === "1");
   const [guideIndex, setGuideIndex] = useState(0);
-
-  useEffect(() => {
-    setGuideOpen(window.localStorage.getItem(DEMO_GUIDE_KEY) === "1");
-  }, []);
 
   const currentArea = useMemo(() => areas.find((area) => area.id === activeArea) ?? areas[0], [activeArea]);
   const currentTool = currentArea.tools.find((tool) => tool.id === activeTool) ?? currentArea.tools[0];
@@ -104,8 +99,15 @@ export function SavedScenarioPlanner({ saved, onReset }: { saved: SavedReport; o
 
   const dashboardOpenTab = (tab: WorkspaceTab) => {
     const map: Partial<Record<WorkspaceTab, ToolId>> = {
-      dashboard: "diagnosis", recovery: "recovery", coach: "coach", brain: "brain", cashflow: "cashflow",
-      operations: "command", run: "run", records: "evidence", resources: "resources",
+      dashboard: "diagnosis",
+      recovery: "recovery",
+      coach: "coach",
+      brain: "brain",
+      cashflow: "cashflow",
+      operations: "command",
+      run: "run",
+      records: "evidence",
+      resources: "resources",
     };
     openTool(map[tab] ?? "diagnosis");
   };
@@ -155,7 +157,6 @@ export function SavedScenarioPlanner({ saved, onReset }: { saved: SavedReport; o
 
       <main className="workspace-panel" role="tabpanel" aria-label={currentTool.label}>
         <div className="current-tool-title"><small>{currentArea.label}</small><h1>{currentTool.label}</h1><p>{currentTool.detail}</p></div>
-
         {activeTool === "diagnosis" && <WorkspaceDashboard saved={saved} openTab={dashboardOpenTab} />}
         {(activeTool === "evidence" || activeTool === "documents") && <BusinessRecords />}
         {activeTool === "recovery" && <div className="workspace-section-stack"><RecoveryTimeline saved={saved} /><RecoveryPlaybooks saved={saved} /><ActionCentre report={saved.report} /></div>}
