@@ -45,20 +45,24 @@ function minimiseDocumentContext(value: unknown) {
   return { fields, signals, warnings };
 }
 async function analyseWithOpenAI(input: unknown) {
-  const key = process.env.OPENAI_API_KEY; if (!key) return null;
-  const response = await fetch("https://api.openai.com/v1/responses", { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-5.6", store: false, input: [{ role: "system", content: [{ type: "input_text", text: systemPrompt }] }, { role: "user", content: [{ type: "input_text", text: JSON.stringify(input) }] }], text: { format: { type: "json_schema", name: "business_lifeline_analysis", strict: true, schema: outputSchema } } }), signal: AbortSignal.timeout(22_000) });
-  if (!response.ok) return null;
-  const result = await response.json() as { output_text?: string };
-  return result.output_text ? JSON.parse(result.output_text) : null;
+  try {
+    const key = process.env.OPENAI_API_KEY; if (!key) return null;
+    const response = await fetch("https://api.openai.com/v1/responses", { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-5.6", store: false, input: [{ role: "system", content: [{ type: "input_text", text: systemPrompt }] }, { role: "user", content: [{ type: "input_text", text: JSON.stringify(input) }] }], text: { format: { type: "json_schema", name: "business_lifeline_analysis", strict: true, schema: outputSchema } } }), signal: AbortSignal.timeout(22_000) });
+    if (!response.ok) return null;
+    const result = await response.json() as { output_text?: string };
+    return result.output_text ? JSON.parse(result.output_text) : null;
+  } catch { return null; }
 }
 async function analyseWithGemini(input: unknown) {
-  const key = process.env.GEMINI_API_KEY; if (!key) return null;
-  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash";
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, { method: "POST", headers: { "x-goog-api-key": key, "Content-Type": "application/json" }, body: JSON.stringify({ systemInstruction: { parts: [{ text: systemPrompt }] }, contents: [{ role: "user", parts: [{ text: JSON.stringify(input) }] }], generationConfig: { responseMimeType: "application/json", responseJsonSchema: outputSchema } }), signal: AbortSignal.timeout(22_000) });
-  if (!response.ok) return null;
-  const result = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-  const text = result.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
-  return text ? JSON.parse(text) : null;
+  try {
+    const key = process.env.GEMINI_API_KEY; if (!key) return null;
+    const model = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, { method: "POST", headers: { "x-goog-api-key": key, "Content-Type": "application/json" }, body: JSON.stringify({ systemInstruction: { parts: [{ text: systemPrompt }] }, contents: [{ role: "user", parts: [{ text: JSON.stringify(input) }] }], generationConfig: { responseMimeType: "application/json", responseJsonSchema: outputSchema } }), signal: AbortSignal.timeout(22_000) });
+    if (!response.ok) return null;
+    const result = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+    const text = result.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
+    return text ? JSON.parse(text) : null;
+  } catch { return null; }
 }
 
 export async function POST(request: Request) {
@@ -75,10 +79,11 @@ export async function POST(request: Request) {
     const metrics = calculateHealth(data);
     const minimisedBusiness = { industry: data.industry, country: data.country, yearsOperating: data.yearsOperating, employees: data.employees, monthlyRevenue: data.monthlyRevenue, fixedExpenses: data.fixedExpenses, variableExpenses: data.variableExpenses, ownerDrawings: data.ownerDrawings, loanRepayments: data.loanRepayments, cashAvailable: data.cashAvailable, accountsReceivable: data.accountsReceivable, overdueInvoices: data.overdueInvoices, totalDebt: data.totalDebt, overdueTax: data.overdueTax, overdueSuppliers: data.overdueSuppliers, revenueTrend: data.revenueTrend, urgentConcerns: data.urgentConcerns, pressureFactors: data.pressureFactors ?? [], biggestProblem: data.biggestProblem, immediateGoal: data.immediateGoal };
     const aiInput = { business: minimisedBusiness, calculatedMetrics: metrics, uploadedRecordEvidence: minimiseDocumentContext(payloadRecord.documentContext) };
-    let analysis = await analyseWithOpenAI(aiInput); let provider = "openai";
-    if (!analysis) { analysis = await analyseWithGemini(aiInput); provider = "gemini"; }
-    if (!analysis) return NextResponse.json({ error: "AI analysis is temporarily unavailable." }, { status: 502, headers: privateResponseHeaders() });
-    return NextResponse.json({ analysis, metrics, provider }, { headers: privateResponseHeaders() });
+    const openAiAnalysis = await analyseWithOpenAI(aiInput);
+    if (openAiAnalysis) return NextResponse.json({ analysis: openAiAnalysis, metrics, provider: "openai" }, { headers: privateResponseHeaders() });
+    const geminiAnalysis = await analyseWithGemini(aiInput);
+    if (geminiAnalysis) return NextResponse.json({ analysis: geminiAnalysis, metrics, provider: "gemini" }, { headers: privateResponseHeaders() });
+    return NextResponse.json({ error: "AI analysis is temporarily unavailable." }, { status: 502, headers: privateResponseHeaders() });
   } catch (error) {
     console.error("Business analysis route error", error instanceof Error ? error.message : "unknown");
     return NextResponse.json({ error: "Unable to complete AI analysis right now." }, { status: 500, headers: privateResponseHeaders() });
