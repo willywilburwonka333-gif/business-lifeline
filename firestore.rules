@@ -2,9 +2,68 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function membershipPath(businessId) {
+      return /databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid);
+    }
+
+    function hasMembership(businessId) {
+      return signedIn()
+        && exists(membershipPath(businessId))
+        && get(membershipPath(businessId)).data.status == 'active';
+    }
+
+    function hasRole(businessId, roles) {
+      return hasMembership(businessId)
+        && get(membershipPath(businessId)).data.role in roles;
+    }
+
+    // Transitional owner-only backup document used by the current client sync.
     match /userWorkspaces/{userId} {
-      allow read, create, update, delete: if request.auth != null
+      allow read, create, update, delete: if signedIn()
         && request.auth.uid == userId;
+    }
+
+    // Structured commercial workspace foundation.
+    match /businesses/{businessId} {
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid;
+      allow read: if hasMembership(businessId)
+        || (signedIn() && resource.data.ownerId == request.auth.uid);
+      allow update: if hasRole(businessId, ['owner', 'manager'])
+        || (signedIn() && resource.data.ownerId == request.auth.uid);
+      allow delete: if signedIn()
+        && resource.data.ownerId == request.auth.uid;
+
+      match /members/{memberId} {
+        allow create: if signedIn()
+          && (
+            (memberId == request.auth.uid
+              && request.resource.data.userId == request.auth.uid
+              && request.resource.data.role == 'owner')
+            || hasRole(businessId, ['owner', 'manager'])
+          );
+        allow read: if hasMembership(businessId)
+          || (signedIn() && memberId == request.auth.uid);
+        allow update: if hasRole(businessId, ['owner', 'manager']);
+        allow delete: if hasRole(businessId, ['owner']);
+      }
+
+      match /auditEvents/{eventId} {
+        allow create: if hasMembership(businessId)
+          && request.resource.data.actorId == request.auth.uid;
+        allow read: if hasRole(businessId, ['owner', 'manager', 'accountant']);
+        allow update, delete: if false;
+      }
+
+      match /{document=**} {
+        allow read: if hasMembership(businessId);
+        allow create, update: if hasRole(businessId, ['owner', 'manager', 'staff']);
+        allow delete: if hasRole(businessId, ['owner', 'manager']);
+      }
     }
 
     match /{document=**} {
