@@ -19,6 +19,7 @@ import "./run-mode.css";
 import "./run-operating-core.css";
 import "./operating-automation.css";
 import "./connected-operations-v2.css";
+import "./business-operating-platform.css";
 import "./product-architecture.css";
 import "./business-records.css";
 import "./stage7-reliability.css";
