@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { BusinessOsScrollAssist } from "@/components/business-os-scroll-assist";
 import { CommercialCloudBridge } from "@/components/commercial-cloud-bridge";
 import { ConnectionStatus } from "@/components/connection-status";
+import { OperatingLedgerSync } from "@/components/operating-ledger-sync";
 import "./globals.css";
 import "./tools.css";
 import "./print.css";
@@ -24,6 +25,7 @@ import "./business-operating-platform.css";
 import "./live-business-control.css";
 import "./native-finance.css";
 import "./advanced-accounting.css";
+import "./operating-ledger-sync.css";
 import "./product-architecture.css";
 import "./business-records.css";
 import "./stage7-reliability.css";
@@ -52,5 +54,5 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#071b2d" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body><a className="skip-link" href="#main-content">Skip to main content</a><ConnectionStatus /><CommercialCloudBridge /><BusinessOsScrollAssist />{children}</body></html>;
+  return <html lang="en"><body><a className="skip-link" href="#main-content">Skip to main content</a><ConnectionStatus /><CommercialCloudBridge /><OperatingLedgerSync /><BusinessOsScrollAssist />{children}</body></html>;
 }
