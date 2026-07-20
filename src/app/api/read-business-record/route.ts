@@ -22,25 +22,29 @@ const prompt = "You extract business facts from uploaded records for a small-bus
 const extensionOf = (name: string) => name.toLowerCase().split(".").pop() ?? "";
 
 async function readWithOpenAI(file: File, base64: string, mime: string, extension: string) {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) return null;
-  const isImage = ["png", "jpg", "jpeg", "webp"].includes(extension);
-  const fileInput = isImage ? { type: "input_image", image_url: `data:${mime};base64,${base64}`, detail: "high" } : { type: "input_file", filename: file.name, file_data: base64 };
-  const response = await fetch("https://api.openai.com/v1/responses", { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: process.env.OPENAI_DOCUMENT_MODEL || process.env.OPENAI_MODEL || "gpt-5.6", store: false, input: [{ role: "system", content: [{ type: "input_text", text: prompt }] }, { role: "user", content: [{ type: "input_text", text: `Read ${file.name}. Extract only MRI-relevant facts and supported business-health signals. Empty arrays are valid.` }, fileInput] }], text: { format: { type: "json_schema", name: "business_record_extraction", strict: true, schema: outputSchema } } }), signal: AbortSignal.timeout(45_000) });
-  if (!response.ok) return null;
-  const result = await response.json() as { output_text?: string };
-  return result.output_text ? JSON.parse(result.output_text) : null;
+  try {
+    const key = process.env.OPENAI_API_KEY;
+    if (!key) return null;
+    const isImage = ["png", "jpg", "jpeg", "webp"].includes(extension);
+    const fileInput = isImage ? { type: "input_image", image_url: `data:${mime};base64,${base64}`, detail: "high" } : { type: "input_file", filename: file.name, file_data: base64 };
+    const response = await fetch("https://api.openai.com/v1/responses", { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: process.env.OPENAI_DOCUMENT_MODEL || process.env.OPENAI_MODEL || "gpt-5.6", store: false, input: [{ role: "system", content: [{ type: "input_text", text: prompt }] }, { role: "user", content: [{ type: "input_text", text: `Read ${file.name}. Extract only MRI-relevant facts and supported business-health signals. Empty arrays are valid.` }, fileInput] }], text: { format: { type: "json_schema", name: "business_record_extraction", strict: true, schema: outputSchema } } }), signal: AbortSignal.timeout(45_000) });
+    if (!response.ok) return null;
+    const result = await response.json() as { output_text?: string };
+    return result.output_text ? JSON.parse(result.output_text) : null;
+  } catch { return null; }
 }
 
 async function readWithGemini(file: File, base64: string, mime: string) {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) return null;
-  const model = process.env.GEMINI_DOCUMENT_MODEL || process.env.GEMINI_MODEL || "gemini-3.5-flash";
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, { method: "POST", headers: { "x-goog-api-key": key, "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: `${prompt}\nRead ${file.name}. Extract only MRI-relevant facts and supported business-health signals. Empty arrays are valid.` }, { inlineData: { mimeType: mime, data: base64 } }] }], generationConfig: { responseMimeType: "application/json", responseJsonSchema: outputSchema } }), signal: AbortSignal.timeout(45_000) });
-  if (!response.ok) return null;
-  const result = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-  const text = result.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
-  return text ? JSON.parse(text) : null;
+  try {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) return null;
+    const model = process.env.GEMINI_DOCUMENT_MODEL || process.env.GEMINI_MODEL || "gemini-3.5-flash";
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, { method: "POST", headers: { "x-goog-api-key": key, "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: `${prompt}\nRead ${file.name}. Extract only MRI-relevant facts and supported business-health signals. Empty arrays are valid.` }, { inlineData: { mimeType: mime, data: base64 } }] }], generationConfig: { responseMimeType: "application/json", responseJsonSchema: outputSchema } }), signal: AbortSignal.timeout(45_000) });
+    if (!response.ok) return null;
+    const result = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+    const text = result.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
+    return text ? JSON.parse(text) : null;
+  } catch { return null; }
 }
 
 export async function POST(request: Request) {
@@ -55,10 +59,11 @@ export async function POST(request: Request) {
     const extension = extensionOf(file.name); if (!allowedExtensions.has(extension)) return NextResponse.json({ error: "This file type is not supported yet." }, { status: 415, headers: privateResponseHeaders() });
     const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
     const mime = file.type || ({ pdf: "application/pdf", csv: "text/csv", txt: "text/plain", doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", xls: "application/vnd.ms-excel", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp" } as Record<string, string>)[extension] || "application/octet-stream";
-    let extraction = await readWithOpenAI(file, base64, mime, extension); let provider = "openai";
-    if (!extraction) { extraction = await readWithGemini(file, base64, mime); provider = "gemini"; }
-    if (!extraction) return NextResponse.json({ error: "The document could not be read right now." }, { status: 502, headers: privateResponseHeaders() });
-    return NextResponse.json({ extraction, source: file.name, provider }, { headers: privateResponseHeaders() });
+    const openAiExtraction = await readWithOpenAI(file, base64, mime, extension);
+    if (openAiExtraction) return NextResponse.json({ extraction: openAiExtraction, source: file.name, provider: "openai" }, { headers: privateResponseHeaders() });
+    const geminiExtraction = await readWithGemini(file, base64, mime);
+    if (geminiExtraction) return NextResponse.json({ extraction: geminiExtraction, source: file.name, provider: "gemini" }, { headers: privateResponseHeaders() });
+    return NextResponse.json({ error: "The document could not be read right now." }, { status: 502, headers: privateResponseHeaders() });
   } catch (error) {
     console.error("Business record reader error", error instanceof Error ? error.message : "unknown");
     return NextResponse.json({ error: "Unable to read this business record right now." }, { status: 500, headers: privateResponseHeaders() });
