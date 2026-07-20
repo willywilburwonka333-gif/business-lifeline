@@ -1,0 +1,8 @@
+.product-help-button{position:fixed;right:16px;bottom:16px;z-index:45;border:0;border-radius:999px;padding:12px 16px;background:#0b6bcb;color:#fff;font-weight:800;box-shadow:0 12px 30px rgba(7,27,45,.28)}
+.product-tutorial{position:fixed;right:16px;bottom:76px;z-index:60;width:min(390px,calc(100vw - 32px));background:#fff;color:#102437;border:1px solid #bfd2e4;border-radius:18px;box-shadow:0 24px 70px rgba(7,27,45,.28);padding:18px}
+.product-tutorial-progress{height:5px;background:#e8eff5;border-radius:99px;overflow:hidden;margin:-2px 0 14px}.product-tutorial-progress i{display:block;height:100%;background:#0b6bcb;transition:width .2s ease}
+.product-tutorial-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.product-tutorial-heading small{font-weight:800;color:#537089;letter-spacing:.06em;text-transform:uppercase}.product-tutorial-heading button{border:0;background:transparent;color:#48647c;text-decoration:underline}
+.product-tutorial h2{font-size:1.35rem;margin:14px 0 8px}.product-tutorial p{margin:0;color:#425c72;line-height:1.55}.product-tutorial-actions{display:flex;justify-content:space-between;gap:10px;margin-top:18px}.product-tutorial-actions .button{min-width:108px}
+.tutorial-target{position:relative;z-index:52!important;outline:4px solid #f5b942!important;outline-offset:5px!important;border-radius:14px;box-shadow:0 0 0 9999px rgba(7,27,45,.4)}
+@media(max-width:640px){.product-help-button{right:12px;bottom:12px}.product-tutorial{left:12px;right:12px;bottom:70px;width:auto;max-height:46vh;overflow:auto}.tutorial-target{scroll-margin:140px 0}}
+@media print{.product-help-button,.product-tutorial{display:none!important}}
