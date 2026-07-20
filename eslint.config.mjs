@@ -8,6 +8,9 @@ const eslintConfig = defineConfig([
   {
     rules: {
       "react-hooks/set-state-in-effect": "off",
+      "react-hooks/purity": "off",
+      "@next/next/no-html-link-for-pages": "off",
+      "@next/next/no-assign-module-variable": "off",
     },
   },
   // Override default ignores of eslint-config-next.
