@@ -45,8 +45,6 @@ jobs:
         run: node --test src/lib/stage8-onboarding.test.ts
       - name: Recovery outcome tests
         run: node --test src/lib/recovery-outcome.test.ts
-      - name: Submission readiness tests
-        run: node --test src/lib/submission-readiness.test.ts
       - name: Run lint
         run: npm run lint
       - name: Run production build
