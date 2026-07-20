@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { extractFieldsFromText, mergeImportDraft, readSmartImport, writeSmartImport } from "@/lib/mri-smart-import";
+import { extractFieldsFromText, mergeImportDraft, readSmartImport, writeSmartImport, type DiagnosticSignal, type ImportedField } from "@/lib/mri-smart-import";
+import type { BusinessData } from "@/lib/types";
 
 type RecordCategory = "Financial" | "Tax" | "Payroll" | "Timesheets" | "Customers" | "Suppliers" | "Contracts" | "Operations" | "Other";
 type RecordStatus = "uploaded" | "verified" | "needs-review";
+type ReaderStatus = "local" | "ai-read" | "registered" | "failed";
 
 type BusinessRecord = {
   id: string;
@@ -15,10 +17,21 @@ type BusinessRecord = {
   status: RecordStatus;
   uploadedAt: string;
   extractedCount?: number;
+  signalCount?: number;
+  readerStatus?: ReaderStatus;
+  readerMessage?: string;
+};
+
+type ReaderExtraction = {
+  fields: Array<{ key: keyof BusinessData; value: number | string; confidence: "high" | "review"; evidence: string }>;
+  reportingPeriod: string;
+  documentType: string;
+  diagnosticSignals: Array<Omit<DiagnosticSignal, "source">>;
+  warnings: string[];
 };
 
 const STORAGE_KEY = "business-lifeline-records-v1";
-const acceptedTypes = ".pdf,.csv,.xlsx,.xls,.doc,.docx,.txt,image/*";
+const acceptedTypes = ".pdf,.csv,.xlsx,.xls,.doc,.docx,.txt,.png,.jpg,.jpeg,.webp,image/*";
 const categoryOptions: RecordCategory[] = ["Financial", "Tax", "Payroll", "Timesheets", "Customers", "Suppliers", "Contracts", "Operations", "Other"];
 
 function inferCategory(name: string): RecordCategory {
@@ -55,17 +68,34 @@ function canReadDirectly(file: File) {
   return file.type.includes("csv") || file.type.startsWith("text/") || lower.endsWith(".csv") || lower.endsWith(".txt");
 }
 
-export function BusinessRecords({ compact = false, onUploadComplete }: { compact?: boolean; onUploadComplete?: () => void }) {
+async function readWithAi(file: File): Promise<ReaderExtraction> {
+  const form = new FormData();
+  form.append("file", file);
+  const response = await fetch("/api/read-business-record", {
+    method: "POST",
+    headers: { "x-business-lifeline-ai-consent": "true" },
+    body: form,
+  });
+  const result = await response.json() as { extraction?: ReaderExtraction; error?: string };
+  if (!response.ok || !result.extraction) throw new Error(result.error || "Document reader failed.");
+  return result.extraction;
+}
+
+export function BusinessRecords({ compact = false, aiEnabled = false }: { compact?: boolean; aiEnabled?: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [records, setRecords] = useState<BusinessRecord[]>([]);
   const [ready, setReady] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [importedCount, setImportedCount] = useState(0);
+  const [signalCount, setSignalCount] = useState(0);
   const [processing, setProcessing] = useState(false);
+  const [processingLabel, setProcessingLabel] = useState("");
 
   useEffect(() => {
+    const draft = readSmartImport();
     setRecords(readStored());
-    setImportedCount(readSmartImport()?.fields.length ?? 0);
+    setImportedCount(draft?.fields.length ?? 0);
+    setSignalCount(draft?.signals?.length ?? 0);
     setReady(true);
   }, []);
 
@@ -83,25 +113,48 @@ export function BusinessRecords({ compact = false, onUploadComplete }: { compact
   const addFiles = async (files: FileList | File[]) => {
     const selected = Array.from(files);
     if (selected.length === 0) return;
-
     setProcessing(true);
     const added: BusinessRecord[] = [];
     let draft = readSmartImport();
 
     for (const file of selected) {
-      let extractedCount = 0;
+      setProcessingLabel(`Reading ${file.name}…`);
+      let extracted: ImportedField[] = [];
+      let signals: DiagnosticSignal[] = [];
+      let warnings: string[] = [];
+      let readerStatus: ReaderStatus = "registered";
+      let readerMessage = aiEnabled ? "No MRI-relevant facts found." : "Saved locally; AI reading was not selected.";
+
       if (canReadDirectly(file)) {
         try {
           const text = await file.text();
-          const extracted = extractFieldsFromText(text, file.name);
-          extractedCount = extracted.length;
+          extracted = extractFieldsFromText(text, file.name);
           if (extracted.length) {
-            draft = mergeImportDraft(draft, extracted);
-            writeSmartImport(draft);
+            readerStatus = "local";
+            readerMessage = `${extracted.length} field${extracted.length === 1 ? "" : "s"} read locally.`;
           }
         } catch {
-          extractedCount = 0;
+          readerMessage = "The local text reader could not read this file.";
         }
+      }
+
+      if (aiEnabled) {
+        try {
+          const result = await readWithAi(file);
+          extracted = result.fields.map((field) => ({ ...field, source: file.name, reportingPeriod: result.reportingPeriod }));
+          signals = result.diagnosticSignals.map((signal) => ({ ...signal, source: file.name }));
+          warnings = result.warnings.map((warning) => `${file.name}: ${warning}`);
+          readerStatus = "ai-read";
+          readerMessage = `${result.documentType || "Record"} read${result.reportingPeriod ? ` · ${result.reportingPeriod}` : ""}.`;
+        } catch (error) {
+          if (!extracted.length) readerStatus = "failed";
+          readerMessage = error instanceof Error ? error.message : "The AI reader could not read this file.";
+        }
+      }
+
+      if (extracted.length || signals.length || warnings.length) {
+        draft = mergeImportDraft(draft, extracted, { signals, warnings });
+        writeSmartImport(draft);
       }
 
       added.push({
@@ -110,9 +163,12 @@ export function BusinessRecords({ compact = false, onUploadComplete }: { compact
         size: file.size,
         fileType: file.type || file.name.split(".").pop()?.toUpperCase() || "Unknown",
         category: inferCategory(file.name),
-        status: extractedCount > 0 ? "uploaded" : "needs-review",
+        status: extracted.length > 0 ? "uploaded" : "needs-review",
         uploadedAt: new Date().toISOString(),
-        extractedCount,
+        extractedCount: extracted.length,
+        signalCount: signals.length,
+        readerStatus,
+        readerMessage,
       });
     }
 
@@ -120,8 +176,9 @@ export function BusinessRecords({ compact = false, onUploadComplete }: { compact
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextRecords));
     setRecords(nextRecords);
     setImportedCount(draft?.fields.length ?? 0);
+    setSignalCount(draft?.signals?.length ?? 0);
     setProcessing(false);
-    onUploadComplete?.();
+    setProcessingLabel("");
   };
 
   const updateRecord = (id: string, updates: Partial<BusinessRecord>) => {
@@ -130,17 +187,18 @@ export function BusinessRecords({ compact = false, onUploadComplete }: { compact
 
   if (compact) {
     return (
-      <section className="records-mri-compact" aria-label="Optional document upload for the Business MRI">
+      <section className="records-mri-compact" aria-label="Upload records before the Business MRI">
         <input ref={inputRef} type="file" multiple accept={acceptedTypes} onChange={(event) => event.target.files && void addFiles(event.target.files)} hidden />
         <div>
-          <p className="eyebrow">OPTIONAL DOCUMENT UPLOAD</p>
-          <h2>Upload reports to pre-fill the numbers.</h2>
-          <p>CSV and text exports are read privately in this browser. Any figures found are placed into the MRI for you to double-check before the report is built.</p>
-          <small>You can upload now or continue without documents. PDF, Excel, Word and image reading will be added in the secure document-reader stage.</small>
+          <p className="eyebrow">MAKE THE MRI EASIER</p>
+          <h2>Upload the records you already have.</h2>
+          <p>{aiEnabled ? "PDFs, spreadsheets, Word files, images, screenshots, CSV and text records can be read for MRI facts and business-health signals." : "CSV and text exports are read privately in this browser. Other files can be registered without being sent anywhere."}</p>
+          <small>{aiEnabled ? "AI document reading sends the selected file to the AI provider under the consent above. Extracted values are never silently confirmed." : "Choose AI-enhanced above to read PDFs, spreadsheets, documents and images. Do not upload secrets, identity records or payment-card details."}</small>
         </div>
         <div className="records-mri-actions">
-          <button type="button" className="button outline" disabled={processing} onClick={() => inputRef.current?.click()}>{processing ? "Reading files…" : "Choose business records"}</button>
+          <button type="button" className="button outline" disabled={processing} onClick={() => inputRef.current?.click()}>{processing ? processingLabel || "Reading files…" : "Upload business records"}</button>
           <span><strong>{importedCount}</strong> MRI field{importedCount === 1 ? "" : "s"} pre-filled</span>
+          <span><strong>{signalCount}</strong> diagnostic signal{signalCount === 1 ? "" : "s"} found</span>
           <span><strong>{summary.total}</strong> file{summary.total === 1 ? "" : "s"} ready</span>
         </div>
       </section>
@@ -150,22 +208,22 @@ export function BusinessRecords({ compact = false, onUploadComplete }: { compact
   return (
     <div className="records-shell">
       <section className="records-hero">
-        <div><p className="eyebrow">BUSINESS RECORDS · SMART IMPORT</p><h1>Bring existing business information into one place.</h1><p>CSV and text exports can now pre-fill MRI figures. Other supported files remain safely listed for the document-reader stage.</p></div>
-        <div className="records-summary" aria-label="Records summary"><span><strong>{summary.total}</strong><small>Files added</small></span><span><strong>{importedCount}</strong><small>MRI fields found</small></span><span><strong>{summary.review}</strong><small>Need review</small></span></div>
+        <div><p className="eyebrow">BUSINESS RECORDS · UNIVERSAL READER</p><h1>Turn existing records into verified MRI inputs.</h1><p>Business Lifeline reads supported reports, spreadsheets, documents and images when AI document reading is enabled, while keeping every imported value linked to its source for confirmation.</p></div>
+        <div className="records-summary" aria-label="Records summary"><span><strong>{summary.total}</strong><small>Files added</small></span><span><strong>{importedCount}</strong><small>MRI fields found</small></span><span><strong>{signalCount}</strong><small>Health signals</small></span></div>
       </section>
 
       <section className={`records-dropzone ${dragging ? "dragging" : ""}`} onDragEnter={(event) => { event.preventDefault(); setDragging(true); }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { event.preventDefault(); setDragging(false); }} onDrop={(event) => { event.preventDefault(); setDragging(false); void addFiles(event.dataTransfer.files); }}>
         <input ref={inputRef} type="file" multiple accept={acceptedTypes} onChange={(event) => event.target.files && void addFiles(event.target.files)} hidden />
-        <div className="records-upload-icon" aria-hidden="true">↑</div><h2>Upload reports, exports and documents</h2><p>CSV and text are read now. PDF, Excel, Word and images are registered for later reading.</p><button type="button" className="button primary" disabled={processing} onClick={() => inputRef.current?.click()}>{processing ? "Reading files…" : "Choose files"}</button><small>Do not upload passwords, banking credentials, tax file numbers, payment-card details or identity documents.</small>
+        <div className="records-upload-icon" aria-hidden="true">↑</div><h2>Upload business records</h2><p>PDF, CSV, Excel, Word, text, screenshots and common image formats are accepted.</p><button type="button" className="button primary" disabled={processing} onClick={() => inputRef.current?.click()}>{processing ? processingLabel || "Reading files…" : "Choose files"}</button><small>Never upload passwords, banking credentials, tax file numbers, identity documents, payment-card details, customer personal data or privileged legal material.</small>
       </section>
 
-      <section className="records-needed"><div><strong>Best files to add first</strong><span>Profit &amp; loss CSV · Balance sheet CSV · Aged debtors CSV · Aged creditors CSV</span></div><div><strong>Then add</strong><span>Payroll summary · Timesheet export · Tax statements · Major contracts</span></div></section>
+      <section className="records-needed"><div><strong>Financial diagnosis</strong><span>P&amp;L · Balance sheet · Cashflow · Aged debtors · Aged creditors · Tax statements</span></div><div><strong>Operating diagnosis</strong><span>Payroll · Timesheets · Contracts · Job reports · Supplier records · Procedures · Compliance records</span></div></section>
 
       <section className="records-list" aria-label="Uploaded business records">
-        <div className="records-list-heading"><div><p className="eyebrow">RECORD REGISTER</p><h2>Confirm each file and every imported figure.</h2></div>{records.length > 0 && <button type="button" className="button ghost" onClick={() => setRecords([])}>Clear register</button>}</div>
-        {records.length === 0 ? <div className="records-empty"><strong>No records added yet.</strong><p>Upload a test CSV containing labelled financial figures.</p></div> : records.map((record) => (
+        <div className="records-list-heading"><div><p className="eyebrow">RECORD REGISTER</p><h2>Confirm every file and imported result.</h2></div>{records.length > 0 && <button type="button" className="button ghost" onClick={() => setRecords([])}>Clear register</button>}</div>
+        {records.length === 0 ? <div className="records-empty"><strong>No records added yet.</strong><p>Upload a business report, spreadsheet, screenshot or document.</p></div> : records.map((record) => (
           <article key={record.id} className="record-card">
-            <div className="record-main"><span className="record-file-badge">{record.name.split(".").pop()?.slice(0, 4).toUpperCase() || "FILE"}</span><div><strong>{record.name}</strong><small>{formatBytes(record.size)} · Added {new Date(record.uploadedAt).toLocaleString()}{record.extractedCount ? ` · ${record.extractedCount} MRI fields found` : " · No automatic figures found"}</small></div></div>
+            <div className="record-main"><span className="record-file-badge">{record.name.split(".").pop()?.slice(0, 4).toUpperCase() || "FILE"}</span><div><strong>{record.name}</strong><small>{formatBytes(record.size)} · Added {new Date(record.uploadedAt).toLocaleString()} · {record.readerMessage || "Registered"}{record.extractedCount ? ` · ${record.extractedCount} MRI fields` : ""}{record.signalCount ? ` · ${record.signalCount} signals` : ""}</small></div></div>
             <label>Category<select value={record.category} onChange={(event) => updateRecord(record.id, { category: event.target.value as RecordCategory })}>{categoryOptions.map((category) => <option key={category}>{category}</option>)}</select></label>
             <label>Status<select value={record.status} onChange={(event) => updateRecord(record.id, { status: event.target.value as RecordStatus })}><option value="needs-review">Needs review</option><option value="uploaded">Imported — confirm</option><option value="verified">Verified</option></select></label>
             <button type="button" className="record-remove" onClick={() => setRecords((current) => current.filter((item) => item.id !== record.id))} aria-label={`Remove ${record.name}`}>Remove</button>
@@ -173,7 +231,7 @@ export function BusinessRecords({ compact = false, onUploadComplete }: { compact
         ))}
       </section>
 
-      <aside className="records-foundation-note"><strong>Current smart-import coverage</strong><p>CSV and plain-text reports with recognisable labels can pre-fill MRI fields. The app never silently confirms imported values. PDF, image, Word and native Excel extraction will be added through the secure document-reader stage.</p></aside>
+      <aside className="records-foundation-note"><strong>What “read” means</strong><p>The reader extracts only visible, MRI-relevant facts and supported health signals. It can still miss poor scans, unusual spreadsheets, encrypted files or unsupported formats. Every result remains marked for owner confirmation.</p></aside>
     </div>
   );
 }

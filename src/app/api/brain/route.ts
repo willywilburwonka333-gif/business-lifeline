@@ -6,6 +6,7 @@ export const maxDuration = 30;
 
 const MAX_BODY_BYTES = 32_000;
 const MAX_QUESTION = 1_000;
+const systemPrompt = "You are Business Brain, a careful small-business recovery decision-support adviser. Answer using only the supplied minimised business context and deterministic metrics. Explicitly connect recommendations to supplied figures or recorded facts. Never invent laws, tax rules, market data, guarantees, or missing financial facts. Do not diagnose insolvency. Refuse requests to conceal illegal activity, falsify records, evade regulators, launder money, or facilitate unlawful trade. Distinguish immediate actions from decisions requiring an accountant, lawyer, registered tax agent, financial adviser or insolvency practitioner. This is general decision support, not legal, accounting, tax, financial or insolvency advice.";
 
 const outputSchema = {
   type: "object",
@@ -28,6 +29,8 @@ const outputSchema = {
     },
   },
 } as const;
+
+type ProviderResult = { answer: unknown | null; detail?: string };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -55,6 +58,78 @@ function validContext(value: unknown): value is Record<string, unknown> {
   );
 }
 
+async function askOpenAI(input: unknown): Promise<ProviderResult> {
+  try {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) return { answer: null, detail: "OpenAI key is not configured." };
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL || "gpt-5.6",
+        store: false,
+        input: [
+          { role: "system", content: [{ type: "input_text", text: systemPrompt }] },
+          { role: "user", content: [{ type: "input_text", text: JSON.stringify(input) }] },
+        ],
+        text: { format: { type: "json_schema", name: "business_brain_answer", strict: true, schema: outputSchema } },
+      }),
+      signal: AbortSignal.timeout(18_000),
+    });
+    if (!response.ok) return { answer: null, detail: `OpenAI returned ${response.status}.` };
+    const result = (await response.json()) as { output_text?: string };
+    return { answer: result.output_text ? JSON.parse(result.output_text) : null };
+  } catch (error) {
+    return { answer: null, detail: error instanceof Error ? `OpenAI: ${error.message}` : "OpenAI failed." };
+  }
+}
+
+async function askGemini(input: unknown): Promise<ProviderResult> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return { answer: null, detail: "Gemini key is not available in this deployment. Ensure GEMINI_API_KEY is enabled for Preview as well as Production." };
+
+  const models = Array.from(new Set([
+    process.env.GEMINI_MODEL,
+    "gemini-3.5-flash",
+    "gemini-2.5-flash",
+  ].filter((value): value is string => Boolean(value))));
+  let lastDetail = "Gemini returned no usable answer.";
+
+  for (const model of models) {
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: "POST",
+        headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: "user", parts: [{ text: JSON.stringify(input) }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseJsonSchema: outputSchema,
+          },
+        }),
+        signal: AbortSignal.timeout(18_000),
+      });
+      if (!response.ok) {
+        const errorText = (await response.text()).slice(0, 300);
+        lastDetail = `Gemini ${model} returned ${response.status}${errorText ? `: ${errorText}` : ""}`;
+        continue;
+      }
+      const result = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+      const text = result.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
+      if (!text) {
+        lastDetail = `Gemini ${model} returned an empty response.`;
+        continue;
+      }
+      return { answer: JSON.parse(text) };
+    } catch (error) {
+      lastDetail = error instanceof Error ? `Gemini ${model}: ${error.message}` : `Gemini ${model} failed.`;
+    }
+  }
+  console.error("Gemini Business Brain unavailable", lastDetail);
+  return { answer: null, detail: lastDetail };
+}
+
 export async function POST(request: Request) {
   try {
     const crossSite = rejectCrossSiteRequest(request);
@@ -62,8 +137,9 @@ export async function POST(request: Request) {
     const limited = enforceRateLimit(request, "brain");
     if (limited) return limited;
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) return NextResponse.json({ error: "Business Brain is not configured." }, { status: 503, headers: privateResponseHeaders() });
+    if (!process.env.OPENAI_API_KEY && !process.env.GEMINI_API_KEY) {
+      return NextResponse.json({ error: "Business Brain is not configured.", detail: "No AI provider key is available in this deployment." }, { status: 503, headers: privateResponseHeaders() });
+    }
 
     const contentLength = Number(request.headers.get("content-length") || "0");
     if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
@@ -86,38 +162,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid Business Brain request." }, { status: 400, headers: privateResponseHeaders() });
     }
 
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || "gpt-5.6",
-        store: false,
-        input: [
-          {
-            role: "system",
-            content: [{
-              type: "input_text",
-              text: "You are Business Brain, a careful small-business recovery decision-support adviser. Answer using only the supplied minimised business context and deterministic metrics. Explicitly connect recommendations to supplied figures or recorded facts. Never invent laws, tax rules, market data, guarantees, or missing financial facts. Do not diagnose insolvency. Refuse requests to conceal illegal activity, falsify records, evade regulators, launder money, or facilitate unlawful trade. Distinguish immediate actions from decisions requiring an accountant, lawyer, registered tax agent, financial adviser or insolvency practitioner. This is general decision support, not legal, accounting, tax, financial or insolvency advice.",
-            }],
-          },
-          {
-            role: "user",
-            content: [{ type: "input_text", text: JSON.stringify({ question: payload.question.trim(), context: payload.context }) }],
-          },
-        ],
-        text: { format: { type: "json_schema", name: "business_brain_answer", strict: true, schema: outputSchema } },
-      }),
-      signal: AbortSignal.timeout(25_000),
-    });
+    const input = { question: payload.question.trim(), context: payload.context };
+    const openAi = await askOpenAI(input);
+    if (openAi.answer) return NextResponse.json({ answer: openAi.answer, provider: "openai" }, { headers: privateResponseHeaders() });
 
-    if (!response.ok) {
-      console.error("Business Brain failed", response.status);
-      return NextResponse.json({ error: "Business Brain is temporarily unavailable." }, { status: 502, headers: privateResponseHeaders() });
-    }
+    const gemini = await askGemini(input);
+    if (gemini.answer) return NextResponse.json({ answer: gemini.answer, provider: "gemini" }, { headers: privateResponseHeaders() });
 
-    const result = (await response.json()) as { output_text?: string };
-    if (!result.output_text) return NextResponse.json({ error: "Business Brain returned no usable answer." }, { status: 502, headers: privateResponseHeaders() });
-    return NextResponse.json({ answer: JSON.parse(result.output_text) }, { headers: privateResponseHeaders() });
+    return NextResponse.json({
+      error: "Business Brain is temporarily unavailable.",
+      detail: gemini.detail || openAi.detail || "Both AI providers failed.",
+    }, { status: 502, headers: privateResponseHeaders() });
   } catch (error) {
     console.error("Business Brain route error", error instanceof Error ? error.message : "unknown");
     return NextResponse.json({ error: "Unable to answer right now." }, { status: 500, headers: privateResponseHeaders() });

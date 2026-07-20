@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { generateReport } from "./planner";
-import { selectPlaybook } from "./recovery-playbooks";
-import type { BusinessData } from "./types";
+import { generateReport } from "./planner.ts";
+import { selectPlaybook } from "./recovery-playbooks.ts";
+import type { BusinessData } from "./types.ts";
 
 const base: BusinessData = {
   businessName: "Test Business",
