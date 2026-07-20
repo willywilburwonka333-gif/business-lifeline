@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 
 const BRIDGE_KEY = "business-lifeline-run-operating-core-v2";
-const SOURCES = ["business-lifeline-operating-platform-v1", "business-lifeline-live-control-v1", "business-lifeline-native-finance-v1"] as const;
+const SOURCES = ["business-lifeline-operating-platform-v1", "business-lifeline-live-control-v1", "business-lifeline-native-finance-v1", "business-lifeline-advanced-accounting-v1"] as const;
 
 type BridgeEnvelope = { __businessLifelineCommercialBridge?: true; legacy?: unknown; commercial?: Record<string, string | null> };
 
