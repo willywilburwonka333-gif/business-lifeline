@@ -17,6 +17,8 @@ import "./business-os.css";
 import "./workspace-shell.css";
 import "./run-mode.css";
 import "./run-operating-core.css";
+import "./operating-automation.css";
+import "./product-architecture.css";
 import "./business-records.css";
 import "./stage7-reliability.css";
 import "./judge-onboarding.css";

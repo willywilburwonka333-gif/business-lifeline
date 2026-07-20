@@ -25,6 +25,21 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Capture lint report
+        id: lint
+        continue-on-error: true
+        run: npm run lint > lint-report.txt 2>&1
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: lint-report.txt
+      - name: Enforce lint result
+        if: steps.lint.outcome == 'failure'
+        run: |
+          cat lint-report.txt
+          exit 1
       - name: Calculations tests
         run: node --test src/lib/calculations.test.ts src/lib/calculations-audit.test.ts
       - name: Planner tests
@@ -45,7 +60,5 @@ jobs:
         run: node --test src/lib/stage8-onboarding.test.ts
       - name: Recovery outcome tests
         run: node --test src/lib/recovery-outcome.test.ts
-      - name: Run lint
-        run: npm run lint
       - name: Run production build
         run: npm run build
