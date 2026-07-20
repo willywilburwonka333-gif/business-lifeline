@@ -8,10 +8,22 @@ export type ImportedField = {
   value: number | string;
   source: string;
   confidence: "high" | "review";
+  evidence?: string;
+  reportingPeriod?: string;
+};
+
+export type DiagnosticSignal = {
+  area: "cash" | "profitability" | "debt" | "tax" | "customers" | "suppliers" | "people" | "operations" | "compliance" | "growth" | "other";
+  signal: string;
+  severity: "information" | "watch" | "urgent";
+  evidence: string;
+  source: string;
 };
 
 export type SmartImportDraft = {
   fields: ImportedField[];
+  signals?: DiagnosticSignal[];
+  warnings?: string[];
   updatedAt: string;
 };
 
@@ -39,7 +51,7 @@ function cleanNumber(value: string): number | null {
   return Math.abs(parsed) * (negative ? -1 : 1);
 }
 
-function findValue(lines: string[], labels: string[]): { value: number; confidence: "high" | "review" } | null {
+function findValue(lines: string[], labels: string[]): { value: number; confidence: "high" | "review"; evidence: string } | null {
   for (const line of lines) {
     const lower = line.toLowerCase();
     const label = labels.find((candidate) => lower.includes(candidate));
@@ -47,7 +59,7 @@ function findValue(lines: string[], labels: string[]): { value: number; confiden
     const afterLabel = line.slice(lower.indexOf(label) + label.length);
     const numbers = afterLabel.match(/\(?-?\$?\s*[\d,]+(?:\.\d+)?\)?/g) ?? line.match(/\(?-?\$?\s*[\d,]+(?:\.\d+)?\)?/g) ?? [];
     const parsed = numbers.map(cleanNumber).filter((value): value is number => value !== null);
-    if (parsed.length) return { value: parsed[parsed.length - 1], confidence: numbers.length === 1 ? "high" : "review" };
+    if (parsed.length) return { value: parsed[parsed.length - 1], confidence: numbers.length === 1 ? "high" : "review", evidence: line.slice(0, 240) };
   }
   return null;
 }
@@ -58,16 +70,24 @@ export function extractFieldsFromText(text: string, source: string): ImportedFie
   for (const alias of aliases) {
     const found = findValue(lines, alias.labels);
     if (!found) continue;
-    fields.push({ key: alias.key, value: found.value, source, confidence: found.confidence });
+    fields.push({ key: alias.key, value: found.value, source, confidence: found.confidence, evidence: found.evidence });
   }
   return fields;
 }
 
-export function mergeImportDraft(existing: SmartImportDraft | null, incoming: ImportedField[]): SmartImportDraft {
+export function mergeImportDraft(existing: SmartImportDraft | null, incoming: ImportedField[], additions?: { signals?: DiagnosticSignal[]; warnings?: string[] }): SmartImportDraft {
   const map = new Map<keyof BusinessData, ImportedField>();
   for (const field of existing?.fields ?? []) map.set(field.key, field);
   for (const field of incoming) map.set(field.key, field);
-  return { fields: [...map.values()], updatedAt: new Date().toISOString() };
+  const signalMap = new Map<string, DiagnosticSignal>();
+  for (const signal of existing?.signals ?? []) signalMap.set(`${signal.source}:${signal.area}:${signal.signal}`, signal);
+  for (const signal of additions?.signals ?? []) signalMap.set(`${signal.source}:${signal.area}:${signal.signal}`, signal);
+  return {
+    fields: [...map.values()],
+    signals: [...signalMap.values()],
+    warnings: [...new Set([...(existing?.warnings ?? []), ...(additions?.warnings ?? [])])].slice(0, 20),
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 export function readSmartImport(): SmartImportDraft | null {
@@ -90,5 +110,7 @@ export function writeSmartImport(draft: SmartImportDraft) {
     data: { ...emptyBusiness, ...importedData },
     report: null,
     importedFields: draft.fields,
+    diagnosticSignals: draft.signals ?? [],
+    importWarnings: draft.warnings ?? [],
   }));
 }
