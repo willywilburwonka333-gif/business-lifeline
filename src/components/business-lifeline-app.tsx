@@ -141,23 +141,23 @@ export function BusinessLifelineApp() {
       <section className="mri-mode-panel" aria-labelledby="mri-setup-title">
         <p className="eyebrow">PRIVACY &amp; DOCUMENTS</p>
         <h1 id="mri-setup-title">Choose how your MRI is prepared.</h1>
-        <p className="mri-mode-lead">You can keep the MRI calculation-only in this browser or allow optional AI prioritisation. Uploading records is optional and helps pre-fill the numbers you will check in Step 3.</p>
+        <p className="mri-mode-lead">You can keep the MRI calculation-only in this browser or allow optional AI prioritisation and document reading. Uploading records is optional and helps pre-fill the numbers you will check in Step 3.</p>
         <div className="mri-mode-options" role="radiogroup" aria-label="Report preparation choice">
           <label className={`mri-mode-card ${reportMode === "private" ? "selected" : ""}`}>
             <input type="radio" name="report-mode" checked={reportMode === "private"} onChange={() => { setReportMode("private"); setAiConsent(false); }} />
             <span className="mri-mode-check" aria-hidden="true">{reportMode === "private" ? "✓" : ""}</span>
-            <span><strong>Private calculation-only report</strong><small>Recommended default</small><p>Your figures stay in this browser. Tested calculations and business rules build the report without sending the MRI to an AI model.</p></span>
+            <span><strong>Private calculation-only report</strong><small>Recommended default</small><p>Your figures stay in this browser. CSV and text can be read locally. Other files are registered but are not sent to an AI model.</p></span>
           </label>
           <label className={`mri-mode-card ${reportMode === "ai" ? "selected" : ""}`}>
             <input type="radio" name="report-mode" checked={reportMode === "ai"} onChange={() => setReportMode("ai")} />
             <span className="mri-mode-check" aria-hidden="true">{reportMode === "ai" ? "✓" : ""}</span>
-            <span><strong>AI-enhanced report</strong><small>Optional personalised prioritisation</small><p>The same tested calculations are used. Selected business details and written answers are also sent to the AI provider for additional diagnosis and prioritisation.</p></span>
+            <span><strong>AI-enhanced report and document reading</strong><small>Optional deeper extraction and prioritisation</small><p>The same tested calculations are used. Selected files, business details and written answers are sent to the AI provider to read PDFs, spreadsheets, documents and images and add supported diagnostic signals.</p></span>
           </label>
         </div>
-        {reportMode === "ai" && <div className="mri-ai-consent"><label><input type="checkbox" checked={aiConsent} onChange={(event) => setAiConsent(event.target.checked)} /><span>I understand and agree that selected MRI information will be sent to the AI provider for this report.</span></label><p>Do not enter passwords, banking credentials, tax file numbers, identity documents, payment-card details, customer personal information or privileged legal material.</p><a href="/legal/ai">Read the AI Data and Privacy Notice →</a></div>}
-        <BusinessRecords compact />
+        {reportMode === "ai" && <div className="mri-ai-consent"><label><input type="checkbox" checked={aiConsent} onChange={(event) => setAiConsent(event.target.checked)} /><span>I understand and agree that selected files and MRI information will be sent to the AI provider for document reading and this report.</span></label><p>Do not upload passwords, banking credentials, tax file numbers, identity documents, payment-card details, customer personal information or privileged legal material.</p><a href="/legal/ai">Read the AI Data and Privacy Notice →</a></div>}
+        <BusinessRecords compact aiEnabled={reportMode === "ai" && aiConsent} />
         <div className="mri-mode-actions"><button type="button" className="button ghost" onClick={() => setShowAssessment(false)}>← Back to home</button><button type="button" className="button primary" onClick={continueToQuestions} disabled={reportMode === "ai" && !aiConsent}>Continue to Your Business <span>→</span></button></div>
-        {reportMode === "ai" && !aiConsent && <p className="mri-consent-hint" role="status">Tick the consent box to continue with AI-enhanced analysis.</p>}
+        {reportMode === "ai" && !aiConsent && <p className="mri-consent-hint" role="status">Tick the consent box before uploading files or continuing with AI-enhanced analysis.</p>}
       </section>
     </main>
   );
