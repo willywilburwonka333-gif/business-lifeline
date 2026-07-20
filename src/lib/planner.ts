@@ -1,5 +1,5 @@
-import { calculateHealth } from "./calculations";
-import type { BusinessData, BusinessReport, PlanAction } from "./types";
+import { calculateHealth } from "./calculations.ts";
+import type { BusinessData, BusinessReport, PlanAction } from "./types.ts";
 
 const action = (title: string, urgency: PlanAction["urgency"], impact: PlanAction["impact"], difficulty: PlanAction["difficulty"], reason: string): PlanAction =>
   ({ title, urgency, impact, difficulty, reason });
