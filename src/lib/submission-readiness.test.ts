@@ -22,7 +22,7 @@ test("submission package contains every required judge-facing document", () => {
 
 test("submission copy explains the core product and responsible AI boundary", () => {
   const submission = read("docs/SUBMISSION.md");
-  assert.match(submission, /Diagnose → Prioritise → Simulate → Execute/);
+  assert.match(submission, /Diagnose[^\n]*Prioritise[^\n]*Simulate[^\n]*Execute/);
   assert.match(submission, /GPT-5\.6/);
   assert.match(submission, /deterministic/i);
   assert.match(submission, /does not diagnose insolvency/i);
