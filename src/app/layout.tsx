@@ -23,6 +23,7 @@ import "./connected-operations-v2.css";
 import "./business-operating-platform.css";
 import "./live-business-control.css";
 import "./native-finance.css";
+import "./advanced-accounting.css";
 import "./product-architecture.css";
 import "./business-records.css";
 import "./stage7-reliability.css";
