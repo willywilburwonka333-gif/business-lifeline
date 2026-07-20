@@ -30,6 +30,8 @@ const outputSchema = {
   },
 } as const;
 
+type ProviderResult = { answer: unknown | null; detail?: string };
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -56,10 +58,10 @@ function validContext(value: unknown): value is Record<string, unknown> {
   );
 }
 
-async function askOpenAI(input: unknown) {
+async function askOpenAI(input: unknown): Promise<ProviderResult> {
   try {
     const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) return null;
+    if (!apiKey) return { answer: null, detail: "OpenAI key is not configured." };
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -72,49 +74,60 @@ async function askOpenAI(input: unknown) {
         ],
         text: { format: { type: "json_schema", name: "business_brain_answer", strict: true, schema: outputSchema } },
       }),
-      signal: AbortSignal.timeout(22_000),
+      signal: AbortSignal.timeout(18_000),
     });
-    if (!response.ok) return null;
+    if (!response.ok) return { answer: null, detail: `OpenAI returned ${response.status}.` };
     const result = (await response.json()) as { output_text?: string };
-    return result.output_text ? JSON.parse(result.output_text) : null;
-  } catch {
-    return null;
+    return { answer: result.output_text ? JSON.parse(result.output_text) : null };
+  } catch (error) {
+    return { answer: null, detail: error instanceof Error ? `OpenAI: ${error.message}` : "OpenAI failed." };
   }
 }
 
-async function askGemini(input: unknown) {
-  try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return null;
-    const model = process.env.GEMINI_MODEL || "gemini-3.5-flash";
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-      method: "POST",
-      headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: "user", parts: [{ text: JSON.stringify(input) }] }],
-        generationConfig: {
-          responseFormat: {
-            text: {
-              mimeType: "application/json",
-              schema: outputSchema,
-            },
+async function askGemini(input: unknown): Promise<ProviderResult> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return { answer: null, detail: "Gemini key is not available in this deployment. Ensure GEMINI_API_KEY is enabled for Preview as well as Production." };
+
+  const models = Array.from(new Set([
+    process.env.GEMINI_MODEL,
+    "gemini-3.5-flash",
+    "gemini-2.5-flash",
+  ].filter((value): value is string => Boolean(value))));
+  let lastDetail = "Gemini returned no usable answer.";
+
+  for (const model of models) {
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: "POST",
+        headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: "user", parts: [{ text: JSON.stringify(input) }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseJsonSchema: outputSchema,
           },
-        },
-      }),
-      signal: AbortSignal.timeout(22_000),
-    });
-    if (!response.ok) {
-      console.error("Gemini Business Brain failed", response.status, await response.text());
-      return null;
+        }),
+        signal: AbortSignal.timeout(18_000),
+      });
+      if (!response.ok) {
+        const errorText = (await response.text()).slice(0, 300);
+        lastDetail = `Gemini ${model} returned ${response.status}${errorText ? `: ${errorText}` : ""}`;
+        continue;
+      }
+      const result = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+      const text = result.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
+      if (!text) {
+        lastDetail = `Gemini ${model} returned an empty response.`;
+        continue;
+      }
+      return { answer: JSON.parse(text) };
+    } catch (error) {
+      lastDetail = error instanceof Error ? `Gemini ${model}: ${error.message}` : `Gemini ${model} failed.`;
     }
-    const result = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-    const text = result.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
-    return text ? JSON.parse(text) : null;
-  } catch (error) {
-    console.error("Gemini Business Brain error", error instanceof Error ? error.message : "unknown");
-    return null;
   }
+  console.error("Gemini Business Brain unavailable", lastDetail);
+  return { answer: null, detail: lastDetail };
 }
 
 export async function POST(request: Request) {
@@ -125,7 +138,7 @@ export async function POST(request: Request) {
     if (limited) return limited;
 
     if (!process.env.OPENAI_API_KEY && !process.env.GEMINI_API_KEY) {
-      return NextResponse.json({ error: "Business Brain is not configured." }, { status: 503, headers: privateResponseHeaders() });
+      return NextResponse.json({ error: "Business Brain is not configured.", detail: "No AI provider key is available in this deployment." }, { status: 503, headers: privateResponseHeaders() });
     }
 
     const contentLength = Number(request.headers.get("content-length") || "0");
@@ -150,13 +163,16 @@ export async function POST(request: Request) {
     }
 
     const input = { question: payload.question.trim(), context: payload.context };
-    const openAiAnswer = await askOpenAI(input);
-    if (openAiAnswer) return NextResponse.json({ answer: openAiAnswer, provider: "openai" }, { headers: privateResponseHeaders() });
+    const openAi = await askOpenAI(input);
+    if (openAi.answer) return NextResponse.json({ answer: openAi.answer, provider: "openai" }, { headers: privateResponseHeaders() });
 
-    const geminiAnswer = await askGemini(input);
-    if (geminiAnswer) return NextResponse.json({ answer: geminiAnswer, provider: "gemini" }, { headers: privateResponseHeaders() });
+    const gemini = await askGemini(input);
+    if (gemini.answer) return NextResponse.json({ answer: gemini.answer, provider: "gemini" }, { headers: privateResponseHeaders() });
 
-    return NextResponse.json({ error: "Business Brain is temporarily unavailable." }, { status: 502, headers: privateResponseHeaders() });
+    return NextResponse.json({
+      error: "Business Brain is temporarily unavailable.",
+      detail: gemini.detail || openAi.detail || "Both AI providers failed.",
+    }, { status: 502, headers: privateResponseHeaders() });
   } catch (error) {
     console.error("Business Brain route error", error instanceof Error ? error.message : "unknown");
     return NextResponse.json({ error: "Unable to answer right now." }, { status: 500, headers: privateResponseHeaders() });
