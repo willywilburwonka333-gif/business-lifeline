@@ -103,7 +103,8 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
     const cleaned = question.trim();
     if (cleaned.length < 3 || loading) return;
     if (!aiConsent) {
-      setError("Please confirm the AI privacy notice before sending business information for analysis.");
+      setError("Tick the privacy consent above before sending this question to OpenAI or Gemini.");
+      document.querySelector<HTMLElement>("#privacy-controls-title")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
 
@@ -171,7 +172,7 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
         <h4 id="privacy-controls-title">You decide when information leaves this device</h4>
         <p>Your saved records remain in this browser. When you use Business Brain, the displayed minimised business context and your question are securely sent through Business Lifeline to OpenAI, or to Gemini when OpenAI is unavailable. The response clearly identifies which provider was used.</p>
         <label className="field">
-          <span><input type="checkbox" checked={aiConsent} onChange={(event) => setAiConsent(event.target.checked)} /> I understand and consent to this AI transmission for the question I submit.</span>
+          <span><input type="checkbox" checked={aiConsent} onChange={(event) => { setAiConsent(event.target.checked); setError(""); }} /> I understand and consent to this AI transmission for the question I submit.</span>
         </label>
         <div className="form-actions no-print">
           <button type="button" className="button ghost" onClick={exportLocalData}>Export my local data</button>
@@ -196,9 +197,10 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
       <form className="brain-form no-print" onSubmit={ask}>
         <label htmlFor="brain-question">Ask about a real business decision</label>
         <textarea id="brain-question" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={1000} rows={4} placeholder="Example: Can I afford to hire another employee right now?" />
-        <button className="button primary" type="submit" disabled={loading || question.trim().length < 3 || !aiConsent}>{loading ? "Interpreting the MRI…" : "Ask Business Brain"}</button>
+        <button className="button primary" type="submit" disabled={loading || question.trim().length < 3}>{loading ? "Trying OpenAI, then Gemini…" : "Ask Business Brain"}</button>
       </form>
 
+      {!aiConsent && question.trim().length >= 3 && <p className="brain-error" role="status">The button is ready. Tick the privacy consent above before the question can be transmitted.</p>}
       {error && <p className="brain-error" role="status">{error}</p>}
 
       <div className="brain-conversation" aria-live="polite">
