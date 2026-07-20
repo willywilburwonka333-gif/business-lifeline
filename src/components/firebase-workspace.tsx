@@ -6,11 +6,13 @@ import {
   User,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendEmailVerification,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
 } from "firebase/auth";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { firebaseAuth, firebaseConfigured, firebaseDb } from "@/lib/firebase-client";
 
 const CLOUD_KEYS = [
@@ -21,6 +23,7 @@ const CLOUD_KEYS = [
   "business-lifeline-mri-import-v1",
 ] as const;
 
+const businessIdFor = (uid: string) => `business-${uid}`;
 type SyncState = "local" | "syncing" | "synced" | "error";
 type CloudPayload = Record<(typeof CLOUD_KEYS)[number], string | null>;
 
@@ -39,6 +42,10 @@ function restoreLocalPayload(payload: Partial<CloudPayload>) {
   });
 }
 
+function clearLocalPayload() {
+  CLOUD_KEYS.forEach((key) => window.localStorage.removeItem(key));
+}
+
 function messageForError(error: unknown) {
   const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
   if (code.includes("email-already-in-use")) return "That email already has an account. Choose Sign in instead.";
@@ -46,6 +53,7 @@ function messageForError(error: unknown) {
   if (code.includes("weak-password")) return "Use a password with at least six characters.";
   if (code.includes("popup-closed")) return "Google sign-in was closed before it finished.";
   if (code.includes("permission-denied")) return "Cloud access is locked until the secure Firestore rules are published.";
+  if (code.includes("too-many-requests")) return "Too many attempts. Wait briefly and try again.";
   return "That did not complete. Check the details and try again.";
 }
 
@@ -58,16 +66,55 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [syncState, setSyncState] = useState<SyncState>("local");
   const [syncMessage, setSyncMessage] = useState("Stored privately on this device");
 
   const displayName = useMemo(() => user?.displayName || user?.email || "Business owner", [user]);
+  const usesPassword = Boolean(user?.providerData.some((provider) => provider.providerId === "password"));
+
+  const writeAudit = useCallback(async (activeUser: User, action: string, detail: string) => {
+    if (!firebaseDb) return;
+    const businessId = businessIdFor(activeUser.uid);
+    try {
+      await addDoc(collection(firebaseDb, "businesses", businessId, "auditEvents"), {
+        action,
+        detail,
+        actorId: activeUser.uid,
+        actorEmail: activeUser.email ?? null,
+        createdAt: serverTimestamp(),
+      });
+    } catch {
+      // Audit failure must not block the user's primary action.
+    }
+  }, []);
+
+  const ensureCommercialWorkspace = useCallback(async (activeUser: User) => {
+    if (!firebaseDb) return;
+    const businessId = businessIdFor(activeUser.uid);
+    await setDoc(doc(firebaseDb, "businesses", businessId), {
+      name: "My Business Lifeline Workspace",
+      ownerId: activeUser.uid,
+      status: "active",
+      plan: "beta",
+      updatedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+    }, { merge: true });
+    await setDoc(doc(firebaseDb, "businesses", businessId, "members", activeUser.uid), {
+      userId: activeUser.uid,
+      email: activeUser.email ?? null,
+      role: "owner",
+      status: "active",
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  }, []);
 
   const syncWorkspace = useCallback(async (activeUser: User, preferCloud = false) => {
     if (!firebaseDb) return;
     setSyncState("syncing");
     setSyncMessage("Syncing secure workspace…");
     try {
+      await ensureCommercialWorkspace(activeUser);
       const workspaceRef = doc(firebaseDb, "userWorkspaces", activeUser.uid);
       const snapshot = await getDoc(workspaceRef);
       const localPayload = readLocalPayload();
@@ -75,6 +122,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
 
       if (cloudPayload && (preferCloud || !hasUsefulLocalData(localPayload))) {
         restoreLocalPayload(cloudPayload);
+        await writeAudit(activeUser, "workspace.restore", "Restored the cloud workspace onto this device.");
         setSyncState("synced");
         setSyncMessage("Cloud workspace restored");
         window.setTimeout(() => window.location.reload(), 350);
@@ -84,17 +132,19 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
       await setDoc(workspaceRef, {
         ownerId: activeUser.uid,
         ownerEmail: activeUser.email ?? null,
+        businessId: businessIdFor(activeUser.uid),
         payload: localPayload,
         updatedAt: serverTimestamp(),
-        version: 1,
+        version: 2,
       }, { merge: true });
+      await writeAudit(activeUser, "workspace.sync", "Synced this device to the secure cloud workspace.");
       setSyncState("synced");
       setSyncMessage("Cloud workspace up to date");
     } catch (syncError) {
       setSyncState("error");
       setSyncMessage(messageForError(syncError));
     }
-  }, []);
+  }, [ensureCommercialWorkspace, writeAudit]);
 
   useEffect(() => {
     if (!firebaseAuth) return;
@@ -120,9 +170,15 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
     if (!firebaseAuth || !email.trim() || password.length < 6) return;
     setBusy(true);
     setError("");
+    setNotice("");
     try {
-      if (createMode) await createUserWithEmailAndPassword(firebaseAuth, email.trim(), password);
-      else await signInWithEmailAndPassword(firebaseAuth, email.trim(), password);
+      if (createMode) {
+        const credential = await createUserWithEmailAndPassword(firebaseAuth, email.trim(), password);
+        await sendEmailVerification(credential.user);
+        setNotice("Account created. Check your email to verify it.");
+      } else {
+        await signInWithEmailAndPassword(firebaseAuth, email.trim(), password);
+      }
       setPanelOpen(false);
       setEmail("");
       setPassword("");
@@ -145,6 +201,64 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
     } finally {
       setBusy(false);
     }
+  };
+
+  const resetPassword = async () => {
+    if (!firebaseAuth || !email.trim()) {
+      setError("Enter your email address first.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await sendPasswordResetEmail(firebaseAuth, email.trim());
+      setNotice("Password reset email sent.");
+    } catch (authError) {
+      setError(messageForError(authError));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resendVerification = async () => {
+    if (!user) return;
+    setBusy(true);
+    setError("");
+    try {
+      await sendEmailVerification(user);
+      setNotice("Verification email sent.");
+    } catch (authError) {
+      setError(messageForError(authError));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const exportWorkspace = async () => {
+    const payload = readLocalPayload();
+    const exportData = {
+      exportedAt: new Date().toISOString(),
+      formatVersion: 1,
+      account: user ? { uid: user.uid, email: user.email } : null,
+      payload,
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `business-lifeline-export-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    if (user) await writeAudit(user, "workspace.export", "Downloaded a local JSON workspace export.");
+    setNotice("Workspace export downloaded.");
+  };
+
+  const clearThisDevice = async () => {
+    const confirmed = window.confirm("Clear Business Lifeline data from this device? Your cloud copy is not deleted.");
+    if (!confirmed) return;
+    if (user) await writeAudit(user, "workspace.local_clear", "Cleared Business Lifeline data from one device.");
+    clearLocalPayload();
+    window.location.reload();
   };
 
   const logOut = async () => {
@@ -175,9 +289,18 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
               <small>SECURE ACCOUNT</small>
               <h2>{displayName}</h2>
               <p>Your Business Lifeline workspace remains available locally and can be copied to your private cloud workspace.</p>
+              <div className="commercial-security-status">
+                <strong>{usesPassword ? (user.emailVerified ? "Email verified" : "Email verification required") : "Verified Google account"}</strong>
+                <span>Role: Owner · Workspace: Active beta</span>
+              </div>
+              {usesPassword && !user.emailVerified && <button className="cloud-mode-switch" type="button" onClick={() => void resendVerification()} disabled={busy}>Resend verification email</button>}
+              {notice && <p className="cloud-account-notice" role="status">{notice}</p>}
+              {error && <p className="cloud-account-error" role="alert">{error}</p>}
               <div className="cloud-account-panel-actions">
                 <button type="button" className="button primary" onClick={() => void syncWorkspace(user)}>Sync this device</button>
                 <button type="button" className="button ghost" onClick={() => void syncWorkspace(user, true)}>Restore cloud copy</button>
+                <button type="button" className="button ghost" onClick={() => void exportWorkspace()}>Download my data</button>
+                <button type="button" className="button ghost" onClick={() => void clearThisDevice()}>Clear this device</button>
                 <button type="button" className="button ghost" onClick={() => void logOut()}>Sign out</button>
               </div>
             </div>
@@ -188,12 +311,14 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
               <p>You can keep using Business Lifeline privately on this device. An account adds secure cloud backup and access across devices.</p>
               <label>Email<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
               <label>Password<input type="password" autoComplete={createMode ? "new-password" : "current-password"} value={password} onChange={(event) => setPassword(event.target.value)} minLength={6} required /></label>
+              {notice && <p className="cloud-account-notice" role="status">{notice}</p>}
               {error && <p className="cloud-account-error" role="alert">{error}</p>}
               <div className="cloud-account-panel-actions">
                 <button className="button primary" type="submit" disabled={busy}>{busy ? "Please wait…" : createMode ? "Create account" : "Sign in"}</button>
                 <button className="button ghost" type="button" onClick={submitGoogle} disabled={busy}>Continue with Google</button>
               </div>
-              <button className="cloud-mode-switch" type="button" onClick={() => { setCreateMode((mode) => !mode); setError(""); }}>{createMode ? "Already have an account? Sign in" : "New here? Create an account"}</button>
+              {!createMode && <button className="cloud-mode-switch" type="button" onClick={() => void resetPassword()} disabled={busy}>Forgot password?</button>}
+              <button className="cloud-mode-switch" type="button" onClick={() => { setCreateMode((mode) => !mode); setError(""); setNotice(""); }}>{createMode ? "Already have an account? Sign in" : "New here? Create an account"}</button>
             </form>
           )}
         </section>
