@@ -39,12 +39,12 @@ async function readWithGemini(file: File, base64: string, mime: string) {
     const key = process.env.GEMINI_API_KEY;
     if (!key) return null;
     const model = process.env.GEMINI_DOCUMENT_MODEL || process.env.GEMINI_MODEL || "gemini-3.5-flash";
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, { method: "POST", headers: { "x-goog-api-key": key, "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: `${prompt}\nRead ${file.name}. Extract only MRI-relevant facts and supported business-health signals. Empty arrays are valid.` }, { inlineData: { mimeType: mime, data: base64 } }] }], generationConfig: { responseMimeType: "application/json", responseJsonSchema: outputSchema } }), signal: AbortSignal.timeout(45_000) });
-    if (!response.ok) return null;
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, { method: "POST", headers: { "x-goog-api-key": key, "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: `${prompt}\nRead ${file.name}. Extract only MRI-relevant facts and supported business-health signals. Empty arrays are valid.` }, { inlineData: { mimeType: mime, data: base64 } }] }], generationConfig: { responseFormat: { text: { mimeType: "application/json", schema: outputSchema } } } }), signal: AbortSignal.timeout(45_000) });
+    if (!response.ok) { console.error("Gemini document reader failed", response.status, await response.text()); return null; }
     const result = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
     const text = result.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
     return text ? JSON.parse(text) : null;
-  } catch { return null; }
+  } catch (error) { console.error("Gemini document reader error", error instanceof Error ? error.message : "unknown"); return null; }
 }
 
 export async function POST(request: Request) {
