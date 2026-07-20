@@ -25,6 +25,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Run lint
+        run: npm run lint
       - name: Calculations tests
         run: node --test src/lib/calculations.test.ts src/lib/calculations-audit.test.ts
       - name: Planner tests
@@ -45,7 +47,5 @@ jobs:
         run: node --test src/lib/stage8-onboarding.test.ts
       - name: Recovery outcome tests
         run: node --test src/lib/recovery-outcome.test.ts
-      - name: Run lint
-        run: npm run lint
       - name: Run production build
         run: npm run build
