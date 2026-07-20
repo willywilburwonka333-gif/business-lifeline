@@ -6,11 +6,10 @@ import { BusinessBrain } from "@/components/business-brain";
 import { BusinessOperatingSystem } from "@/components/business-operating-system";
 import { BusinessRecords } from "@/components/business-records";
 import { BusinessTemplates } from "@/components/business-templates";
-import { OperatingAutomationHub } from "@/components/operating-automation-hub";
+import { ConnectedOperationsV2 } from "@/components/connected-operations-v2";
 import { RecoveryCoach } from "@/components/recovery-coach";
 import { RecoveryPlaybooks } from "@/components/recovery-playbooks";
 import { RecoveryTimeline } from "@/components/recovery-timeline";
-import { RunModeFoundation } from "@/components/run-mode-foundation";
 import { ScenarioPlanner } from "@/components/scenario-planner";
 import { TodayActionSheet } from "@/components/today-action-sheet";
 import { WorkspaceDashboard } from "@/components/workspace-dashboard";
@@ -55,7 +54,7 @@ const areas: AreaDefinition[] = [
     detail: "Operate customers, work, money, stock, sales, people and obligations in one place.",
     tools: [
       { id: "command", label: "Command Centre", detail: "Responsibilities, controls and operating documents" },
-      { id: "run", label: "Run My Business", detail: "CRM, jobs, sales, stock, suppliers, expenses and staff" },
+      { id: "run", label: "Run My Business", detail: "Connected CRM, quotes, jobs, invoices, stock, sales, expenses and staff" },
       { id: "documents", label: "Business Records", detail: "Permanent document and evidence register" },
     ],
   },
@@ -165,7 +164,7 @@ export function SavedScenarioPlanner({ saved, onReset }: { saved: SavedReport; o
         {activeTool === "cashflow" && <ScenarioPlanner data={saved.data} report={saved.report} />}
         {activeTool === "resources" && <div className="workspace-section-stack resources-stage"><TodayActionSheet data={saved.data} report={saved.report} /><BusinessTemplates data={saved.data} /></div>}
         {activeTool === "command" && <BusinessOperatingSystem saved={saved} />}
-        {activeTool === "run" && <div className="workspace-section-stack"><RunModeFoundation saved={saved} /><OperatingAutomationHub /></div>}
+        {activeTool === "run" && <ConnectedOperationsV2 />}
       </main>
     </div>
   );
