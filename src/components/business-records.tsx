@@ -55,7 +55,7 @@ function canReadDirectly(file: File) {
   return file.type.includes("csv") || file.type.startsWith("text/") || lower.endsWith(".csv") || lower.endsWith(".txt");
 }
 
-export function BusinessRecords({ compact = false }: { compact?: boolean }) {
+export function BusinessRecords({ compact = false, onUploadComplete }: { compact?: boolean; onUploadComplete?: () => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [records, setRecords] = useState<BusinessRecord[]>([]);
   const [ready, setReady] = useState(false);
@@ -81,11 +81,14 @@ export function BusinessRecords({ compact = false }: { compact?: boolean }) {
   }), [records]);
 
   const addFiles = async (files: FileList | File[]) => {
+    const selected = Array.from(files);
+    if (selected.length === 0) return;
+
     setProcessing(true);
     const added: BusinessRecord[] = [];
     let draft = readSmartImport();
 
-    for (const file of Array.from(files)) {
+    for (const file of selected) {
       let extractedCount = 0;
       if (canReadDirectly(file)) {
         try {
@@ -113,9 +116,13 @@ export function BusinessRecords({ compact = false }: { compact?: boolean }) {
       });
     }
 
-    setRecords((current) => [...added, ...current]);
+    const nextRecords = [...added, ...readStored()];
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextRecords));
+    setRecords(nextRecords);
     setImportedCount(draft?.fields.length ?? 0);
     setProcessing(false);
+
+    if (compact) onUploadComplete?.();
   };
 
   const updateRecord = (id: string, updates: Partial<BusinessRecord>) => {
@@ -128,12 +135,12 @@ export function BusinessRecords({ compact = false }: { compact?: boolean }) {
         <input ref={inputRef} type="file" multiple accept={acceptedTypes} onChange={(event) => event.target.files && void addFiles(event.target.files)} hidden />
         <div>
           <p className="eyebrow">MAKE THE MRI EASIER</p>
-          <h2>Upload reports and let Business Lifeline pre-fill the numbers.</h2>
-          <p>CSV and text exports are read privately in this browser. Any figures found are placed into the MRI for you to double-check before continuing.</p>
-          <small>PDF, Excel, Word and images are saved to Records now; automatic reading for those formats needs the document-reader stage.</small>
+          <h2>Upload your reports and go straight into the MRI.</h2>
+          <p>CSV and text exports are read privately in this browser. Any figures found are pre-filled for you to double-check on the MRI questions.</p>
+          <small>After the upload finishes, Business Lifeline opens the first MRI step automatically.</small>
         </div>
         <div className="records-mri-actions">
-          <button type="button" className="button outline" disabled={processing} onClick={() => inputRef.current?.click()}>{processing ? "Reading files…" : "Upload business records"}</button>
+          <button type="button" className="button outline" disabled={processing} onClick={() => inputRef.current?.click()}>{processing ? "Reading files…" : "Upload records and continue"}</button>
           <span><strong>{importedCount}</strong> MRI field{importedCount === 1 ? "" : "s"} pre-filled</span>
           <span><strong>{summary.total}</strong> file{summary.total === 1 ? "" : "s"} ready</span>
         </div>
