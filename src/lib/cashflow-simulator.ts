@@ -1,4 +1,4 @@
-import type { BusinessData } from "./types";
+import type { BusinessData } from "./types.ts";
 
 export type CashflowAssumptions = {
   priceChangePercent: number;
