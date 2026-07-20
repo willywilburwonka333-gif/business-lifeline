@@ -94,17 +94,25 @@ async function askGemini(input: unknown) {
         systemInstruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: "user", parts: [{ text: JSON.stringify(input) }] }],
         generationConfig: {
-          responseMimeType: "application/json",
-          responseJsonSchema: outputSchema,
+          responseFormat: {
+            text: {
+              mimeType: "application/json",
+              schema: outputSchema,
+            },
+          },
         },
       }),
       signal: AbortSignal.timeout(22_000),
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.error("Gemini Business Brain failed", response.status, await response.text());
+      return null;
+    }
     const result = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
     const text = result.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
     return text ? JSON.parse(text) : null;
-  } catch {
+  } catch (error) {
+    console.error("Gemini Business Brain error", error instanceof Error ? error.message : "unknown");
     return null;
   }
 }
