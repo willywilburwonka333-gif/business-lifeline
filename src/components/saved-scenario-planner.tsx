@@ -8,6 +8,7 @@ import { BusinessOperatingPlatform } from "@/components/business-operating-platf
 import { BusinessRecords } from "@/components/business-records";
 import { BusinessTemplates } from "@/components/business-templates";
 import { LiveBusinessControl } from "@/components/live-business-control";
+import { NativeFinanceHub } from "@/components/native-finance-hub";
 import { ProductTutorial, tutorialStorageKey, type TutorialStep } from "@/components/product-tutorial";
 import { RecoveryCoach } from "@/components/recovery-coach";
 import { RecoveryPlaybooks } from "@/components/recovery-playbooks";
@@ -19,7 +20,7 @@ import type { SavedReport } from "@/lib/saved-report";
 import type { WorkspaceTab } from "@/lib/workspace";
 
 type MainArea = "mri" | "lifeline" | "operating";
-type ToolId = "diagnosis" | "evidence" | "recovery" | "coach" | "brain" | "cashflow" | "resources" | "health" | "command" | "run" | "documents";
+type ToolId = "diagnosis" | "evidence" | "recovery" | "coach" | "brain" | "cashflow" | "resources" | "health" | "command" | "run" | "finance" | "documents";
 type ToolDefinition = { id: ToolId; label: string; detail: string };
 type AreaDefinition = { id: MainArea; label: string; verb: string; detail: string; tools: ToolDefinition[] };
 type TutorialId = "overview" | MainArea;
@@ -40,6 +41,7 @@ const areas: AreaDefinition[] = [
     { id: "health", label: "Live Business Health", detail: "Continuous score, cash runway, exceptions, obligations, appointments and purchasing" },
     { id: "command", label: "Command Centre", detail: "Responsibilities, controls and operating documents" },
     { id: "run", label: "Run My Business", detail: "Complete CRM, sales, POS, market, jobs, invoices, stock, suppliers, money, people and reports" },
+    { id: "finance", label: "Finance & Providers", detail: "Native ledger, business documents, payments and replaceable provider connections" },
     { id: "documents", label: "Business Records", detail: "Permanent document and evidence register" },
   ] },
 ];
@@ -66,7 +68,8 @@ const tutorialSteps: Record<TutorialId, TutorialStep[]> = {
     { title: "Live Business Health", body: "Watch the business score change as sales, invoices, stock, tasks, cash and obligations change.", target: '.area-tool-list button:nth-child(1)' },
     { title: "Command Centre", body: "Set responsibilities, operating controls and the documents needed to run the business properly.", target: '.area-tool-list button:nth-child(2)' },
     { title: "Run My Business", body: "Open the full operating platform for CRM, sales, POS, markets, jobs, invoices, stock, suppliers, money, team and reports.", target: '.area-tool-list button:nth-child(3)' },
-    { title: "Business Records", body: "Maintain the permanent record of important documents and supporting evidence.", target: '.area-tool-list button:nth-child(4)' },
+    { title: "Finance and provider control", body: "Use Business Lifeline's native ledger and documents while keeping external payment, email, banking and accounting providers replaceable.", target: '.area-tool-list button:nth-child(4)' },
+    { title: "Business Records", body: "Maintain the permanent record of important documents and supporting evidence.", target: '.area-tool-list button:nth-child(5)' },
   ],
 };
 
@@ -86,7 +89,7 @@ export function SavedScenarioPlanner({ saved, onReset }: { saved: SavedReport; o
     <header className="product-header no-print"><div className="product-brand"><span>BUSINESS LIFELINE</span><strong>{saved.data.businessName}</strong><small>MRI complete · Choose what the business needs now</small></div><button className="workspace-reset" type="button" onClick={onReset}>Start a new MRI</button></header>
     <nav className="main-area-nav no-print" aria-label="Business Lifeline main areas">{areas.map((area) => <button key={area.id} type="button" className={activeArea === area.id ? "active" : ""} onClick={() => openArea(area.id)}><small>{area.verb}</small><strong>{area.label}</strong><span>{area.detail}</span></button>)}</nav>
     <section className="area-toolbar no-print" aria-label={`${currentArea.label} tools`}><div className="area-heading"><small>{currentArea.verb.toUpperCase()}</small><strong>{currentArea.label}</strong><span>{currentArea.detail}</span></div><div className="area-tool-list" role="tablist">{currentArea.tools.map((tool) => <button key={tool.id} type="button" role="tab" aria-selected={activeTool === tool.id} className={activeTool === tool.id ? "active" : ""} onClick={() => setActiveTool(tool.id)}><strong>{tool.label}</strong><small>{tool.detail}</small></button>)}</div></section>
-    <main className="workspace-panel" role="tabpanel" aria-label={currentTool.label}><div className="current-tool-title"><small>{currentArea.label}</small><h1>{currentTool.label}</h1><p>{currentTool.detail}</p></div>{activeTool === "diagnosis" && <WorkspaceDashboard saved={saved} openTab={dashboardOpenTab} />}{(activeTool === "evidence" || activeTool === "documents") && <BusinessRecords />}{activeTool === "recovery" && <div className="workspace-section-stack"><RecoveryTimeline saved={saved} /><RecoveryPlaybooks saved={saved} /><ActionCentre report={saved.report} /></div>}{activeTool === "coach" && <RecoveryCoach data={saved.data} report={saved.report} />}{activeTool === "brain" && <BusinessBrain saved={saved} />}{activeTool === "cashflow" && <ScenarioPlanner data={saved.data} report={saved.report} />}{activeTool === "resources" && <div className="workspace-section-stack resources-stage"><TodayActionSheet data={saved.data} report={saved.report} /><BusinessTemplates data={saved.data} /></div>}{activeTool === "health" && <LiveBusinessControl saved={saved} />}{activeTool === "command" && <BusinessOperatingSystem saved={saved} />}{activeTool === "run" && <BusinessOperatingPlatform />}</main>
+    <main className="workspace-panel" role="tabpanel" aria-label={currentTool.label}><div className="current-tool-title"><small>{currentArea.label}</small><h1>{currentTool.label}</h1><p>{currentTool.detail}</p></div>{activeTool === "diagnosis" && <WorkspaceDashboard saved={saved} openTab={dashboardOpenTab} />}{(activeTool === "evidence" || activeTool === "documents") && <BusinessRecords />}{activeTool === "recovery" && <div className="workspace-section-stack"><RecoveryTimeline saved={saved} /><RecoveryPlaybooks saved={saved} /><ActionCentre report={saved.report} /></div>}{activeTool === "coach" && <RecoveryCoach data={saved.data} report={saved.report} />}{activeTool === "brain" && <BusinessBrain saved={saved} />}{activeTool === "cashflow" && <ScenarioPlanner data={saved.data} report={saved.report} />}{activeTool === "resources" && <div className="workspace-section-stack resources-stage"><TodayActionSheet data={saved.data} report={saved.report} /><BusinessTemplates data={saved.data} /></div>}{activeTool === "health" && <LiveBusinessControl saved={saved} />}{activeTool === "command" && <BusinessOperatingSystem saved={saved} />}{activeTool === "run" && <BusinessOperatingPlatform />}{activeTool === "finance" && <NativeFinanceHub />}</main>
     <button type="button" className="product-help-button no-print" onClick={() => setTutorial(activeArea)}>Help &amp; tutorial</button><ProductTutorial tutorialId={tutorial ?? "overview"} title={tutorial === "overview" ? "Business Lifeline overview" : `${currentArea.label} tutorial`} steps={tutorialSteps[tutorial ?? "overview"]} open={Boolean(tutorial)} onClose={() => setTutorial(null)} onStep={onTutorialStep} />
   </div>;
 }
