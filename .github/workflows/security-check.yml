@@ -25,8 +25,28 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
-      - name: Run tests
-        run: npm test
+      - name: Calculations tests
+        run: node --test src/lib/calculations.test.ts src/lib/calculations-audit.test.ts
+      - name: Planner tests
+        run: node --test src/lib/planner.test.ts
+      - name: Saved report tests
+        run: node --test src/lib/saved-report.test.ts
+      - name: Recovery history tests
+        run: node --test src/lib/recovery-history.test.ts
+      - name: Cashflow simulator tests
+        run: node --test src/lib/cashflow-simulator.test.ts
+      - name: Recovery playbook tests
+        run: node --test src/lib/recovery-playbooks.test.ts
+      - name: Business OS tests
+        run: node --test src/lib/business-os.test.ts
+      - name: Workspace tests
+        run: node --test src/lib/workspace.test.ts
+      - name: Stage 8 onboarding tests
+        run: node --test src/lib/stage8-onboarding.test.ts
+      - name: Recovery outcome tests
+        run: node --test src/lib/recovery-outcome.test.ts
+      - name: Submission readiness tests
+        run: node --test src/lib/submission-readiness.test.ts
       - name: Run lint
         run: npm run lint
       - name: Run production build
