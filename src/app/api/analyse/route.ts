@@ -57,12 +57,12 @@ async function analyseWithGemini(input: unknown) {
   try {
     const key = process.env.GEMINI_API_KEY; if (!key) return null;
     const model = process.env.GEMINI_MODEL || "gemini-3.5-flash";
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, { method: "POST", headers: { "x-goog-api-key": key, "Content-Type": "application/json" }, body: JSON.stringify({ systemInstruction: { parts: [{ text: systemPrompt }] }, contents: [{ role: "user", parts: [{ text: JSON.stringify(input) }] }], generationConfig: { responseMimeType: "application/json", responseJsonSchema: outputSchema } }), signal: AbortSignal.timeout(22_000) });
-    if (!response.ok) return null;
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, { method: "POST", headers: { "x-goog-api-key": key, "Content-Type": "application/json" }, body: JSON.stringify({ systemInstruction: { parts: [{ text: systemPrompt }] }, contents: [{ role: "user", parts: [{ text: JSON.stringify(input) }] }], generationConfig: { responseFormat: { text: { mimeType: "application/json", schema: outputSchema } } } }), signal: AbortSignal.timeout(22_000) });
+    if (!response.ok) { console.error("Gemini analysis failed", response.status, await response.text()); return null; }
     const result = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
     const text = result.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
     return text ? JSON.parse(text) : null;
-  } catch { return null; }
+  } catch (error) { console.error("Gemini analysis error", error instanceof Error ? error.message : "unknown"); return null; }
 }
 
 export async function POST(request: Request) {
