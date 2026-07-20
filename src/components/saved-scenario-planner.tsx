@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ActionCentre } from "@/components/action-centre";
 import { BusinessBrain } from "@/components/business-brain";
 import { BusinessOperatingSystem } from "@/components/business-operating-system";
+import { BusinessRecords } from "@/components/business-records";
 import { BusinessTemplates } from "@/components/business-templates";
 import { RecoveryCoach } from "@/components/recovery-coach";
 import { RecoveryPlaybooks } from "@/components/recovery-playbooks";
@@ -24,6 +25,7 @@ const guideSteps: Array<{ tab: WorkspaceTab; title: string; copy: string }> = [
   { tab: "cashflow", title: "Test a recovery", copy: "Change price, costs, collections and funding to compare outcomes." },
   { tab: "operations", title: "Run the turnaround", copy: "Move the plan into tasks, contacts, responsibilities and controls." },
   { tab: "run", title: "Keep operating", copy: "Use the permanent weekly workspace after the immediate crisis is stabilised." },
+  { tab: "records", title: "Bring records together", copy: "Upload existing reports and exports, categorise them and confirm what is verified." },
   { tab: "resources", title: "Execute difficult conversations", copy: "Use the one-page rescue sheet and pre-filled templates." },
 ];
 
@@ -70,7 +72,7 @@ export function SavedScenarioPlanner({ saved, onReset }: { saved: SavedReport; o
           <small className="workspace-foundation">Foundation complete · Business MRI</small>
           <button className="workspace-reset" type="button" onClick={onReset}>Start a new MRI</button>
         </div>
-        <div className="workspace-tab-list" role="tablist" aria-label="Eight-stage business recovery and operating workspace">
+        <div className="workspace-tab-list" role="tablist" aria-label="Nine-stage business recovery and operating workspace">
           {workspaceTabs.map((tab) => (
             <button
               id={`workspace-tab-${tab.id}`}
@@ -126,6 +128,7 @@ export function SavedScenarioPlanner({ saved, onReset }: { saved: SavedReport; o
         {activeTab === "cashflow" && <ScenarioPlanner data={saved.data} report={saved.report} />}
         {activeTab === "operations" && <BusinessOperatingSystem saved={saved} />}
         {activeTab === "run" && <RunModeFoundation saved={saved} />}
+        {activeTab === "records" && <BusinessRecords />}
         {activeTab === "resources" && (
           <div className="workspace-section-stack resources-stage">
             <TodayActionSheet data={saved.data} report={saved.report} />

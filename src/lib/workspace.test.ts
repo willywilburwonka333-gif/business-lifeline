@@ -14,11 +14,13 @@ test("dashboard is first and operating workspaces remain available", () => {
   assert.ok(workspaceTabs.some((tab) => tab.id === "cashflow"));
   assert.ok(workspaceTabs.some((tab) => tab.id === "operations"));
   assert.ok(workspaceTabs.some((tab) => tab.id === "run"));
+  assert.ok(workspaceTabs.some((tab) => tab.id === "records"));
 });
 
 test("workspace tab validator rejects unknown routes", () => {
   assert.equal(isWorkspaceTab("dashboard"), true);
   assert.equal(isWorkspaceTab("run"), true);
+  assert.equal(isWorkspaceTab("records"), true);
   assert.equal(isWorkspaceTab("resources"), true);
   assert.equal(isWorkspaceTab("report"), false);
   assert.equal(isWorkspaceTab(null), false);

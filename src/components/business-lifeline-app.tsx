@@ -2,21 +2,16 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BusinessLifeline } from "@/components/business-lifeline";
+import { BusinessRecords } from "@/components/business-records";
 import { JudgeLanding } from "@/components/judge-landing";
 import { SavedScenarioPlanner } from "@/components/saved-scenario-planner";
 import { demoBusiness } from "@/lib/demo";
 import { generateReport } from "@/lib/planner";
-import {
-  readSavedReport,
-  REPORT_STORAGE_KEY,
-  writeSavedReport,
-  type SavedReport,
-} from "@/lib/saved-report";
+import { readSavedReport, REPORT_STORAGE_KEY, writeSavedReport, type SavedReport } from "@/lib/saved-report";
 import type { BusinessReport } from "@/lib/types";
 
 export const DEMO_GUIDE_KEY = "business-lifeline-demo-guide-v1";
 const MRI_MODE_KEY = "business-lifeline-mri-mode-v1";
-
 type AppState = SavedReport | null | undefined;
 type ReportMode = "private" | "ai";
 
@@ -25,84 +20,10 @@ function buildDemoReport(): BusinessReport {
   return { ...base, aiStatus: "fallback" };
 }
 
-function ReportModeChoice({
-  mode,
-  consent,
-  onModeChange,
-  onConsentChange,
-  onContinue,
-  onBack,
-}: {
-  mode: ReportMode;
-  consent: boolean;
-  onModeChange: (mode: ReportMode) => void;
-  onConsentChange: (consent: boolean) => void;
-  onContinue: () => void;
-  onBack: () => void;
-}) {
-  const aiAllowed = mode === "private" || consent;
-
-  return (
-    <main id="main-content" className="mri-mode-shell">
-      <header className="mri-mode-header">
-        <button className="brand button-reset" onClick={onBack}><span>BL</span> Business Lifeline</button>
-        <small>Business MRI · Privacy choice</small>
-      </header>
-
-      <section className="mri-mode-panel" aria-labelledby="mri-mode-title">
-        <p className="eyebrow">Before we begin</p>
-        <h1 id="mri-mode-title">Choose how your report is prepared.</h1>
-        <p className="mri-mode-lead">Both choices produce your health score, urgent actions and 90-day rescue plan. You can keep everything calculation-only or add optional AI prioritisation.</p>
-
-        <div className="mri-mode-options" role="radiogroup" aria-label="Report preparation choice">
-          <label className={`mri-mode-card ${mode === "private" ? "selected" : ""}`}>
-            <input type="radio" name="report-mode" value="private" checked={mode === "private"} onChange={() => { onModeChange("private"); onConsentChange(false); }} />
-            <span className="mri-mode-check" aria-hidden="true">{mode === "private" ? "✓" : ""}</span>
-            <span>
-              <strong>Private calculation-only report</strong>
-              <small>Recommended default</small>
-              <p>Your figures stay in this browser. Tested calculations and business rules build the complete report without sending the MRI to an AI model.</p>
-            </span>
-          </label>
-
-          <label className={`mri-mode-card ${mode === "ai" ? "selected" : ""}`}>
-            <input type="radio" name="report-mode" value="ai" checked={mode === "ai"} onChange={() => onModeChange("ai")} />
-            <span className="mri-mode-check" aria-hidden="true">{mode === "ai" ? "✓" : ""}</span>
-            <span>
-              <strong>AI-enhanced report</strong>
-              <small>Optional personalised prioritisation</small>
-              <p>Your MRI still uses the same tested calculations. Selected business details and your written answers are also sent to our AI provider to add strategic diagnosis and prioritised guidance.</p>
-            </span>
-          </label>
-        </div>
-
-        {mode === "ai" && (
-          <div className="mri-ai-consent">
-            <label>
-              <input type="checkbox" checked={consent} onChange={(event) => onConsentChange(event.target.checked)} />
-              <span>I understand and agree that selected MRI information will be sent to the AI provider for this report.</span>
-            </label>
-            <p>Do not enter passwords, banking credentials, tax file numbers, identity documents, payment-card details, customer personal information or privileged legal material.</p>
-            <a href="/legal/ai">Read the AI Data and Privacy Notice →</a>
-          </div>
-        )}
-
-        <div className="mri-mode-actions">
-          <button type="button" className="button ghost" onClick={onBack}>← Back</button>
-          <button type="button" className="button primary" onClick={onContinue} disabled={!aiAllowed}>
-            Continue to My Business MRI <span>→</span>
-          </button>
-        </div>
-        {mode === "ai" && !consent && <p className="mri-consent-hint" role="status">Tick the consent box to continue with AI-enhanced analysis.</p>}
-      </section>
-    </main>
-  );
-}
-
 export function BusinessLifelineApp() {
   const [saved, setSaved] = useState<AppState>(undefined);
-  const [showModeChoice, setShowModeChoice] = useState(false);
   const [showAssessment, setShowAssessment] = useState(false);
+  const [showQuestions, setShowQuestions] = useState(false);
   const [reportMode, setReportMode] = useState<ReportMode>("private");
   const [aiConsent, setAiConsent] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
@@ -112,7 +33,7 @@ export function BusinessLifelineApp() {
     const next = readSavedReport();
     lastRaw.current = window.localStorage.getItem(REPORT_STORAGE_KEY);
     const storedMode = window.localStorage.getItem(MRI_MODE_KEY);
-    if (storedMode === "ai" || storedMode === "private") setReportMode(storedMode);
+    if (storedMode === "private" || storedMode === "ai") setReportMode(storedMode);
     setSaved(next);
   }, []);
 
@@ -120,65 +41,62 @@ export function BusinessLifelineApp() {
     const sync = () => {
       const raw = window.localStorage.getItem(REPORT_STORAGE_KEY);
       if (raw === lastRaw.current) return;
-
       const next = readSavedReport();
       lastRaw.current = window.localStorage.getItem(REPORT_STORAGE_KEY);
       setSaved(next);
     };
-
-    const onStorage = (event: StorageEvent) => {
-      if (!event.key || event.key === REPORT_STORAGE_KEY) sync();
-    };
-
+    const onStorage = (event: StorageEvent) => { if (!event.key || event.key === REPORT_STORAGE_KEY) sync(); };
     window.addEventListener("storage", onStorage);
     const timer = window.setInterval(sync, 250);
-
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.clearInterval(timer);
-    };
+    return () => { window.removeEventListener("storage", onStorage); window.clearInterval(timer); };
   }, []);
 
   useEffect(() => {
-    if (!showAssessment) return;
+    if (!showQuestions) return;
+    const openQuestions = () => document.querySelector<HTMLButtonElement>(".landing .hero-actions .button.primary")?.click();
+    const frame = window.requestAnimationFrame(openQuestions);
+    const timer = window.setTimeout(openQuestions, 80);
+    return () => { window.cancelAnimationFrame(frame); window.clearTimeout(timer); };
+  }, [showQuestions]);
 
+  useEffect(() => {
+    if (!showQuestions) return;
+    const timer = window.setInterval(() => {
+      const label = document.querySelector<HTMLElement>(".form-header small");
+      const progress = document.querySelector<HTMLElement>(".form-shell .progress i");
+      if (!label) return;
+      const match = label.textContent?.match(/Step\s+(\d+)\s+of\s+3/i);
+      if (!match) return;
+      const overallStep = Number(match[1]) + 1;
+      label.textContent = `Business MRI · Step ${overallStep} of 4`;
+      if (progress) progress.style.width = `${overallStep * 25}%`;
+    }, 120);
+    return () => window.clearInterval(timer);
+  }, [showQuestions]);
+
+  useEffect(() => {
+    if (!showQuestions) return;
     const originalFetch = window.fetch.bind(window);
     window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
       if (!url.endsWith("/api/analyse")) return originalFetch(input, init);
-
       if (reportMode !== "ai" || !aiConsent) {
-        return new Response(JSON.stringify({ error: "Calculation-only report selected." }), {
-          status: 403,
-          headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-        });
+        return new Response(JSON.stringify({ error: "Calculation-only report selected." }), { status: 403, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
       }
-
       let body: Record<string, unknown> = {};
-      if (typeof init?.body === "string") {
-        try { body = JSON.parse(init.body) as Record<string, unknown>; } catch { body = {}; }
-      }
-
+      if (typeof init?.body === "string") { try { body = JSON.parse(init.body) as Record<string, unknown>; } catch { body = {}; } }
       const headers = new Headers(init?.headers);
       headers.set("Content-Type", "application/json");
       headers.set("x-business-lifeline-ai-consent", "true");
-
-      return originalFetch(input, {
-        ...init,
-        headers,
-        body: JSON.stringify({ ...body, consent: true }),
-      });
+      return originalFetch(input, { ...init, headers, body: JSON.stringify({ ...body, consent: true }) });
     };
-
     return () => { window.fetch = originalFetch; };
-  }, [showAssessment, reportMode, aiConsent]);
+  }, [showQuestions, reportMode, aiConsent]);
 
   const openDemo = () => {
     if (demoLoading) return;
     setDemoLoading(true);
-
-    const report = buildDemoReport();
-    const next: SavedReport = { data: demoBusiness, report };
+    const next: SavedReport = { data: demoBusiness, report: buildDemoReport() };
     writeSavedReport(next);
     window.localStorage.setItem(DEMO_GUIDE_KEY, "1");
     window.localStorage.setItem(MRI_MODE_KEY, "private");
@@ -189,9 +107,15 @@ export function BusinessLifelineApp() {
   };
 
   const beginAssessment = () => {
-    window.localStorage.setItem(MRI_MODE_KEY, reportMode);
-    setShowModeChoice(false);
     setShowAssessment(true);
+    setShowQuestions(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const continueToQuestions = () => {
+    if (reportMode === "ai" && !aiConsent) return;
+    window.localStorage.setItem(MRI_MODE_KEY, reportMode);
+    setShowQuestions(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -201,40 +125,41 @@ export function BusinessLifelineApp() {
     lastRaw.current = null;
     setSaved(null);
     setShowAssessment(false);
-    setShowModeChoice(false);
+    setShowQuestions(false);
     setAiConsent(false);
     setReportMode("private");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  if (saved === undefined) {
-    return (
-      <main className="loading app-loading" aria-label="Loading Business Lifeline">
-        <span>Loading Business Lifeline…</span>
-      </main>
-    );
-  }
-
+  if (saved === undefined) return <main className="loading app-loading" aria-label="Loading Business Lifeline"><span>Loading Business Lifeline…</span></main>;
   if (saved) return <SavedScenarioPlanner saved={saved} onReset={reset} />;
-  if (showAssessment) return <BusinessLifeline />;
-  if (showModeChoice) {
-    return (
-      <ReportModeChoice
-        mode={reportMode}
-        consent={aiConsent}
-        onModeChange={setReportMode}
-        onConsentChange={setAiConsent}
-        onContinue={beginAssessment}
-        onBack={() => { setShowModeChoice(false); setAiConsent(false); }}
-      />
-    );
-  }
-
-  return (
-    <JudgeLanding
-      onStart={() => setShowModeChoice(true)}
-      onDemo={openDemo}
-      demoLoading={demoLoading}
-    />
+  if (showAssessment && showQuestions) return <BusinessLifeline />;
+  if (showAssessment) return (
+    <main id="main-content" className="mri-mode-shell">
+      <header className="mri-mode-header"><button className="brand button-reset" onClick={() => setShowAssessment(false)}><span>BL</span> Business Lifeline</button><small>Business MRI · Step 1 of 4</small></header>
+      <div className="progress"><i style={{ width: "25%" }} /></div>
+      <section className="mri-mode-panel" aria-labelledby="mri-setup-title">
+        <p className="eyebrow">PRIVACY &amp; DOCUMENTS</p>
+        <h1 id="mri-setup-title">Choose how your MRI is prepared.</h1>
+        <p className="mri-mode-lead">You can keep the MRI calculation-only in this browser or allow optional AI prioritisation. Uploading records is optional and helps pre-fill the numbers you will check in Step 3.</p>
+        <div className="mri-mode-options" role="radiogroup" aria-label="Report preparation choice">
+          <label className={`mri-mode-card ${reportMode === "private" ? "selected" : ""}`}>
+            <input type="radio" name="report-mode" checked={reportMode === "private"} onChange={() => { setReportMode("private"); setAiConsent(false); }} />
+            <span className="mri-mode-check" aria-hidden="true">{reportMode === "private" ? "✓" : ""}</span>
+            <span><strong>Private calculation-only report</strong><small>Recommended default</small><p>Your figures stay in this browser. Tested calculations and business rules build the report without sending the MRI to an AI model.</p></span>
+          </label>
+          <label className={`mri-mode-card ${reportMode === "ai" ? "selected" : ""}`}>
+            <input type="radio" name="report-mode" checked={reportMode === "ai"} onChange={() => setReportMode("ai")} />
+            <span className="mri-mode-check" aria-hidden="true">{reportMode === "ai" ? "✓" : ""}</span>
+            <span><strong>AI-enhanced report</strong><small>Optional personalised prioritisation</small><p>The same tested calculations are used. Selected business details and written answers are also sent to the AI provider for additional diagnosis and prioritisation.</p></span>
+          </label>
+        </div>
+        {reportMode === "ai" && <div className="mri-ai-consent"><label><input type="checkbox" checked={aiConsent} onChange={(event) => setAiConsent(event.target.checked)} /><span>I understand and agree that selected MRI information will be sent to the AI provider for this report.</span></label><p>Do not enter passwords, banking credentials, tax file numbers, identity documents, payment-card details, customer personal information or privileged legal material.</p><a href="/legal/ai">Read the AI Data and Privacy Notice →</a></div>}
+        <BusinessRecords compact />
+        <div className="mri-mode-actions"><button type="button" className="button ghost" onClick={() => setShowAssessment(false)}>← Back to home</button><button type="button" className="button primary" onClick={continueToQuestions} disabled={reportMode === "ai" && !aiConsent}>Continue to Your Business <span>→</span></button></div>
+        {reportMode === "ai" && !aiConsent && <p className="mri-consent-hint" role="status">Tick the consent box to continue with AI-enhanced analysis.</p>}
+      </section>
+    </main>
   );
+  return <JudgeLanding onStart={beginAssessment} onDemo={openDemo} demoLoading={demoLoading} />;
 }

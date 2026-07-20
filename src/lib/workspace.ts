@@ -6,6 +6,7 @@ export const workspaceTabIds = [
   "cashflow",
   "operations",
   "run",
+  "records",
   "resources",
 ] as const;
 
@@ -26,7 +27,8 @@ export const workspaceTabs: readonly WorkspaceTabDefinition[] = [
   { id: "cashflow", stage: 5, label: "Cashflow", detail: "Simulator" },
   { id: "operations", stage: 6, label: "Operations", detail: "Business OS" },
   { id: "run", stage: 7, label: "Run", detail: "Operate" },
-  { id: "resources", stage: 8, label: "Resources", detail: "Templates" },
+  { id: "records", stage: 8, label: "Records", detail: "Upload" },
+  { id: "resources", stage: 9, label: "Resources", detail: "Templates" },
 ];
 
 export function isWorkspaceTab(value: unknown): value is WorkspaceTab {
