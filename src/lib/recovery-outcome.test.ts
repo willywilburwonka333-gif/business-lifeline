@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { demoBusiness } from "./demo";
-import { applyCashflowAssumptions, emptyCashflowAssumptions } from "./cashflow-simulator";
-import { generateReport } from "./planner";
-import { buildRecoveryOutcome } from "./recovery-outcome";
+import { demoBusiness } from "./demo.ts";
+import { applyCashflowAssumptions, emptyCashflowAssumptions } from "./cashflow-simulator.ts";
+import { generateReport } from "./planner.ts";
+import { buildRecoveryOutcome } from "./recovery-outcome.ts";
 
 test("recovery outcome reports a positive operating turnaround", () => {
   const baseline = generateReport(demoBusiness);
