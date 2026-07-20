@@ -121,8 +121,7 @@ export function BusinessRecords({ compact = false, onUploadComplete }: { compact
     setRecords(nextRecords);
     setImportedCount(draft?.fields.length ?? 0);
     setProcessing(false);
-
-    if (compact) onUploadComplete?.();
+    onUploadComplete?.();
   };
 
   const updateRecord = (id: string, updates: Partial<BusinessRecord>) => {
@@ -131,16 +130,16 @@ export function BusinessRecords({ compact = false, onUploadComplete }: { compact
 
   if (compact) {
     return (
-      <section className="records-mri-compact" aria-label="Upload records before the Business MRI">
+      <section className="records-mri-compact" aria-label="Optional document upload for the Business MRI">
         <input ref={inputRef} type="file" multiple accept={acceptedTypes} onChange={(event) => event.target.files && void addFiles(event.target.files)} hidden />
         <div>
-          <p className="eyebrow">MAKE THE MRI EASIER</p>
-          <h2>Upload your reports and go straight into the MRI.</h2>
-          <p>CSV and text exports are read privately in this browser. Any figures found are pre-filled for you to double-check on the MRI questions.</p>
-          <small>After the upload finishes, Business Lifeline opens the first MRI step automatically.</small>
+          <p className="eyebrow">OPTIONAL DOCUMENT UPLOAD</p>
+          <h2>Upload reports to pre-fill the numbers.</h2>
+          <p>CSV and text exports are read privately in this browser. Any figures found are placed into the MRI for you to double-check before the report is built.</p>
+          <small>You can upload now or continue without documents. PDF, Excel, Word and image reading will be added in the secure document-reader stage.</small>
         </div>
         <div className="records-mri-actions">
-          <button type="button" className="button outline" disabled={processing} onClick={() => inputRef.current?.click()}>{processing ? "Reading files…" : "Upload records and continue"}</button>
+          <button type="button" className="button outline" disabled={processing} onClick={() => inputRef.current?.click()}>{processing ? "Reading files…" : "Choose business records"}</button>
           <span><strong>{importedCount}</strong> MRI field{importedCount === 1 ? "" : "s"} pre-filled</span>
           <span><strong>{summary.total}</strong> file{summary.total === 1 ? "" : "s"} ready</span>
         </div>
