@@ -7,6 +7,7 @@ import { JudgeLanding } from "@/components/judge-landing";
 import { SavedScenarioPlanner } from "@/components/saved-scenario-planner";
 import { demoBusiness } from "@/lib/demo";
 import { generateReport } from "@/lib/planner";
+import { MRI_IMPORT_KEY } from "@/lib/mri-smart-import";
 import { readSavedReport, REPORT_STORAGE_KEY, writeSavedReport, type SavedReport } from "@/lib/saved-report";
 import type { BusinessReport } from "@/lib/types";
 
@@ -85,10 +86,12 @@ export function BusinessLifelineApp() {
       }
       let body: Record<string, unknown> = {};
       if (typeof init?.body === "string") { try { body = JSON.parse(init.body) as Record<string, unknown>; } catch { body = {}; } }
+      let documentContext: unknown = null;
+      try { documentContext = JSON.parse(window.localStorage.getItem(MRI_IMPORT_KEY) ?? "null"); } catch { documentContext = null; }
       const headers = new Headers(init?.headers);
       headers.set("Content-Type", "application/json");
       headers.set("x-business-lifeline-ai-consent", "true");
-      return originalFetch(input, { ...init, headers, body: JSON.stringify({ ...body, consent: true }) });
+      return originalFetch(input, { ...init, headers, body: JSON.stringify({ ...body, consent: true, documentContext }) });
     };
     return () => { window.fetch = originalFetch; };
   }, [showQuestions, reportMode, aiConsent]);
@@ -141,7 +144,7 @@ export function BusinessLifelineApp() {
       <section className="mri-mode-panel" aria-labelledby="mri-setup-title">
         <p className="eyebrow">PRIVACY &amp; DOCUMENTS</p>
         <h1 id="mri-setup-title">Choose how your MRI is prepared.</h1>
-        <p className="mri-mode-lead">You can keep the MRI calculation-only in this browser or allow optional AI prioritisation and document reading. Uploading records is optional and helps pre-fill the numbers you will check in Step 3.</p>
+        <p className="mri-mode-lead">Keep the MRI calculation-only in this browser or allow optional AI prioritisation and document reading. Uploaded facts pre-fill Step 3, while supported operating signals strengthen the final diagnosis.</p>
         <div className="mri-mode-options" role="radiogroup" aria-label="Report preparation choice">
           <label className={`mri-mode-card ${reportMode === "private" ? "selected" : ""}`}>
             <input type="radio" name="report-mode" checked={reportMode === "private"} onChange={() => { setReportMode("private"); setAiConsent(false); }} />
@@ -151,7 +154,7 @@ export function BusinessLifelineApp() {
           <label className={`mri-mode-card ${reportMode === "ai" ? "selected" : ""}`}>
             <input type="radio" name="report-mode" checked={reportMode === "ai"} onChange={() => setReportMode("ai")} />
             <span className="mri-mode-check" aria-hidden="true">{reportMode === "ai" ? "✓" : ""}</span>
-            <span><strong>AI-enhanced report and document reading</strong><small>Optional deeper extraction and prioritisation</small><p>The same tested calculations are used. Selected files, business details and written answers are sent to the AI provider to read PDFs, spreadsheets, documents and images and add supported diagnostic signals.</p></span>
+            <span><strong>AI-enhanced report and document reading</strong><small>Optional deeper extraction and prioritisation</small><p>The same tested calculations are used. Selected files, business details and written answers are sent to the AI provider to read PDFs, spreadsheets, documents and images and add evidence-backed diagnostic signals.</p></span>
           </label>
         </div>
         {reportMode === "ai" && <div className="mri-ai-consent"><label><input type="checkbox" checked={aiConsent} onChange={(event) => setAiConsent(event.target.checked)} /><span>I understand and agree that selected files and MRI information will be sent to the AI provider for document reading and this report.</span></label><p>Do not upload passwords, banking credentials, tax file numbers, identity documents, payment-card details, customer personal information or privileged legal material.</p><a href="/legal/ai">Read the AI Data and Privacy Notice →</a></div>}
