@@ -6,7 +6,7 @@ import type { BusinessData } from "@/lib/types";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-const MAX_BODY_BYTES = 32_000;
+const MAX_BODY_BYTES = 64_000;
 const MAX_TEXT = 1_500;
 const MAX_NAME = 120;
 const MAX_FINANCIAL_VALUE = 1_000_000_000;
@@ -78,6 +78,34 @@ function parseBusinessData(value: unknown): BusinessData | null {
   return data as BusinessData;
 }
 
+function minimiseDocumentContext(value: unknown) {
+  if (!value || typeof value !== "object") return { fields: [], signals: [], warnings: [] };
+  const context = value as Record<string, unknown>;
+  const fields = Array.isArray(context.fields) ? context.fields.slice(0, 25).map((item) => {
+    const field = item && typeof item === "object" ? item as Record<string, unknown> : {};
+    return {
+      key: String(field.key ?? "").slice(0, 60),
+      value: typeof field.value === "number" ? field.value : String(field.value ?? "").slice(0, 200),
+      source: String(field.source ?? "").slice(0, 120),
+      confidence: field.confidence === "high" ? "high" : "review",
+      evidence: String(field.evidence ?? "").slice(0, 300),
+      reportingPeriod: String(field.reportingPeriod ?? "").slice(0, 120),
+    };
+  }) : [];
+  const signals = Array.isArray(context.signals) ? context.signals.slice(0, 20).map((item) => {
+    const signal = item && typeof item === "object" ? item as Record<string, unknown> : {};
+    return {
+      area: String(signal.area ?? "other").slice(0, 40),
+      signal: String(signal.signal ?? "").slice(0, 300),
+      severity: String(signal.severity ?? "information").slice(0, 20),
+      evidence: String(signal.evidence ?? "").slice(0, 300),
+      source: String(signal.source ?? "").slice(0, 120),
+    };
+  }) : [];
+  const warnings = Array.isArray(context.warnings) ? context.warnings.slice(0, 12).map((item) => String(item).slice(0, 300)) : [];
+  return { fields, signals, warnings };
+}
+
 export async function POST(request: Request) {
   try {
     const crossSite = rejectCrossSiteRequest(request);
@@ -108,7 +136,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const data = parseBusinessData((payload as { data?: unknown }).data);
+    const payloadRecord = payload as { data?: unknown; documentContext?: unknown };
+    const data = parseBusinessData(payloadRecord.data);
     if (!data) return NextResponse.json({ error: "Invalid business analysis request." }, { status: 400, headers: privateResponseHeaders() });
 
     const metrics = calculateHealth(data);
@@ -134,6 +163,7 @@ export async function POST(request: Request) {
       biggestProblem: data.biggestProblem,
       immediateGoal: data.immediateGoal,
     };
+    const documentContext = minimiseDocumentContext(payloadRecord.documentContext);
 
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -146,10 +176,10 @@ export async function POST(request: Request) {
             role: "system",
             content: [{
               type: "input_text",
-              text: "You are Business Lifeline, a careful small-business turnaround decision-support assistant. Analyse only the supplied facts and deterministic metrics. Never invent figures, laws, tax rules, guarantees, or insolvency conclusions. Use plain language. Prioritise immediate cash preservation, lawful communication, revenue quality, cost control, and professional escalation where appropriate. Refuse requests to conceal illegal activity, falsify records, evade regulators, launder money, or facilitate unlawful trade. This is decision support, not accounting, legal, financial, or insolvency advice.",
+              text: "You are Business Lifeline, a careful small-business turnaround decision-support assistant. Diagnose across cash, profitability, debt, tax, customers, suppliers, people, operations, compliance, capacity, owner dependence and growth readiness using only supplied questionnaire facts, deterministic metrics and evidence-backed uploaded-record signals. Never invent figures, laws, tax rules, guarantees, insolvency conclusions or facts not supported by the evidence. Treat imported fields marked review as unconfirmed. Resolve conflicts by asking a question, not choosing a value. Use plain language. Prioritise immediate cash preservation, lawful communication, revenue quality, cost control, operational continuity and professional escalation where appropriate. Refuse requests to conceal illegal activity, falsify records, evade regulators, launder money or facilitate unlawful trade. This is decision support, not accounting, legal, financial or insolvency advice.",
             }],
           },
-          { role: "user", content: [{ type: "input_text", text: JSON.stringify({ business: minimisedBusiness, calculatedMetrics: metrics }) }] },
+          { role: "user", content: [{ type: "input_text", text: JSON.stringify({ business: minimisedBusiness, calculatedMetrics: metrics, uploadedRecordEvidence: documentContext }) }] },
         ],
         text: { format: { type: "json_schema", name: "business_lifeline_analysis", strict: true, schema: outputSchema } },
       }),
