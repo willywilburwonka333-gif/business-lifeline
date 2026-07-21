@@ -22,6 +22,7 @@ import "./run-operating-core.css";
 import "./operating-automation.css";
 import "./connected-operations-v2.css";
 import "./business-operating-platform.css";
+import "./commercial-operating.css";
 import "./live-business-control.css";
 import "./native-finance.css";
 import "./advanced-accounting.css";
