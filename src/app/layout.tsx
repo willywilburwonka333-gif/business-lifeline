@@ -27,6 +27,7 @@ import "./live-business-control.css";
 import "./native-finance.css";
 import "./advanced-accounting.css";
 import "./operating-ledger-sync.css";
+import "./commercial-finance-controls.css";
 import "./product-architecture.css";
 import "./business-records.css";
 import "./stage7-reliability.css";
