@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { collection, doc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
 import { firebaseAuth, firebaseDb } from "@/lib/firebase-client";
@@ -8,93 +8,71 @@ import { firebaseAuth, firebaseDb } from "@/lib/firebase-client";
 const ACTIVE_KEY = "business-lifeline-active-business-v1";
 const OPS_KEY = "business-lifeline-operating-platform-v1";
 const META_KEY = "business-lifeline-record-sync-meta-v1";
-const TYPES = ["customers", "products", "sales", "quotes"] as const;
+const RECORD_TYPES = ["customers", "products", "sales", "quotes"] as const;
 
-type RecordType = (typeof TYPES)[number];
-type GenericRecord = { id: string; [key: string]: unknown };
-type OperatingStore = {
-  customers: GenericRecord[];
-  products: GenericRecord[];
-  sales: GenericRecord[];
-  quotes: GenericRecord[];
+type RecordType = (typeof RECORD_TYPES)[number];
+type BusinessRecord = { id: string; name?: string; customerName?: string; [key: string]: unknown };
+type Store = {
+  customers: BusinessRecord[];
+  products: BusinessRecord[];
+  sales: BusinessRecord[];
+  quotes: BusinessRecord[];
   [key: string]: unknown;
 };
-type MetaItem = { hash: string; touchedAt: number };
-type Meta = Record<string, MetaItem>;
+type SyncMeta = Record<string, string>;
 type CloudRecord = {
-  type: RecordType;
-  recordId: string;
-  payload: GenericRecord;
-  updatedAt?: { toMillis?: () => number };
-  updatedBy?: string;
-  updatedByEmail?: string;
-};
-type Conflict = {
-  key: string;
-  type: RecordType;
-  recordId: string;
-  local: GenericRecord;
-  cloud: GenericRecord;
-  cloudUpdatedAt: number;
+  type?: string;
+  recordId?: string;
+  payload?: BusinessRecord;
 };
 
-const hash = (value: unknown) => JSON.stringify(value);
-const recordKey = (type: RecordType, id: string) => `${type}:${id}`;
-const isRecordType = (value: unknown): value is RecordType =>
-  typeof value === "string" && (TYPES as readonly string[]).includes(value);
-const displayName = (record: GenericRecord, fallback: string) => {
-  const name = record.name;
-  if (typeof name === "string" && name.trim()) return name;
-  const customerName = record.customerName;
-  if (typeof customerName === "string" && customerName.trim()) return customerName;
-  return fallback;
-};
-const listFor = (store: OperatingStore, type: RecordType): GenericRecord[] => store[type];
-const replaceList = (store: OperatingStore, type: RecordType, list: GenericRecord[]) => {
-  store[type] = list;
-};
+function isRecordType(value: string | undefined): value is RecordType {
+  return value !== undefined && (RECORD_TYPES as readonly string[]).includes(value);
+}
 
-const readStore = (): OperatingStore | null => {
+function readStore(): Store | null {
   try {
     const raw = localStorage.getItem(OPS_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     return {
       ...parsed,
-      customers: Array.isArray(parsed.customers) ? (parsed.customers as GenericRecord[]) : [],
-      products: Array.isArray(parsed.products) ? (parsed.products as GenericRecord[]) : [],
-      sales: Array.isArray(parsed.sales) ? (parsed.sales as GenericRecord[]) : [],
-      quotes: Array.isArray(parsed.quotes) ? (parsed.quotes as GenericRecord[]) : [],
+      customers: Array.isArray(parsed.customers) ? (parsed.customers as BusinessRecord[]) : [],
+      products: Array.isArray(parsed.products) ? (parsed.products as BusinessRecord[]) : [],
+      sales: Array.isArray(parsed.sales) ? (parsed.sales as BusinessRecord[]) : [],
+      quotes: Array.isArray(parsed.quotes) ? (parsed.quotes as BusinessRecord[]) : [],
     };
   } catch {
     return null;
   }
-};
+}
 
-const readMeta = (): Meta => {
+function saveStore(store: Store) {
+  localStorage.setItem(OPS_KEY, JSON.stringify(store));
+  window.dispatchEvent(new Event("business-lifeline-operating-updated"));
+}
+
+function readMeta(): SyncMeta {
   try {
-    return JSON.parse(localStorage.getItem(META_KEY) || "{}") as Meta;
+    return JSON.parse(localStorage.getItem(META_KEY) || "{}") as SyncMeta;
   } catch {
     return {};
   }
-};
+}
 
-const writeStore = (store: OperatingStore) => {
-  const serialised = JSON.stringify(store);
-  localStorage.setItem(OPS_KEY, serialised);
-  window.dispatchEvent(new Event("business-lifeline-operating-updated"));
-  window.dispatchEvent(new CustomEvent("business-lifeline-structured-records-updated"));
-};
+function recordLabel(record: BusinessRecord): string {
+  if (typeof record.name === "string" && record.name.trim()) return record.name;
+  if (typeof record.customerName === "string" && record.customerName.trim()) return record.customerName;
+  return record.id;
+}
 
 export function StructuredCoreRecordSync() {
   const [user, setUser] = useState<User | null>(null);
-  const [activeBusinessId, setActiveBusinessId] = useState("");
+  const [businessId, setBusinessId] = useState("");
   const [status, setStatus] = useState("Waiting for a signed-in business");
-  const [synced, setSynced] = useState(0);
-  const [conflicts, setConflicts] = useState<Conflict[]>([]);
+  const [count, setCount] = useState(0);
   const [open, setOpen] = useState(false);
-  const applyingRemote = useRef(false);
-  const remoteSeen = useRef<Record<string, number>>({});
+  const [latestRecords, setLatestRecords] = useState<BusinessRecord[]>([]);
 
   useEffect(() => {
     if (!firebaseAuth) return;
@@ -102,129 +80,65 @@ export function StructuredCoreRecordSync() {
   }, []);
 
   useEffect(() => {
-    const read = () => setActiveBusinessId(localStorage.getItem(ACTIVE_KEY) || "");
-    read();
-    window.addEventListener("business-lifeline-business-switched", read);
-    window.addEventListener("storage", read);
+    const refresh = () => setBusinessId(localStorage.getItem(ACTIVE_KEY) || "");
+    refresh();
+    window.addEventListener("business-lifeline-business-switched", refresh);
+    window.addEventListener("storage", refresh);
     return () => {
-      window.removeEventListener("business-lifeline-business-switched", read);
-      window.removeEventListener("storage", read);
+      window.removeEventListener("business-lifeline-business-switched", refresh);
+      window.removeEventListener("storage", refresh);
     };
   }, []);
 
   useEffect(() => {
-    if (!firebaseDb || !user || !activeBusinessId) return;
-    setStatus("Listening for shared record changes");
+    if (!firebaseDb || !user || !businessId) return;
 
     return onSnapshot(
-      collection(firebaseDb, "businesses", activeBusinessId, "records"),
+      collection(firebaseDb, "businesses", businessId, "records"),
       (snapshot) => {
         const store = readStore();
         if (!store) return;
-        const meta = readMeta();
-        let changed = false;
-        const nextConflicts: Conflict[] = [];
 
-        snapshot.docs.forEach((item) => {
-          const data = item.data() as CloudRecord;
-          if (!isRecordType(data.type) || !data.payload?.id || !data.recordId) return;
+        const changed: BusinessRecord[] = [];
+        snapshot.docs.forEach((snapshotDoc) => {
+          const data = snapshotDoc.data() as CloudRecord;
+          if (!isRecordType(data.type) || !data.recordId || !data.payload) return;
 
-          const key = recordKey(data.type, data.recordId);
-          const cloudTime = data.updatedAt?.toMillis?.() || 0;
-          if (remoteSeen.current[key] === cloudTime) return;
-          remoteSeen.current[key] = cloudTime;
-
-          const list = listFor(store, data.type);
-          const index = list.findIndex((record) => record.id === data.recordId);
-          const local = index >= 0 ? list[index] : undefined;
-          const localMeta = meta[key];
-
-          if (
-            local &&
-            hash(local) !== hash(data.payload) &&
-            localMeta?.touchedAt &&
-            localMeta.touchedAt > cloudTime
-          ) {
-            nextConflicts.push({
-              key,
-              type: data.type,
-              recordId: data.recordId,
-              local,
-              cloud: data.payload,
-              cloudUpdatedAt: cloudTime,
-            });
-            return;
-          }
-
-          if (!local || hash(local) !== hash(data.payload)) {
-            applyingRemote.current = true;
-            replaceList(
-              store,
-              data.type,
-              index >= 0
-                ? list.map((record, listIndex) =>
-                    listIndex === index ? data.payload : record,
-                  )
-                : [data.payload, ...list],
-            );
-            meta[key] = {
-              hash: hash(data.payload),
-              touchedAt: cloudTime || Date.now(),
-            };
-            changed = true;
-          }
+          const records = store[data.type];
+          const index = records.findIndex((record) => record.id === data.recordId);
+          if (index >= 0) records[index] = data.payload;
+          else records.unshift(data.payload);
+          changed.push(data.payload);
         });
 
-        if (changed) {
-          writeStore(store);
-          localStorage.setItem(META_KEY, JSON.stringify(meta));
-          window.setTimeout(() => {
-            applyingRemote.current = false;
-          }, 150);
-        }
-
-        if (nextConflicts.length) {
-          setConflicts((current) => [
-            ...current.filter(
-              (item) => !nextConflicts.some((next) => next.key === item.key),
-            ),
-            ...nextConflicts,
-          ]);
-        }
-        setSynced(snapshot.size);
+        if (changed.length) saveStore(store);
+        setLatestRecords(changed.slice(0, 5));
+        setCount(snapshot.size);
         setStatus("Core records are live across devices");
       },
       (error) => setStatus(error.message),
     );
-  }, [user, activeBusinessId]);
+  }, [businessId, user]);
 
   useEffect(() => {
-    if (!firebaseDb || !user || !activeBusinessId) return;
+    if (!firebaseDb || !user || !businessId) return;
 
     const push = async () => {
-      if (applyingRemote.current) return;
       const store = readStore();
       if (!store) return;
       const meta = readMeta();
       let uploaded = 0;
 
       try {
-        for (const type of TYPES) {
-          for (const record of listFor(store, type)) {
+        for (const type of RECORD_TYPES) {
+          for (const record of store[type]) {
             if (!record.id) continue;
-            const key = recordKey(type, record.id);
-            const valueHash = hash(record);
-            if (meta[key]?.hash === valueHash) continue;
+            const key = `${type}:${record.id}`;
+            const serialised = JSON.stringify(record);
+            if (meta[key] === serialised) continue;
 
-            meta[key] = { hash: valueHash, touchedAt: Date.now() };
             await setDoc(
-              doc(
-                firebaseDb,
-                "businesses",
-                activeBusinessId,
-                "records",
-                `${type}_${record.id}`,
-              ),
+              doc(firebaseDb, "businesses", businessId, "records", `${type}_${record.id}`),
               {
                 type,
                 recordId: record.id,
@@ -235,11 +149,14 @@ export function StructuredCoreRecordSync() {
               },
               { merge: true },
             );
+
+            meta[key] = serialised;
             uploaded += 1;
           }
         }
+
         localStorage.setItem(META_KEY, JSON.stringify(meta));
-        if (uploaded) {
+        if (uploaded > 0) {
           setStatus(`${uploaded} changed record${uploaded === 1 ? "" : "s"} synced`);
         }
       } catch (error) {
@@ -248,161 +165,49 @@ export function StructuredCoreRecordSync() {
     };
 
     void push();
-    const timer = window.setInterval(() => {
-      void push();
-    }, 3500);
+    const timer = window.setInterval(() => void push(), 4000);
     return () => window.clearInterval(timer);
-  }, [user, activeBusinessId]);
+  }, [businessId, user]);
 
-  const resolve = async (conflict: Conflict, choice: "local" | "cloud") => {
-    if (!firebaseDb || !user || !activeBusinessId) return;
-    const store = readStore();
-    if (!store) return;
-    const meta = readMeta();
+  const label = useMemo(() => `${count} cloud record${count === 1 ? "" : "s"}`, [count]);
 
-    if (choice === "cloud") {
-      replaceList(
-        store,
-        conflict.type,
-        listFor(store, conflict.type).map((record) =>
-          record.id === conflict.recordId ? conflict.cloud : record,
-        ),
-      );
-      meta[conflict.key] = {
-        hash: hash(conflict.cloud),
-        touchedAt: conflict.cloudUpdatedAt || Date.now(),
-      };
-      writeStore(store);
-    } else {
-      meta[conflict.key] = {
-        hash: hash(conflict.local),
-        touchedAt: Date.now(),
-      };
-      await setDoc(
-        doc(
-          firebaseDb,
-          "businesses",
-          activeBusinessId,
-          "records",
-          `${conflict.type}_${conflict.recordId}`,
-        ),
-        {
-          type: conflict.type,
-          recordId: conflict.recordId,
-          payload: conflict.local,
-          updatedAt: serverTimestamp(),
-          updatedBy: user.uid,
-          updatedByEmail: user.email || "",
-        },
-        { merge: true },
-      );
-    }
-
-    localStorage.setItem(META_KEY, JSON.stringify(meta));
-    setConflicts((current) => current.filter((item) => item.key !== conflict.key));
-  };
-
-  const label = useMemo(
-    () =>
-      conflicts.length
-        ? `${conflicts.length} sync conflict${conflicts.length === 1 ? "" : "s"}`
-        : status,
-    [conflicts.length, status],
-  );
-
-  if (!user || !activeBusinessId) return null;
+  if (!user || !businessId) return null;
 
   return (
     <>
-      <button
-        className={
-          conflicts.length
-            ? "record-sync-launcher warning"
-            : "record-sync-launcher"
-        }
-        onClick={() => setOpen(true)}
-      >
+      <button className="record-sync-launcher" onClick={() => setOpen(true)}>
         <span>Live records</span>
         <strong>{label}</strong>
       </button>
 
       {open && (
-        <div
-          className="record-sync-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Live record sync"
-        >
+        <div className="record-sync-backdrop" role="dialog" aria-modal="true" aria-label="Live record sync">
           <section className="record-sync-panel">
             <header>
               <div>
                 <small>STRUCTURED CLOUD RECORDS</small>
-                <h2>CRM, products, sales and quotes</h2>
-                <p>
-                  Core records are stored individually so one small change no
-                  longer replaces an entire business module.
-                </p>
+                <h2>Customers, products, sales and quotes</h2>
+                <p>Core records now sync independently between signed-in devices.</p>
               </div>
-              <button onClick={() => setOpen(false)} aria-label="Close">
-                ×
-              </button>
+              <button onClick={() => setOpen(false)} aria-label="Close">×</button>
             </header>
 
             <div className="record-sync-kpis">
-              <article>
-                <small>Cloud records</small>
-                <strong>{synced}</strong>
-              </article>
-              <article>
-                <small>Conflicts</small>
-                <strong>{conflicts.length}</strong>
-              </article>
-              <article>
-                <small>Status</small>
-                <strong>{status}</strong>
-              </article>
+              <article><small>Cloud records</small><strong>{count}</strong></article>
+              <article><small>Status</small><strong>{status}</strong></article>
+              <article><small>Business</small><strong>Connected</strong></article>
             </div>
 
-            {conflicts.length ? (
-              <section>
-                <h3>Resolve changes</h3>
-                <p>
-                  Both this device and the cloud changed the same record. Choose
-                  which version to keep.
-                </p>
-                {conflicts.map((conflict) => (
-                  <article className="record-conflict" key={conflict.key}>
-                    <div>
-                      <strong>
-                        {conflict.type} · {displayName(conflict.local, conflict.recordId)}
-                      </strong>
-                      <span>Device and cloud versions differ</span>
-                    </div>
-                    <div>
-                      <button onClick={() => void resolve(conflict, "local")}>
-                        Keep this device
-                      </button>
-                      <button onClick={() => void resolve(conflict, "cloud")}>
-                        Use cloud version
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </section>
-            ) : (
-              <section className="record-sync-ok">
-                <strong>No unresolved changes</strong>
-                <p>
-                  Customer, product, sale and quote records are syncing
-                  individually.
-                </p>
-              </section>
-            )}
+            <section className="record-sync-ok">
+              <strong>Latest cloud updates</strong>
+              {latestRecords.length ? (
+                latestRecords.map((record) => <p key={record.id}>{recordLabel(record)}</p>)
+              ) : (
+                <p>No cloud record updates yet.</p>
+              )}
+            </section>
 
-            <footer>
-              Whole-module backup remains active as a safety net while structured
-              records become the primary commercial data layer.
-            </footer>
+            <footer>Whole-module backup remains active while structured records become the primary data layer.</footer>
           </section>
         </div>
       )}
