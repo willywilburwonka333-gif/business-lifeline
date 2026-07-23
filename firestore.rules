@@ -10,6 +10,14 @@ service cloud.firestore {
       return /databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid);
     }
 
+    function businessPath(businessId) {
+      return /databases/$(database)/documents/businesses/$(businessId);
+    }
+
+    function invitePath(inviteId) {
+      return /databases/$(database)/documents/businessInvites/$(inviteId);
+    }
+
     function hasMembership(businessId) {
       return signedIn()
         && exists(membershipPath(businessId))
@@ -21,35 +29,133 @@ service cloud.firestore {
         && get(membershipPath(businessId)).data.role in roles;
     }
 
-    // Transitional owner-only backup document used by the current client sync.
+    function authEmail() {
+      return signedIn() && request.auth.token.email != null
+        ? request.auth.token.email
+        : '';
+    }
+
     match /userWorkspaces/{userId} {
       allow read, create, update, delete: if signedIn()
         && request.auth.uid == userId;
     }
 
-    // Structured commercial workspace foundation.
+    match /users/{userId}/businessMemberships/{businessId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow create: if signedIn()
+        && (
+          request.auth.uid == userId
+          || hasRole(businessId, ['owner', 'manager'])
+        );
+      allow update: if signedIn()
+        && (
+          request.auth.uid == userId
+          || hasRole(businessId, ['owner', 'manager'])
+        );
+      allow delete: if signedIn()
+        && (
+          request.auth.uid == userId
+          || hasRole(businessId, ['owner'])
+        );
+    }
+
+    match /businessInvites/{inviteId} {
+      allow create: if signedIn()
+        && request.resource.data.token == inviteId
+        && request.resource.data.status == 'active'
+        && request.resource.data.role in ['manager', 'staff', 'accountant']
+        && hasRole(request.resource.data.businessId, ['owner', 'manager']);
+
+      allow get: if signedIn()
+        && (
+          resource.data.createdBy == request.auth.uid
+          || resource.data.email == ''
+          || resource.data.email == authEmail()
+          || hasRole(resource.data.businessId, ['owner', 'manager'])
+        );
+      allow list: if false;
+
+      allow update: if signedIn()
+        && (
+          hasRole(resource.data.businessId, ['owner', 'manager'])
+          || (
+            resource.data.status == 'active'
+            && request.resource.data.status == 'accepted'
+            && request.resource.data.acceptedBy == request.auth.uid
+            && (resource.data.email == '' || resource.data.email == authEmail())
+            && request.resource.data.businessId == resource.data.businessId
+            && request.resource.data.role == resource.data.role
+          )
+        );
+
+      allow delete: if signedIn()
+        && hasRole(resource.data.businessId, ['owner', 'manager']);
+    }
+
     match /businesses/{businessId} {
       allow create: if signedIn()
+        && request.resource.data.id == businessId
         && request.resource.data.ownerId == request.auth.uid;
       allow read: if hasMembership(businessId)
         || (signedIn() && resource.data.ownerId == request.auth.uid);
       allow update: if hasRole(businessId, ['owner', 'manager'])
-        || (signedIn() && resource.data.ownerId == request.auth.uid);
+        && request.resource.data.ownerId == resource.data.ownerId;
       allow delete: if signedIn()
         && resource.data.ownerId == request.auth.uid;
 
       match /members/{memberId} {
         allow create: if signedIn()
+          && request.resource.data.userId == memberId
+          && request.resource.data.status == 'active'
           && (
-            (memberId == request.auth.uid
-              && request.resource.data.userId == request.auth.uid
-              && request.resource.data.role == 'owner')
-            || hasRole(businessId, ['owner', 'manager'])
+            (
+              memberId == request.auth.uid
+              && request.resource.data.role == 'owner'
+              && getAfter(businessPath(businessId)).data.ownerId == request.auth.uid
+            )
+            || (
+              memberId == request.auth.uid
+              && request.resource.data.inviteId is string
+              && exists(invitePath(request.resource.data.inviteId))
+              && get(invitePath(request.resource.data.inviteId)).data.businessId == businessId
+              && get(invitePath(request.resource.data.inviteId)).data.status == 'active'
+              && get(invitePath(request.resource.data.inviteId)).data.role == request.resource.data.role
+              && (
+                get(invitePath(request.resource.data.inviteId)).data.email == ''
+                || get(invitePath(request.resource.data.inviteId)).data.email == authEmail()
+              )
+            )
+            || (
+              hasRole(businessId, ['owner', 'manager'])
+              && request.resource.data.role in ['manager', 'staff', 'accountant']
+            )
           );
+
         allow read: if hasMembership(businessId)
           || (signedIn() && memberId == request.auth.uid);
-        allow update: if hasRole(businessId, ['owner', 'manager']);
-        allow delete: if hasRole(businessId, ['owner']);
+
+        allow update: if signedIn()
+          && resource.data.role != 'owner'
+          && request.resource.data.role != 'owner'
+          && (
+            hasRole(businessId, ['owner'])
+            || (
+              hasRole(businessId, ['manager'])
+              && resource.data.role in ['staff', 'accountant']
+              && request.resource.data.role in ['staff', 'accountant']
+            )
+          );
+
+        allow delete: if hasRole(businessId, ['owner'])
+          && resource.data.role != 'owner';
+      }
+
+      match /modules/{moduleId} {
+        allow read: if hasMembership(businessId);
+        allow create, update: if hasRole(businessId, ['owner', 'manager', 'staff'])
+          && request.resource.data.module == moduleId
+          && request.resource.data.updatedBy == request.auth.uid;
+        allow delete: if hasRole(businessId, ['owner', 'manager']);
       }
 
       match /auditEvents/{eventId} {
