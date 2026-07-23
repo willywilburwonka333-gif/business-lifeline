@@ -91,10 +91,12 @@ export function StructuredCoreRecordSync() {
   }, []);
 
   useEffect(() => {
-    if (!firebaseDb || !user || !businessId) return;
+    const db = firebaseDb;
+    if (!db || !user || !businessId) return;
+    const activeBusinessId = businessId;
 
     return onSnapshot(
-      collection(firebaseDb, "businesses", businessId, "records"),
+      collection(db, "businesses", activeBusinessId, "records"),
       (snapshot) => {
         const store = readStore();
         if (!store) return;
@@ -121,7 +123,10 @@ export function StructuredCoreRecordSync() {
   }, [businessId, user]);
 
   useEffect(() => {
-    if (!firebaseDb || !user || !businessId) return;
+    const db = firebaseDb;
+    if (!db || !user || !businessId) return;
+    const activeBusinessId = businessId;
+    const currentUser = user;
 
     const push = async () => {
       const store = readStore();
@@ -138,14 +143,14 @@ export function StructuredCoreRecordSync() {
             if (meta[key] === serialised) continue;
 
             await setDoc(
-              doc(firebaseDb, "businesses", businessId, "records", `${type}_${record.id}`),
+              doc(db, "businesses", activeBusinessId, "records", `${type}_${record.id}`),
               {
                 type,
                 recordId: record.id,
                 payload: record,
                 updatedAt: serverTimestamp(),
-                updatedBy: user.uid,
-                updatedByEmail: user.email || "",
+                updatedBy: currentUser.uid,
+                updatedByEmail: currentUser.email || "",
               },
               { merge: true },
             );
