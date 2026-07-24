@@ -7,11 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test src/lib/calculations.test.ts src/lib/calculations-audit.test.ts src/lib/planner.test.ts src/lib/saved-report.test.ts src/lib/recovery-history.test.ts src/lib/cashflow-simulator.test.ts src/lib/recovery-playbooks.test.ts src/lib/business-os.test.ts src/lib/workspace.test.ts src/lib/stage8-onboarding.test.ts src/lib/recovery-outcome.test.ts src/lib/connected-operations.test.ts",
+    "test": "node --test src/lib/calculations.test.ts src/lib/calculations-audit.test.ts src/lib/planner.test.ts src/lib/saved-report.test.ts src/lib/recovery-history.test.ts src/lib/cashflow-simulator.test.ts src/lib/recovery-playbooks.test.ts src/lib/business-os.test.ts src/lib/workspace.test.ts src/lib/stage8-onboarding.test.ts src/lib/recovery-outcome.test.ts src/lib/connected-operations.test.ts src/lib/cashflow-forecast.test.ts src/lib/mri-accuracy-profile.test.ts",
     "check": "npm run test && npm run lint && npm run build"
   },
   "dependencies": {
     "firebase": "^12.3.0",
+    "firebase-admin": "^13.4.0",
     "next": "16.2.10",
     "react": "19.2.4",
     "react-dom": "19.2.4"
