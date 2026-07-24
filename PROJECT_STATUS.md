@@ -1,15 +1,17 @@
 # Business Lifeline — Current Product Status
 
-Updated: 20 July 2026
+Updated: 24 July 2026
 
 ## Product architecture
 
-Business Lifeline is now organised around three main product areas:
+Business Lifeline is organised around three connected product areas:
 
 1. **Business MRI — Diagnose**
+   - Fast guided financial and operating assessment
    - Privacy and document intake
-   - Business details, financials, pressures and priorities
-   - Deterministic health score and findings
+   - Deterministic calculations rather than AI arithmetic
+   - Business Pressure Indicator, component scores and data-confidence rating
+   - Hard escalation triggers for serious payroll, tax, legal, supplier and cash-runway risks
    - Evidence and record review
 
 2. **Business Lifeline — Recover**
@@ -17,7 +19,7 @@ Business Lifeline is now organised around three main product areas:
    - Recovery playbooks
    - Action centre
    - Recovery Coach
-   - Business Brain with OpenAI → Gemini → calculation fallback
+   - Business Brain with model and calculation fallbacks
    - Cashflow simulator
    - Recovery resources and templates
 
@@ -32,60 +34,81 @@ Business Lifeline is now organised around three main product areas:
    - Staff roster
    - Operating automation activity feed
 
-## Current branch and pull request
+## Current source of truth
 
-- Branch: `feature/operating-automation-engine`
-- Pull request: #19
-- Latest architecture-polish commit: `acc5bddbfd4e24bc643a769d9e0a5def945b6310`
-- PR #18 was merged into `main` at `02a9b29d5d4b9972912f6d7b371cd823a7bf6c8d`.
+- Repository: `willywilburwonka333-gif/business-lifeline`
+- Branch: `main`
+- Latest accuracy-integration commit: `f57b3e2570ffc80d747a265bbf23c00c107e2698`
+- Open automated-testing pull request: #36
+- Product direction: keep the initial MRI extremely easy, then offer an optional **Accuracy Boost** for businesses needing a deeper assessment.
 
-## What has just changed
+## Accuracy system completed so far
 
-- Replaced the confusing nine-stage navigation with three main areas: Diagnose, Recover and Run.
-- Removed the conceptual duplication between Operations and Run by placing both inside the Operating System.
-- Added area-specific internal tool navigation.
-- Rebuilt the guided demo as a compact three-part tour.
-- Added responsive mobile navigation and reduced top-of-screen clutter.
-- Preserved the existing saved MRI, recovery and operating data keys.
+- Replaced the presentation of a generic health score with a **Business Pressure Indicator**.
+- Added separate scores for cash flow, runway, liquidity, overdue obligations, debt and revenue stability.
+- Added a data-confidence percentage so incomplete or inconsistent inputs do not appear falsely precise.
+- Added hard score caps and escalation triggers so good revenue or cash cannot hide serious overdue obligations.
+- Added plain-English explanations showing what drove the result.
+- Updated saved-report validation to require the new score structure and reject corrupt or incomplete saved metrics.
+- Expanded automated tests for healthy businesses, distressed businesses, uncovered arrears, low-confidence data and urgent payroll/legal concerns.
+- Preserved AI as an interpretation layer; deterministic code remains responsible for arithmetic and core risk indicators.
+
+## Important product boundary
+
+The Business Pressure Indicator is decision support and risk screening. It must not be presented as:
+
+- a legal solvency determination
+- accounting, tax, legal, valuation or insolvency advice
+- a guarantee that a business can recover
+- a scientifically validated probability of failure
+
+The exact scoring model still requires structured comparison against qualified accountants, advisers and restructuring professionals before any public accuracy percentage is claimed.
 
 ## Immediate validation required
 
-1. Wait for PR #19 GitHub and Vercel checks.
-2. Test the new three-area navigation on iPhone.
-3. Confirm dashboard buttons open the correct new area/tool.
-4. Confirm the guided demo no longer covers most of the mobile screen.
-5. Confirm all Operating System modules still load and save correctly.
-6. Confirm Business Brain returns Gemini when OpenAI is unavailable.
-7. Fix any TypeScript, lint, build or mobile layout failures before merging.
+1. Run `npm run check` against current `main`.
+2. Confirm TypeScript, unit tests, lint and production build all pass.
+3. Open the Riverbend Café demo and confirm the Business Pressure Indicator, confidence score and escalation reasons render correctly.
+4. Refresh and confirm the expanded metrics survive saved-report validation.
+5. Test a healthy business, a loss-making business, overdue-tax case and urgent-payroll case.
+6. Test the score cards and explanations on iPhone-width layouts.
+7. Rebase or replace PR #36 because its original base predates the latest accuracy commits.
 
-## Next build after navigation polish
+## Next build — Accuracy Boost V1
 
-### Connected Operations V2
+Build an optional guided **13-week cash-flow forecast** after the fast MRI.
 
-- Stocktake sessions with expected-versus-counted variance
-- Customer communication and purchase history
-- Quote accepted → job/order creation
-- Invoice due dates and overdue follow-up automation
-- Supplier catalogue and automatic reorder drafts
-- Receipt image attachment and recurring expenses
-- Recurring tasks and reminders
-- Staff timesheets and payroll-preparation export
-- Market-day fast-sale mode
-- End-of-day sales, cash and stock reconciliation
-- Configurable automation rules
+The user should only enter or confirm:
 
-## Commercial backend still required
+- opening cash
+- expected weekly customer receipts
+- wages and super
+- tax payments
+- rent and leases
+- suppliers
+- loan repayments
+- other unavoidable payments
+- known one-off receipts or expenses
 
-- Secure accounts and authentication
-- Encrypted cloud database and file storage
-- Multi-business support
-- Team roles and permissions
-- Real-time sync and backups
-- Accounting, bank, payment and ecommerce integrations
-- Notifications and scheduled automation
-- Audit logs, export and deletion controls
-- Subscription billing and usage limits
-- Security, privacy and legal review
+The system should then calculate:
+
+- weekly opening and closing cash
+- first forecast cash shortfall
+- lowest projected cash balance
+- total funding gap
+- weeks of usable runway
+- obligations that cannot be met when due
+- confidence level based on completed weeks and supplied evidence
+
+The Accuracy Boost must remain optional so an overwhelmed owner can complete the fast MRI first.
+
+## Build order after the 13-week forecast
+
+1. Add expanded but progressive MRI inputs for business structure, GST basis, payroll, super, PAYG, creditor due dates, facilities, secured debt, guarantees, seasonality and customer concentration.
+2. Connect forecast results to recovery actions, dashboard warnings, playbooks and Business Brain context.
+3. Add industry modules, beginning with general retail/service, construction/trades, hospitality and petrol stations.
+4. Add a professional-validation workspace for comparing app findings against adviser findings without exposing confidential data unnecessarily.
+5. Measure agreement, false alarms, missed risks and priority-order accuracy before publishing any accuracy claim.
 
 ## Product promise
 
