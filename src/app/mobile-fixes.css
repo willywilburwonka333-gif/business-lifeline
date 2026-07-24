@@ -1,0 +1,130 @@
+/* Mobile usability fixes for persistent controls and horizontally dense workspaces. */
+
+@media (max-width: 700px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .workspace-shell,
+  .product-architecture,
+  .workspace-panel,
+  .business-brain,
+  .brain-answer,
+  .brain-main-answer,
+  .brain-answer-grid,
+  .area-toolbar,
+  .current-tool-title {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .main-area-nav,
+  .area-tool-list {
+    display: flex;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    padding-inline: 14px;
+    gap: 10px;
+  }
+
+  .main-area-nav::-webkit-scrollbar,
+  .area-tool-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .main-area-nav > button,
+  .area-tool-list > button {
+    flex: 0 0 min(82vw, 310px);
+    scroll-snap-align: start;
+  }
+
+  .business-brain,
+  .workspace-panel {
+    overflow-wrap: anywhere;
+  }
+
+  .brain-answer-grid,
+  .brain-context-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .brain-main-answer,
+  .brain-answer,
+  .panel {
+    padding-inline: 18px;
+  }
+
+  .brain-error {
+    margin: 14px 0;
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .beta-safety-launcher {
+    left: 12px !important;
+    right: auto !important;
+    bottom: calc(12px + env(safe-area-inset-bottom)) !important;
+    width: 52px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    display: grid !important;
+    place-items: center !important;
+    overflow: hidden;
+    z-index: 45 !important;
+  }
+
+  .beta-safety-launcher span,
+  .beta-safety-launcher strong {
+    display: none !important;
+  }
+
+  .beta-safety-launcher::after {
+    content: "!";
+    font-size: 24px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .product-help-button {
+    right: 12px !important;
+    bottom: calc(12px + env(safe-area-inset-bottom)) !important;
+    width: 52px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    font-size: 0 !important;
+    z-index: 45 !important;
+  }
+
+  .product-help-button::after {
+    content: "?";
+    font-size: 25px;
+    font-weight: 800;
+  }
+
+  .beta-safety-backdrop {
+    padding: 10px !important;
+  }
+
+  .beta-safety-panel {
+    max-height: calc(100dvh - 20px) !important;
+    overflow-y: auto !important;
+  }
+
+  .beta-safety-panel nav {
+    overflow-x: auto;
+    display: flex;
+  }
+
+  .beta-safety-panel nav button {
+    flex: 0 0 auto;
+  }
+}
