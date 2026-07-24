@@ -1,3 +1,4 @@
+import type { MriAccuracyProfile } from "./mri-accuracy-profile";
 import type { BusinessData } from "./types";
 
 export const FORECAST_WEEKS = 13;
@@ -41,29 +42,40 @@ export type CashflowForecastResult = {
 const safe = (value: number) => Number.isFinite(value) ? Math.max(0, value) : 0;
 const round = (value: number) => Number(value.toFixed(2));
 
-export function buildForecastFromMRI(data: BusinessData): CashflowForecast {
+export function buildForecastFromMRI(data: BusinessData, profile?: MriAccuracyProfile): CashflowForecast {
   const weekly = (value: number) => round(safe(value) * 12 / 52);
   const weeklyRevenue = weekly(data.monthlyRevenue);
   const weeklyFixed = weekly(data.fixedExpenses);
   const weeklyVariable = weekly(data.variableExpenses);
   const weeklyDrawings = weekly(data.ownerDrawings);
   const weeklyLoans = weekly(data.loanRepayments);
+  const weeklyPayroll = profile ? weekly(profile.monthlyWages + profile.monthlySuper) : 0;
+  const supplierBaseline = profile && profile.accountsPayable > 0
+    ? Math.max(weeklyVariable, round(profile.nextThirtyDayCreditors / 4))
+    : weeklyVariable;
   const base: ForecastWeekInput = {
     week: 1,
     customerReceipts: weeklyRevenue,
-    wagesAndSuper: 0,
+    wagesAndSuper: weeklyPayroll,
     taxPayments: 0,
     rentAndLeases: weeklyFixed,
-    supplierPayments: weeklyVariable,
+    supplierPayments: supplierBaseline,
     loanRepayments: weeklyLoans,
     otherPayments: weeklyDrawings,
     oneOffCashIn: 0,
     oneOffCashOut: 0,
   };
 
+  const weeks = Array.from({ length: FORECAST_WEEKS }, (_, index) => ({ ...base, week: index + 1 }));
+  if (profile) {
+    weeks[0].oneOffCashIn = safe(profile.oneOffIncome);
+    weeks[0].oneOffCashOut = safe(profile.oneOffExpenses);
+    weeks[0].taxPayments = safe(profile.paygOutstanding);
+  }
+
   return {
-    openingCash: safe(data.cashAvailable),
-    weeks: Array.from({ length: FORECAST_WEEKS }, (_, index) => ({ ...base, week: index + 1 })),
+    openingCash: safe(data.cashAvailable) + safe(profile?.availableFacilities ?? 0) + safe(profile?.overdraftLimit ?? 0),
+    weeks,
   };
 }
 
