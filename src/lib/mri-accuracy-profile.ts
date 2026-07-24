@@ -23,6 +23,9 @@ export type MriAccuracyProfile = {
   oneOffExpenses: number;
 };
 
+export const accuracyProfileStorageKey = (businessName: string) =>
+  `business-lifeline-accuracy-profile-v1:${businessName.trim().toLowerCase() || "current"}`;
+
 export const emptyMriAccuracyProfile = (): MriAccuracyProfile => ({
   businessStructure: "unknown",
   gstBasis: "unknown",
@@ -43,6 +46,15 @@ export const emptyMriAccuracyProfile = (): MriAccuracyProfile => ({
   oneOffIncome: 0,
   oneOffExpenses: 0,
 });
+
+export function readMriAccuracyProfile(businessName: string, storage: Storage = window.localStorage): MriAccuracyProfile {
+  try {
+    const raw = storage.getItem(accuracyProfileStorageKey(businessName));
+    return raw ? { ...emptyMriAccuracyProfile(), ...JSON.parse(raw) } : emptyMriAccuracyProfile();
+  } catch {
+    return emptyMriAccuracyProfile();
+  }
+}
 
 export function assessMriAccuracyProfile(profile: MriAccuracyProfile) {
   const completed = [
