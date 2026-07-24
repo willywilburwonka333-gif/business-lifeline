@@ -12,15 +12,31 @@ function clientKey(request: Request, scope: string) {
   return `${scope}:${forwarded || realIp || "unknown"}`;
 }
 
+function normalizedOrigin(value: string | null | undefined) {
+  if (!value) return null;
+  try {
+    return new URL(value.startsWith("http") ? value : `https://${value}`).origin;
+  } catch {
+    return null;
+  }
+}
+
 export function rejectCrossSiteRequest(request: Request): NextResponse | null {
-  const origin = request.headers.get("origin");
+  const origin = normalizedOrigin(request.headers.get("origin"));
   if (!origin) return null;
 
-  const expected = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL;
-  if (!expected) return null;
+  const requestOrigin = normalizedOrigin(request.url);
+  const forwardedHost = request.headers.get("x-forwarded-host") || request.headers.get("host");
+  const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+  const forwardedOrigin = forwardedHost ? normalizedOrigin(`${forwardedProto}://${forwardedHost}`) : null;
+  const configuredOrigins = [
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    process.env.VERCEL_URL,
+  ].map(normalizedOrigin).filter((value): value is string => Boolean(value));
 
-  const normalizedExpected = expected.startsWith("http") ? expected : `https://${expected}`;
-  if (origin !== normalizedExpected) {
+  const allowed = new Set([requestOrigin, forwardedOrigin, ...configuredOrigins].filter((value): value is string => Boolean(value)));
+  if (!allowed.has(origin)) {
     return NextResponse.json(
       { error: "Cross-site requests are not allowed." },
       { status: 403, headers: privateResponseHeaders() },
