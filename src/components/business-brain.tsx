@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useRef, useState } from "react";
 import { AnalysisProvenance } from "@/components/analysis-provenance";
+import { assessMriAccuracyProfile, emptyMriAccuracyProfile, type MriAccuracyProfile } from "@/lib/mri-accuracy-profile";
 import type { SavedReport } from "@/lib/saved-report";
 import { coachProgress, readCoachCheckIn } from "@/lib/recovery-coach";
 
@@ -25,25 +26,39 @@ const suggestions = [
   "Is it time to get professional help?",
 ];
 
+const accuracyStorageKey = (businessName: string) =>
+  `business-lifeline-accuracy-profile-v1:${businessName.trim().toLowerCase() || "current"}`;
+
+function readAccuracyProfile(businessName: string): MriAccuracyProfile {
+  try {
+    const raw = window.localStorage.getItem(accuracyStorageKey(businessName));
+    return raw ? { ...emptyMriAccuracyProfile(), ...JSON.parse(raw) } : emptyMriAccuracyProfile();
+  } catch {
+    return emptyMriAccuracyProfile();
+  }
+}
+
 function localFallback(saved: SavedReport, question: string): BrainAnswer {
   const { data, report } = saved;
   const monthly = report.metrics.monthlyOperatingResult;
   const urgent = report.today[0];
+  const accuracy = assessMriAccuracyProfile(readAccuracyProfile(data.businessName));
   return {
     answer: monthly < 0
       ? `Your MRI shows the business is losing ${Math.abs(monthly).toLocaleString("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 0 })} per month. Before making a major decision about “${question}”, protect cash and complete the highest-priority recovery action first.`
       : `Your MRI shows a positive monthly operating result, but the decision about “${question}” should still be tested against cash runway, debt pressure and the effect on monthly profit.`,
     reasoningSummary: [
-      `Current health score: ${report.metrics.overallScore}/100.`,
+      `Business Pressure Indicator: ${report.metrics.overallScore}/100.`,
       `Cash available: ${data.cashAvailable.toLocaleString("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 0 })}.`,
       `Monthly operating result: ${monthly.toLocaleString("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 0 })}.`,
+      `Accuracy profile completion: ${accuracy.confidence}%.`,
     ],
-    nextSteps: urgent ? [urgent.title, "Use the Cashflow Simulator to test the financial effect before committing."] : ["Review the MRI priorities and test the decision in the Cashflow Simulator."],
-    watchOutFor: report.warnings.slice(0, 3),
+    nextSteps: urgent ? [urgent.title, "Use the 13-week Accuracy Boost before committing to a major decision."] : ["Review the MRI priorities and test the decision in the 13-week Accuracy Boost."],
+    watchOutFor: [...accuracy.risks, ...report.warnings].slice(0, 5),
     professionalHelp: {
-      recommended: report.urgentHelp,
+      recommended: report.urgentHelp || accuracy.risks.length >= 2,
       type: "qualified accountant or appropriate business adviser",
-      reason: report.urgentHelp ? "The MRI contains urgent warning signs that should not rely on automated guidance alone." : "Not automatically required from the supplied figures, but obtain professional advice before a high-impact legal, tax, staffing or debt decision.",
+      reason: report.urgentHelp || accuracy.risks.length >= 2 ? "The supplied information contains warning signs that should not rely on automated guidance alone." : "Not automatically required from the supplied figures, but obtain professional advice before a high-impact legal, tax, staffing or debt decision.",
     },
   };
 }
@@ -92,7 +107,7 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
   const contextSummary = useMemo(() => {
     const coach = readCoachCheckIn();
     return {
-      health: saved.report.metrics.overallScore,
+      pressure: saved.report.metrics.overallScore,
       industry: saved.data.industry,
       monthlyResult: saved.report.metrics.monthlyOperatingResult,
       coach: coachProgress(coach, saved.report),
@@ -112,6 +127,8 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
     setLoading(true);
     setError("");
     const coach = readCoachCheckIn();
+    const accuracyProfile = readAccuracyProfile(saved.data.businessName);
+    const accuracyAssessment = assessMriAccuracyProfile(accuracyProfile);
     const context = {
       industry: saved.data.industry,
       country: saved.data.country,
@@ -126,11 +143,18 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
       pressureFactors: saved.data.pressureFactors ?? [],
       metrics: {
         overallScore: saved.report.metrics.overallScore,
+        pressureLevel: saved.report.metrics.pressureLevel,
+        dataConfidence: saved.report.metrics.dataConfidence,
         runwayMonths: saved.report.metrics.runwayMonths,
         operatingMargin: saved.report.metrics.operatingMargin,
         expenseRatio: saved.report.metrics.expenseRatio,
         debtPressure: saved.report.metrics.debtPressure,
+        liquidityScore: saved.report.metrics.liquidityScore,
+        obligationsScore: saved.report.metrics.obligationsScore,
       },
+      accuracyProfile,
+      accuracyProfileConfidence: accuracyAssessment.confidence,
+      additionalAccuracyRisks: accuracyAssessment.risks,
       warnings: saved.report.warnings.slice(0, 5),
       risks: saved.report.risks.slice(0, 5),
       today: saved.report.today.slice(0, 5).map(({ title, urgency, impact, difficulty, reason }) => ({ title, urgency, impact, difficulty, reason })),
@@ -145,15 +169,17 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
       });
       const payload = (await response.json()) as { answer?: BrainAnswer; provider?: "openai" | "gemini"; error?: string; detail?: string };
       if (!response.ok || !payload.answer || !payload.provider) throw new Error(payload.detail || payload.error || "Business Brain is temporarily unavailable.");
-      const nextItem: ConversationItem = { question: cleaned, answer: payload.answer, source: payload.provider };
-      setConversation((current) => [...current, nextItem].slice(-6));
+      setConversation((current) => [...current, { question: cleaned, answer: payload.answer!, source: payload.provider! }].slice(-6));
       setQuestion("");
     } catch (caught) {
       const fallback = localFallback(saved, cleaned);
-      const nextItem: ConversationItem = { question: cleaned, answer: fallback, source: "rules" };
-      setConversation((current) => [...current, nextItem].slice(-6));
+      setConversation((current) => [...current, { question: cleaned, answer: fallback, source: "rules" }].slice(-6));
       setQuestion("");
-      setError(caught instanceof Error ? `${caught.message} Showing a calculation-based answer instead.` : "Showing a calculation-based answer instead.");
+      const rawMessage = caught instanceof Error ? caught.message : "";
+      const safeMessage = /cross-site|failed to fetch|network/i.test(rawMessage)
+        ? "Business Brain could not connect securely on this deployment."
+        : rawMessage || "Business Brain is temporarily unavailable.";
+      setError(`${safeMessage} A calculation-based answer is shown below.`);
     } finally {
       setLoading(false);
     }
@@ -161,20 +187,20 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
 
   return (
     <section className="business-brain" aria-labelledby="business-brain-title">
-      <div className="section-heading"><div><p className="eyebrow">Stage 3 · Contextual adviser</p><h3 id="business-brain-title">Business Brain</h3></div><span className="brain-context-badge">Grounded in this MRI</span></div>
-      <p className="template-note">Ask a real decision question. Business Brain uses a minimised set of MRI figures and risks. Your business name, recovery notes and full history are not sent.</p>
+      <div className="section-heading"><div><p className="eyebrow">Contextual adviser</p><h3 id="business-brain-title">Business Brain</h3></div><span className="brain-context-badge">Grounded in this MRI</span></div>
+      <p className="template-note">Ask a real decision question. Business Brain uses a minimised set of MRI figures, deeper accuracy inputs and current risks. Your business name, recovery notes and full history are not sent.</p>
 
       <section className="panel" aria-labelledby="privacy-controls-title" ref={privacyRef}>
         <p className="eyebrow">Privacy and control</p>
         <h4 id="privacy-controls-title">You decide when information leaves this device</h4>
-        <p>Your saved records remain in this browser. When you use Business Brain, the displayed minimised business context and your question are securely sent through Business Lifeline to OpenAI, or to Gemini when OpenAI is unavailable. The response clearly identifies which provider was used.</p>
+        <p>Your saved records remain in this browser. When you use Business Brain, the displayed minimised business context and your question are securely sent through Business Lifeline to OpenAI, or to Gemini when OpenAI is unavailable.</p>
         <label className="field"><span><input type="checkbox" checked={aiConsent} onChange={(event) => setAiConsent(event.target.checked)} /> I understand and consent to this AI transmission for the question I submit.</span></label>
         <div className="form-actions no-print"><button type="button" className="button ghost" onClick={exportLocalData}>Export my local data</button><button type="button" className="button ghost" onClick={() => { if (window.confirm("Delete all Business Lifeline data stored in this browser? This cannot be undone.")) deleteLocalData(); }}>Delete all local data</button></div>
         <small>Do not enter passwords, banking credentials, identity documents, tax file numbers, customer or employee personal information, or confidential contracts.</small>
       </section>
 
       <AnalysisProvenance report={saved.report} compact />
-      <div className="brain-context-grid" aria-label="Business Brain context"><article><span>Health</span><strong>{contextSummary.health}/100</strong></article><article><span>Industry</span><strong>{contextSummary.industry || "Not supplied"}</strong></article><article><span>Monthly result</span><strong>{contextSummary.monthlyResult.toLocaleString("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 0 })}</strong></article><article><span>Coach progress</span><strong>{contextSummary.coach}%</strong></article></div>
+      <div className="brain-context-grid" aria-label="Business Brain context"><article><span>Pressure indicator</span><strong>{contextSummary.pressure}/100</strong></article><article><span>Industry</span><strong>{contextSummary.industry || "Not supplied"}</strong></article><article><span>Monthly result</span><strong>{contextSummary.monthlyResult.toLocaleString("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 0 })}</strong></article><article><span>Coach progress</span><strong>{contextSummary.coach}%</strong></article></div>
       <div className="brain-suggestions no-print">{suggestions.map((item) => <button key={item} type="button" onClick={() => setQuestion(item)}>{item}</button>)}</div>
       <form className="brain-form no-print" onSubmit={ask}><label htmlFor="brain-question">Ask about a real business decision</label><textarea id="brain-question" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={1000} rows={4} placeholder="Example: Can I afford to hire another employee right now?" /><button className="button primary" type="submit" disabled={loading || question.trim().length < 3}>{loading ? "Trying OpenAI, then Gemini…" : "Ask Business Brain"}</button></form>
       {error && <p className="brain-error" role="status">{error}</p>}
