@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { buildForecastFromMRI, calculateCashflowForecast, type CashflowForecast, type ForecastWeekInput } from "@/lib/cashflow-forecast";
+import { assessMriAccuracyProfile, readMriAccuracyProfile, type MriAccuracyProfile } from "@/lib/mri-accuracy-profile";
 import type { BusinessData } from "@/lib/types";
 
 const currencyFor = (country: string) => country.toLowerCase().includes("australia") ? "AUD" : country.toLowerCase().includes("new zealand") ? "NZD" : country.toLowerCase().includes("united kingdom") ? "GBP" : country.toLowerCase().includes("canada") ? "CAD" : "USD";
@@ -21,22 +22,30 @@ const editableFields: Array<{ key: keyof Omit<ForecastWeekInput, "week">; label:
 
 export function AccuracyBoost({ data }: { data: BusinessData }) {
   const storageKey = useMemo(() => `business-lifeline-13-week-v1:${data.businessName.trim().toLowerCase() || "current"}`, [data.businessName]);
+  const [profile, setProfile] = useState<MriAccuracyProfile | null>(null);
   const [forecast, setForecast] = useState<CashflowForecast>(() => buildForecastFromMRI(data));
   const [expandedWeek, setExpandedWeek] = useState(1);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
+    const nextProfile = readMriAccuracyProfile(data.businessName);
+    setProfile(nextProfile);
     try {
       const raw = localStorage.getItem(storageKey);
-      if (!raw) return;
+      if (!raw) {
+        setForecast(buildForecastFromMRI(data, nextProfile));
+        return;
+      }
       const saved = JSON.parse(raw) as CashflowForecast;
       if (Array.isArray(saved.weeks) && saved.weeks.length === 13) setForecast(saved);
     } catch {
       localStorage.removeItem(storageKey);
+      setForecast(buildForecastFromMRI(data, nextProfile));
     }
-  }, [storageKey]);
+  }, [data, storageKey]);
 
   const result = useMemo(() => calculateCashflowForecast(forecast), [forecast]);
+  const profileAssessment = useMemo(() => profile ? assessMriAccuracyProfile(profile) : null, [profile]);
 
   const updateWeek = (weekIndex: number, key: keyof Omit<ForecastWeekInput, "week">, value: number) => {
     setForecast((current) => ({
@@ -52,6 +61,16 @@ export function AccuracyBoost({ data }: { data: BusinessData }) {
     window.setTimeout(() => setMessage(""), 2500);
   };
 
+  const applyProfile = () => {
+    const nextProfile = readMriAccuracyProfile(data.businessName);
+    setProfile(nextProfile);
+    setForecast(buildForecastFromMRI(data, nextProfile));
+    localStorage.removeItem(storageKey);
+    setExpandedWeek(1);
+    setMessage("Accuracy Inputs applied to the 13-week forecast.");
+    window.setTimeout(() => setMessage(""), 2500);
+  };
+
   const save = () => {
     localStorage.setItem(storageKey, JSON.stringify(forecast));
     setMessage("13-week forecast saved in this browser.");
@@ -59,18 +78,20 @@ export function AccuracyBoost({ data }: { data: BusinessData }) {
   };
 
   const reset = () => {
-    const next = buildForecastFromMRI(data);
+    const next = buildForecastFromMRI(data, profile ?? undefined);
     setForecast(next);
     localStorage.removeItem(storageKey);
     setExpandedWeek(1);
-    setMessage("Forecast reset to the MRI estimates.");
+    setMessage("Forecast reset using the latest MRI and Accuracy Inputs.");
     window.setTimeout(() => setMessage(""), 2500);
   };
 
   return (
     <section className="panel accuracy-boost no-print" aria-labelledby="accuracy-boost-title">
       <div className="section-heading"><span>Accuracy Boost · 13-week cashflow</span><h3 id="accuracy-boost-title">See when cash pressure is likely to hit</h3></div>
-      <p className="template-note">Your MRI has pre-filled a weekly starting point. Edit only what is different, add known tax, wages, super and one-off payments, then save the forecast.</p>
+      <p className="template-note">Your MRI and saved Accuracy Inputs pre-fill a weekly starting point. Edit only what is different, then save the forecast.</p>
+
+      {profileAssessment && <aside className="analysis-status ready"><span>Accuracy Inputs connected</span><small>{profileAssessment.confidence}% profile completion · payroll, PAYG, creditors, facilities and one-off items are included where supplied.</small></aside>}
 
       <div className="metric-grid">
         <article><span>First cash shortfall</span><strong>{result.firstShortfallWeek === null ? "No shortfall" : `Week ${result.firstShortfallWeek}`}</strong><small>Within the next 13 weeks</small></article>
@@ -79,7 +100,7 @@ export function AccuracyBoost({ data }: { data: BusinessData }) {
         <article><span>Forecast confidence</span><strong>{result.confidence}%</strong><small>Based on completed weekly fields</small></article>
       </div>
 
-      <label className="field"><span>Opening cash</span><div className="money-input"><span>$</span><input type="number" min="0" step="any" value={forecast.openingCash} onChange={(event) => setForecast((current) => ({ ...current, openingCash: Math.max(0, Number(event.target.value) || 0) }))} /></div><small>Cash actually available at the start of week 1.</small></label>
+      <label className="field"><span>Opening cash and confirmed facilities</span><div className="money-input"><span>$</span><input type="number" min="0" step="any" value={forecast.openingCash} onChange={(event) => setForecast((current) => ({ ...current, openingCash: Math.max(0, Number(event.target.value) || 0) }))} /></div><small>Cash actually available plus any undrawn facilities you have confirmed can be used.</small></label>
 
       <div className="forecast-week-list">
         {result.weeks.map((week, index) => {
@@ -100,7 +121,7 @@ export function AccuracyBoost({ data }: { data: BusinessData }) {
 
       {result.warnings.length > 0 && <aside className="urgent" role="alert"><b>Check before relying on this forecast</b><ul>{result.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></aside>}
 
-      <div className="scenario-buttons"><button type="button" className="button primary" onClick={save}>Save forecast</button><button type="button" className="button ghost" onClick={reset}>Reset to MRI estimates</button></div>
+      <div className="scenario-buttons"><button type="button" className="button primary" onClick={save}>Save forecast</button><button type="button" className="button ghost" onClick={applyProfile}>Reapply Accuracy Inputs</button><button type="button" className="button ghost" onClick={reset}>Reset baseline</button></div>
       {message && <p className="scenario-save-status" role="status">{message}</p>}
       <p className="form-disclaimer">This is a planning forecast based on the figures entered. It is not a guarantee, solvency determination or substitute for professional advice.</p>
     </section>
