@@ -15,20 +15,32 @@
   .brain-main-answer,
   .brain-answer-grid,
   .area-toolbar,
-  .current-tool-title {
+  .current-tool-title,
+  .analysis-provenance,
+  .analysis-provenance-grid,
+  .analysis-provenance-grid article {
     min-width: 0;
     max-width: 100%;
   }
 
+  .product-header {
+    padding: 16px !important;
+    border-radius: 0 !important;
+  }
+
+  .product-brand > strong {
+    font-size: 1.45rem !important;
+  }
+
   .main-area-nav,
   .area-tool-list {
-    display: flex;
+    display: flex !important;
     overflow-x: auto;
     overscroll-behavior-inline: contain;
     scroll-snap-type: x proximity;
     scrollbar-width: none;
-    padding-inline: 14px;
-    gap: 10px;
+    padding-inline: 12px !important;
+    gap: 8px !important;
   }
 
   .main-area-nav::-webkit-scrollbar,
@@ -36,10 +48,57 @@
     display: none;
   }
 
-  .main-area-nav > button,
-  .area-tool-list > button {
-    flex: 0 0 min(82vw, 310px);
+  .main-area-nav > button {
+    flex: 0 0 138px !important;
+    min-height: 78px !important;
+    padding: 12px !important;
+    border-radius: 14px !important;
     scroll-snap-align: start;
+  }
+
+  .main-area-nav > button strong {
+    font-size: .98rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .main-area-nav > button small {
+    font-size: .68rem !important;
+  }
+
+  .area-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 12;
+    padding: 8px 0 10px !important;
+  }
+
+  .area-heading {
+    padding: 0 14px 6px;
+  }
+
+  .area-tool-list > button {
+    flex: 0 0 auto !important;
+    min-width: 116px !important;
+    max-width: 150px !important;
+    min-height: 52px !important;
+    padding: 9px 11px !important;
+    border-radius: 12px !important;
+    scroll-snap-align: start;
+  }
+
+  .area-tool-list > button strong {
+    font-size: .88rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .current-tool-title {
+    margin: 0 12px 12px !important;
+    padding: 16px !important;
+    border-radius: 16px !important;
+  }
+
+  .current-tool-title h1 {
+    font-size: 2rem !important;
   }
 
   .business-brain,
@@ -48,30 +107,71 @@
   }
 
   .brain-answer-grid,
-  .brain-context-grid {
-    grid-template-columns: 1fr !important;
+  .brain-context-grid,
+  .analysis-provenance-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .analysis-provenance,
+  .analysis-provenance.compact {
+    padding: 16px !important;
+    margin-inline: 0 !important;
+  }
+
+  .analysis-provenance-heading {
+    display: grid !important;
+    gap: 10px !important;
+  }
+
+  .analysis-provenance-grid article {
+    width: 100% !important;
+    padding: 16px !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+  }
+
+  .analysis-provenance-grid article span,
+  .analysis-provenance-grid article strong,
+  .analysis-provenance-grid article p,
+  .analysis-provenance-grid article small {
+    writing-mode: horizontal-tb !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
   }
 
   .brain-main-answer,
   .brain-answer,
   .panel {
-    padding-inline: 18px;
+    padding-inline: 16px;
+  }
+
+  .brain-answer {
+    border-radius: 16px !important;
+    overflow: hidden;
+  }
+
+  .brain-question,
+  .brain-main-answer {
+    padding: 18px !important;
   }
 
   .brain-error {
     margin: 14px 0;
-    padding: 14px 16px;
+    padding: 12px 14px;
     font-size: 13px;
-    line-height: 1.45;
+    line-height: 1.4;
   }
 
   .beta-safety-launcher {
     left: 12px !important;
     right: auto !important;
     bottom: calc(12px + env(safe-area-inset-bottom)) !important;
-    width: 52px !important;
-    height: 52px !important;
-    min-width: 52px !important;
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
     padding: 0 !important;
     border-radius: 50% !important;
     display: grid !important;
@@ -87,7 +187,7 @@
 
   .beta-safety-launcher::after {
     content: "!";
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 900;
     line-height: 1;
   }
@@ -95,9 +195,9 @@
   .product-help-button {
     right: 12px !important;
     bottom: calc(12px + env(safe-area-inset-bottom)) !important;
-    width: 52px !important;
-    height: 52px !important;
-    min-width: 52px !important;
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
     padding: 0 !important;
     border-radius: 50% !important;
     font-size: 0 !important;
@@ -106,7 +206,7 @@
 
   .product-help-button::after {
     content: "?";
-    font-size: 25px;
+    font-size: 23px;
     font-weight: 800;
   }
 
