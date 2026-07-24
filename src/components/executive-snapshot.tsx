@@ -20,7 +20,6 @@ const money = (amount: number, country: string) =>
 export function ExecutiveSnapshot({ data, report }: { data: BusinessData; report: BusinessReport }) {
   const metrics = report.metrics;
   const immediateActions = report.today.slice(0, 3);
-  const status = metrics.overallScore >= 70 ? "Stable" : metrics.overallScore >= 45 ? "Under pressure" : "Critical";
 
   return (
     <section className="panel executive-snapshot" aria-labelledby="executive-snapshot-title">
@@ -31,9 +30,14 @@ export function ExecutiveSnapshot({ data, report }: { data: BusinessData; report
 
       <div className="metric-grid">
         <article>
-          <span>Status</span>
-          <strong>{status}</strong>
-          <small>Health score {metrics.overallScore}/100</small>
+          <span>Business pressure</span>
+          <strong>{metrics.pressureLevel}</strong>
+          <small>Pressure indicator {metrics.overallScore}/100</small>
+        </article>
+        <article>
+          <span>Assessment confidence</span>
+          <strong>{metrics.dataConfidence}%</strong>
+          <small>Based on completeness and consistency of supplied data</small>
         </article>
         <article>
           <span>Monthly result</span>
@@ -47,10 +51,30 @@ export function ExecutiveSnapshot({ data, report }: { data: BusinessData; report
           <strong>{metrics.runwayMonths === null ? "Cash positive" : `${metrics.runwayMonths} months`}</strong>
           <small>At the current monthly result</small>
         </article>
-        <article>
-          <span>Immediate cash available</span>
-          <strong>{money(data.cashAvailable, data.country)}</strong>
-          <small>{money(data.overdueInvoices, data.country)} overdue invoices</small>
+      </div>
+
+      {metrics.criticalTriggers.length > 0 && (
+        <div className="panel warning-panel" role="alert">
+          <p className="eyebrow">Immediate escalation signals</p>
+          <ul>
+            {metrics.criticalTriggers.map((trigger) => <li key={trigger}>{trigger}</li>)}
+          </ul>
+          <p>This is a screening result, not a legal determination of solvency. Seek qualified advice promptly where an escalation signal applies.</p>
+        </div>
+      )}
+
+      <div className="insight-grid">
+        <article className="panel">
+          <p className="eyebrow">Why this result</p>
+          <ul>
+            {metrics.scoreExplanation.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        </article>
+        <article className="panel">
+          <p className="eyebrow">Next three moves</p>
+          <ol>
+            {immediateActions.length ? immediateActions.map((item) => <li key={item.title}>{item.title}</li>) : <li>Continue monitoring cash and sales weekly.</li>}
+          </ol>
         </article>
       </div>
 
@@ -61,10 +85,8 @@ export function ExecutiveSnapshot({ data, report }: { data: BusinessData; report
           <p><b>Immediate goal:</b> {data.immediateGoal || "No immediate goal supplied"}</p>
         </article>
         <article className="panel">
-          <p className="eyebrow">Next three moves</p>
-          <ol>
-            {immediateActions.length ? immediateActions.map((item) => <li key={item.title}>{item.title}</li>) : <li>Continue monitoring cash and sales weekly.</li>}
-          </ol>
+          <p className="eyebrow">Score components</p>
+          <p>Cash flow {metrics.cashFlowScore}/100 · Liquidity {metrics.liquidityScore}/100 · Obligations {metrics.obligationsScore}/100 · Debt {metrics.debtScore}/100 · Revenue stability {metrics.revenueScore}/100</p>
         </article>
       </div>
     </section>
