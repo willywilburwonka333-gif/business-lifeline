@@ -23,6 +23,9 @@ test("calculates Riverbend Café deterministically and flags distress", () => {
   assert.equal(metrics.operatingMargin, -4.7);
   assert.equal(metrics.runwayMonths, 9.3);
   assert.ok(metrics.overallScore <= 35);
+  assert.ok(["Severe", "Critical"].includes(metrics.pressureLevel));
+  assert.ok(metrics.criticalTriggers.length > 0);
+  assert.ok(metrics.scoreExplanation.length >= 4);
 });
 
 test("scores a healthy profitable sole trader strongly", () => {
@@ -41,6 +44,8 @@ test("scores a healthy profitable sole trader strongly", () => {
   assert.equal(metrics.monthlyOperatingResult, 6000);
   assert.equal(metrics.runwayMonths, null);
   assert.ok(metrics.overallScore >= 80);
+  assert.equal(metrics.pressureLevel, "Stable");
+  assert.equal(metrics.criticalTriggers.length, 0);
 });
 
 test("does not let cash runway hide uncovered overdue obligations", () => {
@@ -59,7 +64,11 @@ test("does not let cash runway hide uncovered overdue obligations", () => {
 
   assert.equal(metrics.monthlyOperatingResult, -2000);
   assert.equal(metrics.runwayMonths, 10);
-  assert.ok(metrics.overallScore <= 35);
+  assert.ok(metrics.overallScore <= 24);
+  assert.equal(metrics.pressureLevel, "Critical");
+  assert.ok(metrics.liquidityScore < 100);
+  assert.ok(metrics.obligationsScore < 50);
+  assert.ok(metrics.criticalTriggers.length >= 2);
 });
 
 test("handles a pre-revenue startup without invalid scores", () => {
@@ -81,7 +90,39 @@ test("handles a pre-revenue startup without invalid scores", () => {
   assert.ok(metrics.overallScore >= 0 && metrics.overallScore <= 100);
 });
 
-test("keeps every component score within zero and one hundred", () => {
+test("reduces confidence when supplied data is incomplete or inconsistent", () => {
+  const metrics = calculateHealth(makeBusiness({
+    monthlyRevenue: 10000,
+    fixedExpenses: 4000,
+    variableExpenses: 2000,
+    accountsReceivable: 1000,
+    overdueInvoices: 5000,
+    biggestProblem: "",
+    immediateGoal: "",
+    industry: "",
+  }));
+
+  assert.ok(metrics.dataConfidence < 75);
+  assert.match(metrics.scoreExplanation.at(-1) ?? "", /reduced confidence/i);
+});
+
+test("urgent payroll or legal concerns create an escalation trigger", () => {
+  const metrics = calculateHealth(makeBusiness({
+    monthlyRevenue: 30000,
+    fixedExpenses: 12000,
+    variableExpenses: 8000,
+    ownerDrawings: 3000,
+    loanRepayments: 1000,
+    cashAvailable: 25000,
+    urgentConcerns: ["Unable to pay super and received a statutory demand"],
+  }));
+
+  assert.ok(metrics.criticalTriggers.some((trigger) => /urgent payroll, legal, tax or closure/i.test(trigger)));
+  assert.ok(metrics.overallScore <= 39);
+  assert.equal(metrics.pressureLevel, "Severe");
+});
+
+test("keeps every score within zero and one hundred", () => {
   const metrics = calculateHealth(makeBusiness({
     monthlyRevenue: 1,
     fixedExpenses: 100000,
@@ -97,6 +138,9 @@ test("keeps every component score within zero and one hundred", () => {
     metrics.runwayScore,
     metrics.debtScore,
     metrics.revenueScore,
+    metrics.liquidityScore,
+    metrics.obligationsScore,
+    metrics.dataConfidence,
     metrics.overallScore,
   ]) {
     assert.ok(score >= 0 && score <= 100);
