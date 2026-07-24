@@ -48,13 +48,28 @@ const isBusinessData = (value: unknown): value is BusinessData => {
 
 const isMetrics = (value: unknown): value is HealthMetrics => {
   if (!isRecord(value)) return false;
-  const required = [
+  const requiredNumbers = [
     "monthlyOperatingResult", "operatingMargin", "expenseRatio", "debtPressure",
     "receivablesPressure", "revenueStability", "cashFlowScore", "runwayScore",
-    "debtScore", "revenueScore", "overallScore",
+    "debtScore", "revenueScore", "liquidityScore", "obligationsScore",
+    "dataConfidence", "overallScore",
   ];
-  return required.every((key) => isFiniteNumber(value[key])) &&
-    (value.runwayMonths === null || isFiniteNumber(value.runwayMonths));
+  const validPressureLevel = ["Stable", "Watch", "High", "Severe", "Critical"].includes(
+    String(value.pressureLevel),
+  );
+  const scoresInRange = [
+    "cashFlowScore", "runwayScore", "debtScore", "revenueScore",
+    "liquidityScore", "obligationsScore", "dataConfidence", "overallScore",
+  ].every((key) => isFiniteNumber(value[key]) && Number(value[key]) >= 0 && Number(value[key]) <= 100);
+
+  return (
+    requiredNumbers.every((key) => isFiniteNumber(value[key])) &&
+    scoresInRange &&
+    (value.runwayMonths === null || isFiniteNumber(value.runwayMonths)) &&
+    validPressureLevel &&
+    isStringArray(value.criticalTriggers) &&
+    isStringArray(value.scoreExplanation)
+  );
 };
 
 const isBusinessReport = (value: unknown): value is BusinessReport => {
