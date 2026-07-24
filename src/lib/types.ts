@@ -24,6 +24,8 @@ export type BusinessData = {
   pressureFactors?: string[];
 };
 
+export type PressureLevel = "Stable" | "Watch" | "High" | "Severe" | "Critical";
+
 export type HealthMetrics = {
   monthlyOperatingResult: number;
   operatingMargin: number;
@@ -36,7 +38,13 @@ export type HealthMetrics = {
   runwayScore: number;
   debtScore: number;
   revenueScore: number;
+  liquidityScore: number;
+  obligationsScore: number;
+  dataConfidence: number;
   overallScore: number;
+  pressureLevel: PressureLevel;
+  criticalTriggers: string[];
+  scoreExplanation: string[];
 };
 
 export type PlanAction = {
