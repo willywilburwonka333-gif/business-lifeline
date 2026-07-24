@@ -64,7 +64,7 @@ function localFallback(saved: SavedReport, question: string): BrainAnswer {
 }
 
 function sourceLabel(source: ConversationSource) {
-  if (source === "openai") return "AI interpretation · GPT-5.6";
+  if (source === "openai") return "AI interpretation · OpenAI";
   if (source === "gemini") return "AI interpretation · Gemini fallback";
   return "Calculation-based fallback";
 }
@@ -169,11 +169,13 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
       });
       const payload = (await response.json()) as { answer?: BrainAnswer; provider?: "openai" | "gemini"; error?: string; detail?: string };
       if (!response.ok || !payload.answer || !payload.provider) throw new Error(payload.detail || payload.error || "Business Brain is temporarily unavailable.");
-      setConversation((current) => [...current, { question: cleaned, answer: payload.answer!, source: payload.provider! }].slice(-6));
+      const item: ConversationItem = { question: cleaned, answer: payload.answer, source: payload.provider };
+      setConversation((current) => [...current, item].slice(-6));
       setQuestion("");
     } catch (caught) {
       const fallback = localFallback(saved, cleaned);
-      setConversation((current) => [...current, { question: cleaned, answer: fallback, source: "rules" }].slice(-6));
+      const item: ConversationItem = { question: cleaned, answer: fallback, source: "rules" };
+      setConversation((current) => [...current, item].slice(-6));
       setQuestion("");
       const rawMessage = caught instanceof Error ? caught.message : "";
       const safeMessage = /cross-site|failed to fetch|network/i.test(rawMessage)
