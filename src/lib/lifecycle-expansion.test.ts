@@ -3,6 +3,7 @@ import { buildExitAnalysis, emptyExitPlan } from "./exit-readiness";
 import { buildGrowthAnalysis, growthScenario, type GrowthPlan } from "./growth-engine";
 import { generateReport } from "./planner";
 import { validationMetrics } from "./professional-validation";
+import { industryModule } from "./industry-intelligence";
 import type { SavedReport } from "./saved-report";
 
 const saved: SavedReport = { data: demoBusiness, report: generateReport(demoBusiness) };
@@ -43,3 +44,10 @@ const validation = validationMetrics([
   { id: "2", date: "", adviserRole: "Accountant", area: "Debt", lifelineFinding: "B", adviserFinding: "C", agreement: "disagree", severityMatch: "adviser-higher", notes: "" },
 ]);
 if (validation.reviewed !== 2 || validation.missedRiskSignals !== 1) throw new Error("Validation metrics failed.");
+
+
+const hospitality = industryModule({ ...saved, data: { ...saved.data, industry: "Cafe and hospitality" } });
+if (hospitality.id !== "hospitality" || hospitality.kpis.length < 4) throw new Error("Hospitality diagnostic module failed.");
+
+const construction = industryModule({ ...saved, data: { ...saved.data, industry: "Construction trades" } });
+if (construction.id !== "construction") throw new Error("Construction diagnostic module failed.");
