@@ -40,6 +40,7 @@ Business Lifeline is organised around five connected product areas:
    - Customer segment economics and retention inputs
    - Pricing, volume, payroll, fixed-cost and marketing growth scenarios
    - Growth experiment portfolio with expected vs actual outcomes
+   - Pipeline conversion, acquisition-cost / customer-lifetime gross-profit planning and payroll headroom
    - Run-data carry-forward for pipeline, catalogue margin, sales and workload
 
 5. **Exit & Succession — Sell**
@@ -49,6 +50,7 @@ Business Lifeline is organised around five connected product areas:
    - Buyer due-diligence data-room checklist
    - Maintainable earnings / SDE / EBITDA / EBIT-style planning scenarios with explicit valuation disclaimer
    - Buyer-readiness export pack
+   - Due-diligence issue tracker, offer/deal-structure register and handover workflow
    - Run-data carry-forward for customers, sales, pipeline, tasks and active work
 
 ## September 2026 final-plan completion pass
@@ -87,8 +89,8 @@ Implemented on `lifecycle-expansion-v1`:
 - Connected saved 13-week forecast shortfalls into the diagnosis dashboard, Recovery Coach, Action Centre and Business Brain.
 - Added longitudinal recovery outcomes so pressure, monthly result, cash and overdue obligations can be compared over time.
 - Added a professional-validation workspace measuring agreement, disagreement, possible false alarms and possible missed-risk signals.
-- Added customer-segment economics, recurring/repeat revenue, capacity, owner load, catalogue-margin and funding-readiness growth controls.
-- Added transferability scoring, succession paths, due-diligence data-room tracking, Run-data evidence and buyer-readiness pack export.
+- Added customer-segment economics, recurring/repeat revenue, capacity, owner load, catalogue-margin, pipeline conversion, CAC/LTV-style planning, payroll headroom and funding-readiness growth controls.
+- Added transferability scoring, succession paths, due-diligence data-room tracking, diligence-issue management, structured offers, handover tracking, Run-data evidence and buyer-readiness pack export.
 - Added clearly labelled earnings-multiple planning scenarios using maintainable earnings / SDE / EBITDA / EBIT-style inputs without presenting them as professional valuations.
 - Included Grow, Sell and validation data in cloud workspace sync.
 - Added lifecycle and industry automated tests.
