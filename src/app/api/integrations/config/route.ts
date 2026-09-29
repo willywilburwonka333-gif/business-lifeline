@@ -14,6 +14,8 @@ export async function GET() {
     },
     xero: {
       configured: Boolean(process.env.XERO_CLIENT_ID && process.env.XERO_CLIENT_SECRET && process.env.XERO_REDIRECT_URI),
+      redirectUri: process.env.XERO_REDIRECT_URI || null,
+      scopesConfigured: Boolean(process.env.XERO_SCOPES),
     },
     secureTokenVault: tokenVault,
     firebaseAdmin,
