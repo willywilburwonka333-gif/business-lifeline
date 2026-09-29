@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { calculateCashflowForecast, type CashflowForecast, type CashflowForecastResult } from "@/lib/cashflow-forecast";
 import { selectPlaybook } from "@/lib/recovery-playbooks";
 import type { SavedReport } from "@/lib/saved-report";
 
@@ -10,6 +11,19 @@ const money = (value: number, country: string) => new Intl.NumberFormat("en", { 
 export function RecoveryPlaybooks({ saved }: { saved: SavedReport }) {
   const recommended = useMemo(() => selectPlaybook(saved.data, saved.report), [saved]);
   const [completed, setCompleted] = useState<Record<string, boolean>>({});
+  const [forecast, setForecast] = useState<CashflowForecastResult | null>(null);
+  useEffect(() => {
+    const refresh = () => {
+      try {
+        const key = `business-lifeline-13-week-v1:${saved.data.businessName.trim().toLowerCase() || "current"}`;
+        const raw = window.localStorage.getItem(key);
+        setForecast(raw ? calculateCashflowForecast(JSON.parse(raw) as CashflowForecast) : null);
+      } catch { setForecast(null); }
+    };
+    refresh();
+    window.addEventListener("business-lifeline-forecast-updated", refresh);
+    return () => window.removeEventListener("business-lifeline-forecast-updated", refresh);
+  }, [saved.data.businessName]);
   const done = recommended.steps.filter((_, index) => completed[`${recommended.id}-${index}`]).length;
   const progress = Math.round((done / recommended.steps.length) * 100);
 
@@ -35,6 +49,7 @@ export function RecoveryPlaybooks({ saved }: { saved: SavedReport }) {
   return (
     <section className="recovery-playbooks no-print">
       <div className="section-heading"><span>Recovery playbooks</span><h3>{recommended.name}</h3></div>
+      {forecast?.firstShortfallWeek !== null && forecast?.firstShortfallWeek !== undefined && <aside className="urgent"><b>13-week forecast escalation</b><p>The saved forecast falls below zero in week {forecast.firstShortfallWeek}, with a funding gap of {money(forecast.fundingGap, saved.data.country)}. Treat closing this gap as part of the current recovery pathway.</p></aside>}
       <div className="playbook-hero">
         <div>
           <p className="playbook-severity">{recommended.severity} pathway</p>
