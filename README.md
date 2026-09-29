@@ -1,8 +1,8 @@
 # Business Lifeline
 
-> **The AI recovery operating system for small business.**
+> **The small-business lifecycle operating system: Diagnose → Recover → Run → Grow → Sell.**
 
-Business Lifeline helps an overwhelmed small-business owner understand what is wrong, decide what to do first, test recovery options, and run the turnaround from one place.
+Business Lifeline helps a small-business owner understand what is wrong, recover control, run the business, grow deliberately, and prepare for succession or sale from one connected evidence base.
 
 It combines deterministic financial calculations with GPT-5.6 interpretation. Core figures never depend on a language model; AI is used to explain context, resolve priorities, identify missing information, and make the recovery plan easier to act on.
 
@@ -12,7 +12,7 @@ Small-business owners often know something is wrong before they know why. Their 
 
 Business Lifeline creates an ordered path:
 
-**Diagnose → Prioritise → Simulate → Execute**
+**Diagnose → Recover → Run → Grow → Sell**
 
 ## Product journey
 
@@ -23,6 +23,8 @@ Business Lifeline creates an ordered path:
 5. **Cashflow Simulator** — tests price, volume, costs, drawings, repayments, invoice collection, and additional cash.
 6. **Recovery outcome** — distinguishes recurring operating repair from one-off cash relief and produces a reviewable action summary.
 7. **Business Operating System** — converts advice into owned tasks, contacts, targets, controls, and weekly execution.
+8. **Growth Engine** — sets revenue/margin/cash targets, detects constraints, models hiring/pricing/marketing economics, segments customers and tracks measurable growth experiments.
+9. **Exit & Succession** — scores transferability, prepares a living due-diligence data room, tracks owner/customer/key-person risk, supports sale/succession paths and produces clearly labelled indicative earnings-multiple planning scenarios.
 
 ## What makes the AI use different
 
@@ -36,7 +38,7 @@ The application calculates:
 - cash runway
 - debt pressure
 - receivables pressure
-- business health score
+- Business Pressure Indicator and component scores
 - urgent-risk flags
 - rules-based actions and fallback guidance
 
@@ -80,7 +82,7 @@ The one-click demo shows a café with:
 - A$18,000 in overdue tax and supplier obligations
 - tax and debt warning signs
 
-The guided walkthrough moves through the Dashboard, Business Brain, Cashflow Simulator, Recovery Playbook, and Business OS.
+The guided walkthrough moves through Diagnose, Recover and Run; completed businesses can then use Grow and Sell without re-entering their core operating evidence.
 
 ## Technology
 
@@ -148,6 +150,6 @@ This runs the full automated test suite, ESLint, and a production Next.js build.
 
 ## Current product status
 
-Business Lifeline is a submission-ready innovation prototype and public-beta candidate. It is not yet a production financial-advice platform. The current codebase includes Firebase authentication, Firestore workspace sync, document-assisted MRI intake and a read-only QuickBooks connector with financial-report ingestion. Commercial launch still requires production configuration and tenant-isolation verification, billing/entitlements, monitoring, broader user validation, independent privacy/legal/security review, expanded accounting coverage and production testing with real provider accounts.
+Business Lifeline is a submission-ready innovation prototype and public-beta candidate. It is not yet a production financial-advice platform. The current codebase includes Firebase authentication, Firestore workspace sync, document-assisted MRI intake and a read-only QuickBooks connector with financial-report ingestion. Commercial launch still requires production provider configuration, live tenant-isolation verification, monitoring, broader user validation, independent privacy/legal/security review, professional diagnostic validation and production testing with real accounting/billing accounts.
 
 Built for OpenAI Build Week.
