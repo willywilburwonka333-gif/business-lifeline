@@ -52,8 +52,8 @@ export function ExitCentre({ saved }: { saved: SavedReport }) {
       <div className="section-heading"><span>Run evidence</span><h3>Operating proof carried forward automatically</h3></div>
       <div className="metric-grid">
         <article><span>Customers on record</span><strong>{analysis.operatingEvidence?.customers ?? 0}</strong></article>
-        <article><span>90-day recorded sales</span><strong>{money(analysis.operatingEvidence?.sales90 ?? 0)}</strong></article>
-        <article><span>Open pipeline</span><strong>{money(analysis.operatingEvidence?.pipeline ?? 0)}</strong></article>
+        <article><span>90-day recorded sales</span><strong>{money(analysis.operatingEvidence?.sales90 ?? 0, saved.data.country)}</strong></article>
+        <article><span>Open pipeline</span><strong>{money(analysis.operatingEvidence?.pipeline ?? 0, saved.data.country)}</strong></article>
         <article><span>Open operating tasks</span><strong>{analysis.operatingEvidence?.openTasks ?? 0}</strong></article>
       </div>
       <button type="button" className="button primary" onClick={exportBuyerPack}>Download buyer-readiness pack</button>
