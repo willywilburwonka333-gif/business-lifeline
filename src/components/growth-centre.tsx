@@ -69,6 +69,8 @@ export function GrowthCentre({ saved }: { saved: SavedReport }) {
       <article><span>Experiment coverage</span><strong>{analysis.targetCoveragePercent}%</strong><small>Of the monthly growth gap currently covered by active experiments</small></article>
       <article><span>Funding readiness</span><strong>{analysis.fundingReadiness}</strong><small>{money(analysis.capitalRequired, saved.data.country)} three-month test capital indicated from current plan</small></article>
       <article><span>Catalogue margin</span><strong>{analysis.averageCatalogueMargin ? `${analysis.averageCatalogueMargin}%` : "Needs price/cost data"}</strong><small>{analysis.lowMarginItems} recorded item(s) below 20% gross margin</small></article>
+      <article><span>Quote conversion</span><strong>{analysis.quoteCount ? `${analysis.pipelineConversionPercent}%` : "Needs quote history"}</strong><small>{analysis.acceptedQuotes}/{analysis.quoteCount} recorded quotes accepted</small></article>
+      <article><span>Payroll headroom</span><strong>{money(analysis.payrollHeadroomBeforeLoss, saved.data.country)}</strong><small>Approximate monthly headroom before current result reaches zero</small></article>
     </section>
 
     <section className="panel">
@@ -85,7 +87,21 @@ export function GrowthCentre({ saved }: { saved: SavedReport }) {
         <label className="field"><span>Owner hours per week</span><input type="number" min="0" value={plan.ownerHoursPerWeek ?? 0} onChange={(e) => setPlan({ ...plan, ownerHoursPerWeek: Number(e.target.value) || 0 })} /></label>
         <label className="field"><span>Largest customer % of revenue</span><input type="number" min="0" max="100" value={plan.largestCustomerPercent ?? 0} onChange={(e) => setPlan({ ...plan, largestCustomerPercent: Number(e.target.value) || 0 })} /></label>
         <label className="field"><span>Monthly growth test budget</span><input type="number" min="0" value={plan.monthlyGrowthBudget ?? 0} onChange={(e) => setPlan({ ...plan, monthlyGrowthBudget: Number(e.target.value) || 0 })} /></label>
+        <label className="field"><span>Monthly marketing spend</span><input type="number" min="0" value={plan.monthlyMarketingSpend ?? 0} onChange={(e) => setPlan({ ...plan, monthlyMarketingSpend: Number(e.target.value) || 0 })} /></label>
+        <label className="field"><span>New customers per month</span><input type="number" min="0" value={plan.newCustomersPerMonth ?? 0} onChange={(e) => setPlan({ ...plan, newCustomersPerMonth: Number(e.target.value) || 0 })} /></label>
+        <label className="field"><span>Monthly gross profit per customer</span><input type="number" min="0" value={plan.monthlyGrossProfitPerCustomer ?? 0} onChange={(e) => setPlan({ ...plan, monthlyGrossProfitPerCustomer: Number(e.target.value) || 0 })} /></label>
+        <label className="field"><span>Average customer lifetime (months)</span><input type="number" min="0" value={plan.averageCustomerLifetimeMonths ?? 0} onChange={(e) => setPlan({ ...plan, averageCustomerLifetimeMonths: Number(e.target.value) || 0 })} /></label>
         <label className="field"><span>Growth strategy</span><textarea value={plan.strategy} onChange={(e) => setPlan({ ...plan, strategy: e.target.value })} placeholder="Example: grow recurring service revenue without increasing owner hours." /></label>
+      </div>
+    </section>
+
+    <section className="panel">
+      <div className="section-heading"><span>Growth unit economics</span><h3>Marketing and hiring economics</h3></div>
+      <div className="metric-grid">
+        <article><span>Customer acquisition cost</span><strong>{analysis.customerAcquisitionCost ? money(analysis.customerAcquisitionCost, saved.data.country) : "Needs inputs"}</strong><small>Marketing spend ÷ new customers</small></article>
+        <article><span>Customer lifetime gross profit</span><strong>{analysis.customerLifetimeGrossProfit ? money(analysis.customerLifetimeGrossProfit, saved.data.country) : "Needs inputs"}</strong><small>Planning estimate from gross profit × lifetime</small></article>
+        <article><span>LTV : CAC</span><strong>{analysis.ltvToCac ? `${analysis.ltvToCac.toFixed(1)}x` : "Needs inputs"}</strong><small>Planning ratio, not guaranteed customer economics</small></article>
+        <article><span>Payroll headroom at target margin</span><strong>{money(analysis.payrollHeadroomBeforeTargetMargin, saved.data.country)}</strong><small>Current result less profit required to preserve the selected target margin</small></article>
       </div>
     </section>
 
