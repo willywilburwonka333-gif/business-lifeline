@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { firebaseAuth } from "@/lib/firebase-client";
 import { accountingProviders, type AccountingProviderId } from "@/lib/accounting-integrations";
+import { mergeImportDraft, readSmartImport, writeSmartImport, type ImportedField } from "@/lib/mri-smart-import";
 
 type ConnectorConfig = {
   quickbooks?: { configured?: boolean; redirectUri?: string | null };
@@ -17,6 +18,10 @@ type QuickBooksStatus = {
   organisationName?: string | null;
   lastSyncedAt?: string | null;
   sourceRecords?: number;
+  financialSnapshot?: {
+    revenue?: number; expenses?: number; cash?: number; accountsReceivable?: number;
+    accountsPayable?: number; totalDebt?: number; periodStart?: string; periodEnd?: string;
+  };
 };
 
 const statusLabel = (provider: AccountingProviderId, config: ConnectorConfig | null, quickbooks: QuickBooksStatus) => {
@@ -93,7 +98,21 @@ export function AccountingConnections() {
       const payload = await response.json() as QuickBooksStatus & { error?: string };
       if (!response.ok) throw new Error(payload.error || "QuickBooks sync failed.");
       setQuickbooks(payload);
-      setMessage(`QuickBooks synced for ${payload.organisationName || "the connected company"}.`);
+      const snapshot = payload.financialSnapshot;
+      if (snapshot) {
+        const period = snapshot.periodStart && snapshot.periodEnd ? `${snapshot.periodStart} to ${snapshot.periodEnd}` : undefined;
+        const candidates: Array<[ImportedField["key"], number | undefined, string]> = [
+          ["monthlyRevenue", snapshot.revenue, "QuickBooks Profit and Loss"],
+          ["cashAvailable", snapshot.cash, "QuickBooks Balance Sheet"],
+          ["accountsReceivable", snapshot.accountsReceivable, "QuickBooks Balance Sheet"],
+          ["totalDebt", snapshot.totalDebt, "QuickBooks Balance Sheet"],
+        ];
+        const fields: ImportedField[] = candidates
+          .filter((entry): entry is [ImportedField["key"], number, string] => typeof entry[1] === "number" && Number.isFinite(entry[1]))
+          .map(([key, value, evidence]) => ({ key, value, source: "QuickBooks Online", confidence: "high", evidence, reportingPeriod: period }));
+        if (fields.length) writeSmartImport(mergeImportDraft(readSmartImport(), fields));
+      }
+      setMessage(`QuickBooks synced for ${payload.organisationName || "the connected company"}. Financial facts were added to the MRI evidence layer for confirmation where needed.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "QuickBooks sync failed.");
     } finally { setBusy(false); }
@@ -133,7 +152,7 @@ export function AccountingConnections() {
       </div>
 
       {message && <p className="scenario-save-status" role="status">{message}</p>}
-      <div className="accounting-data-plan"><strong>Current live sync</strong><p>The first QuickBooks sync verifies the company, refreshes tokens securely and reads the company profile plus invoice count. Profit and loss, balance sheet, receivables, payables and transaction normalisation are the next connector layer.</p></div>
+      <div className="accounting-data-plan"><strong>Current live sync</strong><p>QuickBooks sync verifies the company, refreshes tokens securely, reads the previous complete month Profit and Loss plus the current Balance Sheet, and feeds supported facts into the MRI evidence layer. Aged receivables/payables and transaction-level normalisation remain the next connector layer.</p></div>
     </section>
   );
 }

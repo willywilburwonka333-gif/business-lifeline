@@ -1,6 +1,6 @@
 # Business Lifeline — Current Product Status
 
-Updated: 24 July 2026
+Updated: 30 September 2026
 
 ## Product architecture
 
@@ -33,6 +33,23 @@ Business Lifeline is organised around three connected product areas:
    - Expense capture
    - Staff roster
    - Operating automation activity feed
+
+## September 2026 completion pass
+
+Implemented on `lifeline-completion-pass` / PR #40:
+- MRI evidence is conflict-aware: materially different sources no longer silently overwrite each other.
+- Evidence states distinguish confirmed, review, conflict and missing facts.
+- High-confidence imported financial facts remove redundant MRI questions; uncertain/conflicting facts remain owner-confirmation questions.
+- QuickBooks sync now reads the previous complete-month Profit and Loss and current Balance Sheet, normalises supported facts and feeds revenue, cash, receivables and debt into MRI evidence.
+- Automated tests cover conflict handling and QuickBooks report normalisation.
+
+Still externally blocked or intentionally incomplete:
+- Xero production OAuth/sync validation and MYOB/Sage direct connections.
+- Stripe checkout, subscriptions, entitlements, cancellation and webhook lifecycle.
+- Production credential/configuration verification for Firebase, QuickBooks and AI providers.
+- Independent legal/privacy/security review, penetration testing and professional validation of diagnostic accuracy.
+- Full transaction-level accounting normalisation, aged receivable/payable ageing and bank-feed reconciliation.
+- Mature Grow/Sell lifecycle modules beyond existing recovery/succession foundations.
 
 ## Current source of truth
 
@@ -74,9 +91,9 @@ The exact scoring model still requires structured comparison against qualified a
 6. Test the score cards and explanations on iPhone-width layouts.
 7. Rebase or replace PR #36 because its original base predates the latest accuracy commits.
 
-## Next build — Accuracy Boost V1
+## Accuracy Boost V1
 
-Build an optional guided **13-week cash-flow forecast** after the fast MRI.
+The optional guided **13-week cash-flow forecast** is implemented after the fast MRI.
 
 The user should only enter or confirm:
 

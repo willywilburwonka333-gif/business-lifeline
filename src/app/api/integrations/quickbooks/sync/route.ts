@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { decryptSecret, encryptSecret } from "@/lib/accounting-token-vault";
 import { getFirebaseAdmin, requireFirebaseUser } from "@/lib/firebase-admin";
 import { privateResponseHeaders } from "@/lib/api-security";
+import { combineQuickBooksFacts, type QuickBooksReport } from "@/lib/quickbooks-normalizer";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -50,6 +51,24 @@ export async function POST(request: Request) {
       signal: AbortSignal.timeout(20_000),
     });
     const countPayload = await countResponse.json() as { QueryResponse?: { totalCount?: number } };
+    const now = new Date();
+    const firstThisMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const periodEndDate = new Date(firstThisMonth.getTime() - 86_400_000);
+    const periodStartDate = new Date(Date.UTC(periodEndDate.getUTCFullYear(), periodEndDate.getUTCMonth(), 1));
+    const isoDate = (value: Date) => value.toISOString().slice(0, 10);
+    const reportHeaders = { Authorization: `Bearer ${tokens.access_token}`, Accept: "application/json" };
+    const readReport = async (name: string, queryString = ""): Promise<QuickBooksReport> => {
+      const response = await fetch(`${base}/reports/${name}?${queryString}minorversion=75`, { headers: reportHeaders, signal: AbortSignal.timeout(20_000) });
+      if (!response.ok) throw new Error(`QuickBooks ${name} report could not be read.`);
+      return response.json() as Promise<QuickBooksReport>;
+    };
+    const period = `start_date=${isoDate(periodStartDate)}&end_date=${isoDate(periodEndDate)}&`;
+    const [profitAndLoss, balanceSheet] = await Promise.all([
+      readReport("ProfitAndLoss", period),
+      readReport("BalanceSheet"),
+    ]);
+    const financials = combineQuickBooksFacts(profitAndLoss, balanceSheet);
+
     const organisationName = companyPayload.CompanyInfo?.CompanyName || companyPayload.CompanyInfo?.LegalName || "QuickBooks company";
     const sourceRecords = Number(countPayload.QueryResponse?.totalCount || 0);
     const lastSyncedAt = new Date().toISOString();
@@ -60,11 +79,16 @@ export async function POST(request: Request) {
       country: companyPayload.CompanyInfo?.Country || null,
       sourceRecords,
       lastSyncedAt,
+      financialSnapshot: {
+        ...financials,
+        periodStart: isoDate(periodStartDate),
+        periodEnd: isoDate(periodEndDate),
+      },
       updatedAt: lastSyncedAt,
       status: "connected",
     }, { merge: true });
 
-    return NextResponse.json({ connected: true, organisationName, sourceRecords, lastSyncedAt }, { headers: privateResponseHeaders() });
+    return NextResponse.json({ connected: true, organisationName, sourceRecords, lastSyncedAt, financialSnapshot: { ...financials, periodStart: isoDate(periodStartDate), periodEnd: isoDate(periodEndDate) } }, { headers: privateResponseHeaders() });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "QuickBooks sync failed." }, { status: 502, headers: privateResponseHeaders() });
   }
