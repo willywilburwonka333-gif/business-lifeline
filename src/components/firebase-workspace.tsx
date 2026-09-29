@@ -16,15 +16,32 @@ import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc } from "fireba
 import { firebaseAuth, firebaseConfigured, firebaseDb } from "@/lib/firebase-client";
 
 const CLOUD_KEYS = [
+  "business-lifeline-mri-v2",
   "business-lifeline-report-v1",
-  "business-lifeline-connected-operations-v2",
-  "business-lifeline-operating-automation-v1",
-  "business-lifeline-run-operating-core-v2",
   "business-lifeline-mri-import-v1",
   "business-lifeline-mri-smart-import-v1",
   "business-lifeline-records-v1",
+  "business-lifeline-completed-actions-v1",
+  "business-lifeline-recovery-coach-v1",
+  "business-lifeline-recovery-history-v1",
+  "business-lifeline-operating-system-v1",
+  "business-lifeline-connected-operations-v2",
+  "business-lifeline-operating-automation-v1",
+  "business-lifeline-run-operating-core-v2",
+  "business-lifeline-operating-platform-v1",
+  "business-lifeline-live-control-v1",
+  "business-lifeline-native-finance-v1",
+  "business-lifeline-advanced-accounting-v1",
+  "business-lifeline-commercial-finance-controls-v1",
+  "business-lifeline-document-vault-v1",
+  "business-lifeline-ledger-sync-status-v1",
+  "business-lifeline-record-sync-meta-v1",
 ] as const;
-const CLOUD_PREFIXES = ["business-lifeline-13-week-v1:"] as const;
+const CLOUD_PREFIXES = [
+  "business-lifeline-13-week-v1:",
+  "business-lifeline-accuracy-profile-v1:",
+  "business-lifeline-cashflow-v2:",
+] as const;
 
 const businessIdFor = (uid: string) => `business-${uid}`;
 type SyncState = "local" | "syncing" | "synced" | "error";
