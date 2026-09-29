@@ -42,6 +42,10 @@ export type GrowthPlan = {
   monthlyGrowthBudget?: number;
   largestCustomerPercent?: number;
   segments?: GrowthSegment[];
+  monthlyMarketingSpend?: number;
+  newCustomersPerMonth?: number;
+  monthlyGrossProfitPerCustomer?: number;
+  averageCustomerLifetimeMonths?: number;
   initiatives: GrowthInitiative[];
 };
 
@@ -56,6 +60,9 @@ export type OperatingSnapshot = {
   openTasks: number;
   averageCatalogueMargin?: number;
   lowMarginItems?: number;
+  quoteCount?: number;
+  acceptedQuotes?: number;
+  pipelineConversionPercent?: number;
 };
 
 const emptyPlan = (): GrowthPlan => ({
@@ -72,6 +79,10 @@ const emptyPlan = (): GrowthPlan => ({
   monthlyGrowthBudget: 0,
   largestCustomerPercent: 0,
   segments: [],
+  monthlyMarketingSpend: 0,
+  newCustomersPerMonth: 0,
+  monthlyGrossProfitPerCustomer: 0,
+  averageCustomerLifetimeMonths: 0,
   initiatives: [],
 });
 
@@ -89,9 +100,9 @@ export function readGrowthPlan(storage?: Storage): GrowthPlan {
 export function readOperatingSnapshot(storage?: Storage): OperatingSnapshot {
   try {
     const target = storage ?? (typeof window !== "undefined" ? window.localStorage : null);
-    if (!target) return { customers: 0, products: 0, sales30: 0, sales90: 0, pipeline: 0, lowStock: 0, activeJobs: 0, openTasks: 0, averageCatalogueMargin: 0, lowMarginItems: 0 };
+    if (!target) return { customers: 0, products: 0, sales30: 0, sales90: 0, pipeline: 0, lowStock: 0, activeJobs: 0, openTasks: 0, averageCatalogueMargin: 0, lowMarginItems: 0, quoteCount: 0, acceptedQuotes: 0, pipelineConversionPercent: 0 };
     const raw = target.getItem(OPERATING_KEY);
-    if (!raw) return { customers: 0, products: 0, sales30: 0, sales90: 0, pipeline: 0, lowStock: 0, activeJobs: 0, openTasks: 0, averageCatalogueMargin: 0, lowMarginItems: 0 };
+    if (!raw) return { customers: 0, products: 0, sales30: 0, sales90: 0, pipeline: 0, lowStock: 0, activeJobs: 0, openTasks: 0, averageCatalogueMargin: 0, lowMarginItems: 0, quoteCount: 0, acceptedQuotes: 0, pipelineConversionPercent: 0 };
     const store = JSON.parse(raw) as {
       customers?: unknown[];
       products?: Array<{ qty?: number; reorder?: number; price?: number; cost?: number }>;
@@ -104,7 +115,11 @@ export function readOperatingSnapshot(storage?: Storage): OperatingSnapshot {
     const within = (date: string | undefined, days: number) => !date || now - new Date(date).getTime() <= days * 86400000;
     const sales30 = (store.sales ?? []).filter((sale) => within(sale.createdAt, 30)).reduce((sum, sale) => sum + Number(sale.total ?? 0), 0);
     const sales90 = (store.sales ?? []).filter((sale) => within(sale.createdAt, 90)).reduce((sum, sale) => sum + Number(sale.total ?? 0), 0);
-    const pipeline = (store.quotes ?? []).filter((quote) => ["draft", "sent"].includes(quote.status ?? "draft")).reduce((sum, quote) => {
+    const quotes = store.quotes ?? [];
+    const quoteCount = quotes.length;
+    const acceptedQuotes = quotes.filter((quote) => quote.status === "accepted").length;
+    const pipelineConversionPercent = quoteCount ? Math.round(acceptedQuotes / quoteCount * 100) : 0;
+    const pipeline = quotes.filter((quote) => ["draft", "sent"].includes(quote.status ?? "draft")).reduce((sum, quote) => {
       if (typeof quote.amount === "number") return sum + quote.amount;
       return sum + (quote.items ?? []).reduce((lineTotal, line) => lineTotal + Number(line.qty ?? 0) * Number(line.price ?? 0), 0);
     }, 0);
@@ -123,9 +138,12 @@ export function readOperatingSnapshot(storage?: Storage): OperatingSnapshot {
       openTasks: (store.tasks ?? []).filter((task) => !task.done).length,
       averageCatalogueMargin: Number(averageCatalogueMargin.toFixed(1)),
       lowMarginItems,
+      quoteCount,
+      acceptedQuotes,
+      pipelineConversionPercent,
     };
   } catch {
-    return { customers: 0, products: 0, sales30: 0, sales90: 0, pipeline: 0, lowStock: 0, activeJobs: 0, openTasks: 0, averageCatalogueMargin: 0, lowMarginItems: 0 };
+    return { customers: 0, products: 0, sales30: 0, sales90: 0, pipeline: 0, lowStock: 0, activeJobs: 0, openTasks: 0, averageCatalogueMargin: 0, lowMarginItems: 0, quoteCount: 0, acceptedQuotes: 0, pipelineConversionPercent: 0 };
   }
 }
 
@@ -166,6 +184,14 @@ export function buildGrowthAnalysis(saved: SavedReport, plan: GrowthPlan, operat
   if ((operating.averageCatalogueMargin ?? 0) > 0) opportunities.push(`Recorded catalogue gross margin averages about ${operating.averageCatalogueMargin}%; use product/service mix to prioritise contribution.`);
   if (plan.initiatives.length === 0) opportunities.push("Create one low-cost, measurable growth experiment with a review date.");
 
+  const marketingSpend = Math.max(0, plan.monthlyMarketingSpend ?? 0);
+  const newCustomers = Math.max(0, plan.newCustomersPerMonth ?? 0);
+  const customerAcquisitionCost = newCustomers > 0 ? marketingSpend / newCustomers : 0;
+  const customerLifetimeGrossProfit = Math.max(0, plan.monthlyGrossProfitPerCustomer ?? 0) * Math.max(0, plan.averageCustomerLifetimeMonths ?? 0);
+  const ltvToCac = customerAcquisitionCost > 0 ? customerLifetimeGrossProfit / customerAcquisitionCost : 0;
+  const payrollHeadroomBeforeLoss = Math.max(0, currentMonthlyProfit);
+  const payrollHeadroomBeforeTargetMargin = Math.max(0, currentMonthlyProfit - saved.data.monthlyRevenue * targetMargin / 100);
+
   const activeInitiativeCost = plan.initiatives.filter((item) => !["stop", "complete"].includes(item.status)).reduce((sum, item) => sum + item.cost, 0);
   const monthlyGrowthBudget = Math.max(0, plan.monthlyGrowthBudget ?? 0);
   const capitalRequired = activeInitiativeCost + monthlyGrowthBudget * 3;
@@ -198,6 +224,14 @@ export function buildGrowthAnalysis(saved: SavedReport, plan: GrowthPlan, operat
     recurringRevenuePercent: plan.recurringRevenuePercent ?? 0,
     repeatCustomerPercent: plan.repeatCustomerPercent ?? 0,
     capacityUtilisationPercent: plan.capacityUtilisationPercent ?? 0,
+    pipelineConversionPercent: operating.pipelineConversionPercent ?? 0,
+    quoteCount: operating.quoteCount ?? 0,
+    acceptedQuotes: operating.acceptedQuotes ?? 0,
+    customerAcquisitionCost,
+    customerLifetimeGrossProfit,
+    ltvToCac,
+    payrollHeadroomBeforeLoss,
+    payrollHeadroomBeforeTargetMargin,
   };
 }
 
