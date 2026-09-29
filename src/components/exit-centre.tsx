@@ -5,7 +5,8 @@ import { EXIT_PLAN_KEY, buildBuyerReadinessPack, buildExitAnalysis, dataRoomLabe
 import { readOperatingSnapshot } from "@/lib/growth-engine";
 import type { SavedReport } from "@/lib/saved-report";
 
-const money = (value: number) => value.toLocaleString("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 0 });
+const currencyFor = (country: string) => country.toLowerCase().includes("australia") ? "AUD" : country.toLowerCase().includes("new zealand") ? "NZD" : country.toLowerCase().includes("united kingdom") ? "GBP" : country.toLowerCase().includes("canada") ? "CAD" : "USD";
+const money = (value: number, country: string) => value.toLocaleString("en", { style: "currency", currency: currencyFor(country), maximumFractionDigits: 0 });
 
 export function ExitCentre({ saved }: { saved: SavedReport }) {
   const [plan, setPlan] = useState<ExitPlan>(() => readExitPlan());
@@ -43,8 +44,8 @@ export function ExitCentre({ saved }: { saved: SavedReport }) {
     <section className="metric-grid">
       <article><span>Exit readiness</span><strong>{analysis.readinessScore}%</strong><small>Transferability and risk preparation</small></article>
       <article><span>Data room readiness</span><strong>{analysis.dataRoomScore}%</strong><small>Buyer / adviser records organised</small></article>
-      <article><span>Maintainable earnings used</span><strong>{money(analysis.earnings)}</strong><small>Planning input, not a formal valuation</small></article>
-      <article><span>Indicative scenario range</span><strong>{money(analysis.lowIndicative)} – {money(analysis.highIndicative)}</strong><small>User-selected multiples only</small></article>
+      <article><span>Maintainable earnings used</span><strong>{money(analysis.earnings, saved.data.country)}</strong><small>Planning input, not a formal valuation</small></article>
+      <article><span>Indicative scenario range</span><strong>{money(analysis.lowIndicative, saved.data.country)} – {money(analysis.highIndicative, saved.data.country)}</strong><small>User-selected multiples only</small></article>
     </section>
 
     <section className="panel">
@@ -104,7 +105,7 @@ export function ExitCentre({ saved }: { saved: SavedReport }) {
         <label className="field"><span>Low multiple</span><input type="number" min="0" step="0.1" value={plan.lowMultiple} onChange={(e) => setPlan({ ...plan, lowMultiple: Number(e.target.value) || 0 })} /></label>
         <label className="field"><span>High multiple</span><input type="number" min="0" step="0.1" value={plan.highMultiple} onChange={(e) => setPlan({ ...plan, highMultiple: Number(e.target.value) || 0 })} /></label>
       </div>
-      {plan.desiredProceeds > 0 && <p className="scenario-save-status">{analysis.gapToDesired > 0 ? `The top of this scenario is ${money(analysis.gapToDesired)} below the desired proceeds. Improve maintainable earnings, reduce buyer risk or revisit assumptions.` : "The desired proceeds sit within or below this user-entered planning range."}</p>}
+      {plan.desiredProceeds > 0 && <p className="scenario-save-status">{analysis.gapToDesired > 0 ? `The top of this scenario is ${money(analysis.gapToDesired, saved.data.country)} below the desired proceeds. Improve maintainable earnings, reduce buyer risk or revisit assumptions.` : "The desired proceeds sit within or below this user-entered planning range."}</p>}
     </section>
 
     <section className="panel">
