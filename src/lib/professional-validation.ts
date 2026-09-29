@@ -12,9 +12,11 @@ export type AdviserFinding = {
   notes: string;
 };
 
-export function readProfessionalValidation(storage: Storage = window.localStorage): AdviserFinding[] {
+export function readProfessionalValidation(storage?: Storage): AdviserFinding[] {
   try {
-    const raw = storage.getItem(PROFESSIONAL_VALIDATION_KEY);
+    const target = storage ?? (typeof window !== "undefined" ? window.localStorage : null);
+    if (!target) return [];
+    const raw = target.getItem(PROFESSIONAL_VALIDATION_KEY);
     const value = raw ? JSON.parse(raw) : [];
     return Array.isArray(value) ? value : [];
   } catch {
