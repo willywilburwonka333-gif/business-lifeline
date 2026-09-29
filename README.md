@@ -148,6 +148,6 @@ This runs the full automated test suite, ESLint, and a production Next.js build.
 
 ## Current product status
 
-Business Lifeline is a submission-ready innovation prototype and public-beta candidate. It is not yet a production financial-advice platform. Commercial development would require authentication, encrypted cloud storage, formal privacy and legal review, monitoring, broader user validation, and accounting integrations.
+Business Lifeline is a submission-ready innovation prototype and public-beta candidate. It is not yet a production financial-advice platform. The current codebase includes Firebase authentication, Firestore workspace sync, document-assisted MRI intake and a read-only QuickBooks connector with financial-report ingestion. Commercial launch still requires production configuration and tenant-isolation verification, billing/entitlements, monitoring, broader user validation, independent privacy/legal/security review, expanded accounting coverage and production testing with real provider accounts.
 
 Built for OpenAI Build Week.
