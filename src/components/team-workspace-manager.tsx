@@ -32,6 +32,12 @@ const SOURCES = [
   ["validation", "business-lifeline-professional-validation-v1"],
 ] as const;
 
+const LIFECYCLE_KEYS = [
+  "business-lifeline-growth-plan-v1",
+  "business-lifeline-exit-plan-v1",
+  "business-lifeline-professional-validation-v1",
+] as const;
+
 const token = () => crypto.randomUUID().replaceAll("-", "").slice(0, 16).toUpperCase();
 const canWrite = (role?: Role) => role === "owner" || role === "manager" || role === "staff";
 
@@ -48,6 +54,7 @@ export function TeamWorkspaceManager() {
   const [latestInvite, setLatestInvite] = useState("");
   const localHashes = useRef<Record<string, string>>({});
   const applyingRemote = useRef(false);
+  const previousBusinessId = useRef("");
 
   const active = memberships.find((item) => item.businessId === activeId);
 
@@ -72,6 +79,18 @@ export function TeamWorkspaceManager() {
       if (selected) localStorage.setItem(ACTIVE_KEY, selected);
     }, (error) => setNotice(error.message));
   }, [user]);
+
+  useEffect(() => {
+    if (!activeId || previousBusinessId.current === activeId) return;
+    if (previousBusinessId.current) {
+      LIFECYCLE_KEYS.forEach((key) => {
+        localStorage.removeItem(key);
+        delete localHashes.current[key];
+        window.dispatchEvent(new StorageEvent("storage", { key, newValue: null }));
+      });
+    }
+    previousBusinessId.current = activeId;
+  }, [activeId]);
 
   useEffect(() => {
     if (!firebaseDb || !activeId || !user) {
