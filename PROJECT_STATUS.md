@@ -4,7 +4,7 @@ Updated: 30 September 2026
 
 ## Product architecture
 
-Business Lifeline is organised around three connected product areas:
+Business Lifeline is organised around five connected product areas:
 
 1. **Business MRI — Diagnose**
    - Fast guided financial and operating assessment
@@ -34,6 +34,23 @@ Business Lifeline is organised around three connected product areas:
    - Staff roster
    - Operating automation activity feed
 
+4. **Growth Engine — Grow**
+   - Revenue, margin, owner-income and cash-buffer targets
+   - Capacity, owner-load, customer-concentration and funding-readiness constraints
+   - Customer segment economics and retention inputs
+   - Pricing, volume, payroll, fixed-cost and marketing growth scenarios
+   - Growth experiment portfolio with expected vs actual outcomes
+   - Run-data carry-forward for pipeline, catalogue margin, sales and workload
+
+5. **Exit & Succession — Sell**
+   - Exit path selection: third-party sale, management buyout, family succession, partner buyout or orderly closure
+   - Transferability/readiness scorecard
+   - Owner dependence, recurring revenue and customer concentration tracking
+   - Buyer due-diligence data-room checklist
+   - Maintainable earnings / SDE / EBITDA / EBIT-style planning scenarios with explicit valuation disclaimer
+   - Buyer-readiness export pack
+   - Run-data carry-forward for customers, sales, pipeline, tasks and active work
+
 ## September 2026 final-plan completion pass
 
 Implemented on `final-plan-completion` / PR #41:
@@ -61,15 +78,28 @@ Still externally blocked or intentionally incomplete:
 - Production credential/configuration verification for Firebase, QuickBooks and AI providers.
 - Independent legal/privacy/security review, penetration testing and professional validation of diagnostic accuracy.
 - Full transaction-level provider normalisation and automated bank-feed reconciliation beyond the current native finance controls.
-- Mature Grow/Sell lifecycle modules beyond existing recovery/succession foundations.
+
+## Lifecycle expansion — September 2026
+
+Implemented on `lifecycle-expansion-v1`:
+- Added Grow and Sell as first-class top-level lifecycle areas.
+- Added industry-specific diagnostic modules for hospitality, construction/trades, petrol/convenience, retail, service businesses and general small business.
+- Connected saved 13-week forecast shortfalls into the diagnosis dashboard, Recovery Coach, Action Centre and Business Brain.
+- Added longitudinal recovery outcomes so pressure, monthly result, cash and overdue obligations can be compared over time.
+- Added a professional-validation workspace measuring agreement, disagreement, possible false alarms and possible missed-risk signals.
+- Added customer-segment economics, recurring/repeat revenue, capacity, owner load, catalogue-margin and funding-readiness growth controls.
+- Added transferability scoring, succession paths, due-diligence data-room tracking, Run-data evidence and buyer-readiness pack export.
+- Added clearly labelled earnings-multiple planning scenarios using maintainable earnings / SDE / EBITDA / EBIT-style inputs without presenting them as professional valuations.
+- Included Grow, Sell and validation data in cloud workspace sync.
+- Added lifecycle and industry automated tests.
 
 ## Current source of truth
 
 - Repository: `willywilburwonka333-gif/business-lifeline`
-- Branch: `main`
-- Latest accuracy-integration commit: `f57b3e2570ffc80d747a265bbf23c00c107e2698`
-- Open automated-testing pull request: #36
-- Product direction: keep the initial MRI extremely easy, then offer an optional **Accuracy Boost** for businesses needing a deeper assessment.
+- Production branch: `main`
+- Lifecycle development branch: `lifecycle-expansion-v1`
+- Product architecture: **Diagnose → Recover → Run → Grow → Sell**
+- Product direction: keep the initial MRI extremely easy, then progressively deepen accuracy, recovery execution, operations, growth and exit preparation as the business needs them.
 
 ## Accuracy system completed so far
 
@@ -131,18 +161,22 @@ The system should then calculate:
 
 The Accuracy Boost must remain optional so an overwhelmed owner can complete the fast MRI first.
 
-## Build order after the 13-week forecast
+## Diagnose / Recover refinement status
 
-1. Add expanded but progressive MRI inputs for business structure, GST basis, payroll, super, PAYG, creditor due dates, facilities, secured debt, guarantees, seasonality and customer concentration.
-2. Connect forecast results to recovery actions, dashboard warnings, playbooks and Business Brain context.
-3. Add industry modules, beginning with general retail/service, construction/trades, hospitality and petrol stations.
-4. Add a professional-validation workspace for comparing app findings against adviser findings without exposing confidential data unnecessarily.
-5. Measure agreement, false alarms, missed risks and priority-order accuracy before publishing any accuracy claim.
+Completed in code:
+1. Expanded progressive accuracy inputs for structure, GST basis, payroll, super, PAYG, creditors, facilities, debt, guarantees, seasonality and concentration.
+2. Forecast results feed dashboard warnings, recovery actions, Recovery Coach and Business Brain context.
+3. Industry modules cover retail, service, construction/trades, hospitality, petrol/convenience and a general fallback.
+4. Professional-validation workspace records adviser comparisons and agreement/missed-risk/false-alarm signals.
+5. Longitudinal recovery outcomes track whether the business actually improves.
+
+Still requires real-world evidence:
+- professional case review
+- false-positive / false-negative measurement
+- priority-order accuracy measurement
+- forecast-vs-actual comparison across multiple businesses
+- no public diagnostic accuracy percentage until that evidence exists
 
 ## Product promise
 
-**Diagnose the business → Recover the business → Run the business.**
-
-Long-term lifecycle:
-
-**Start → Diagnose → Recover → Run → Grow → Sell.**
+**Diagnose → Recover → Run → Grow → Sell.**
