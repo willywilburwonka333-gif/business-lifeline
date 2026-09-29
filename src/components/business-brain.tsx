@@ -8,6 +8,7 @@ import { coachProgress, readCoachCheckIn } from "@/lib/recovery-coach";
 import { calculateCashflowForecast, type CashflowForecast } from "@/lib/cashflow-forecast";
 import { buildGrowthAnalysis, readGrowthPlan, readOperatingSnapshot } from "@/lib/growth-engine";
 import { buildExitAnalysis, readExitPlan } from "@/lib/exit-readiness";
+import { industryModule } from "@/lib/industry-intelligence";
 
 type BrainAnswer = {
   answer: string;
@@ -140,7 +141,8 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
       if (rawForecast) forecastSummary = calculateCashflowForecast(JSON.parse(rawForecast) as CashflowForecast);
     } catch { forecastSummary = null; }
     const growthAnalysis = buildGrowthAnalysis(saved, readGrowthPlan(), readOperatingSnapshot());
-    const exitAnalysis = buildExitAnalysis(saved, readExitPlan());
+    const exitAnalysis = buildExitAnalysis(saved, readExitPlan(), readOperatingSnapshot());
+    const industry = industryModule(saved);
 
     const context = {
       industry: saved.data.industry,
@@ -185,6 +187,13 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
         profitGap: growthAnalysis.profitGap,
         constraints: growthAnalysis.constraints.slice(0, 5),
         opportunities: growthAnalysis.opportunities.slice(0, 5),
+      },
+      industryModule: {
+        name: industry.name,
+        kpis: industry.kpis,
+        diagnosticQuestions: industry.diagnosticQuestions,
+        watchPoints: industry.watchPoints,
+        actions: industry.actions,
       },
       exit: {
         readinessScore: exitAnalysis.readinessScore,
