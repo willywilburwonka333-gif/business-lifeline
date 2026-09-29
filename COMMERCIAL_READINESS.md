@@ -44,6 +44,10 @@ Updated: 30 September 2026
 - Scenario planning
 - Recovery resources/templates
 - Automatic deterministic MRI recalculation when new evidence changes business facts
+- Saved 13-week forecast shortfalls feed back into dashboard risks, recovery actions, Recovery Coach and Business Brain
+- Longitudinal recovery outcome tracking
+- Professional validation comparison workspace
+- Industry-specific diagnosis modules for hospitality, construction/trades, petrol/convenience, retail and service businesses
 
 ### Run
 
@@ -64,6 +68,27 @@ Updated: 30 September 2026
 - GST operating summary
 - Document vault
 - Operating ledger sync and live business control tower
+
+### Grow
+
+- Revenue, margin, owner-income and cash-buffer targets
+- Customer segment economics and repeat/recurring revenue inputs
+- Capacity utilisation, owner workload and customer concentration constraints
+- Run-data carry-forward for sales, pipeline, open tasks, active jobs and catalogue margins
+- Pricing/volume/payroll/fixed-cost/marketing growth scenario model
+- Growth experiment portfolio with expected vs actual outcomes
+- Capital requirement and funding-readiness indicator
+
+### Sell / succession
+
+- Third-party sale, management buyout, family succession, partner buyout and orderly-closure pathways
+- Exit-readiness / transferability scorecard
+- Owner-dependence, customer-concentration and recurring-revenue risk inputs
+- Living buyer due-diligence data-room checklist
+- Maintainable earnings / SDE / EBITDA / EBIT-style planning inputs and normalisations
+- User-entered multiple scenarios with explicit non-valuation disclaimer
+- Run-data carry-forward into exit preparation
+- Downloadable buyer-readiness pack
 
 ### Accounting connections
 
@@ -113,6 +138,7 @@ These cannot be completed in repository code:
 - accountant/BAS-agent review of tax/accounting wording
 - professional validation of diagnostic accuracy
 - real-business pilot validation
+- external valuation/accounting review before any exit scenario is used as a valuation opinion
 
 See `docs/OWNER_SETUP_CHECKLIST.md` for the exact owner-side setup.
 
