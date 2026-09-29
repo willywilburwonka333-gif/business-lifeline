@@ -9,10 +9,17 @@ export type ReadinessKey =
   | "staffDepth" | "contracts" | "ipBrand" | "systems" | "compliance" | "disputes"
   | "management" | "workingCapital" | "dataRoom";
 
+export type EarningsBasis = "maintainable-earnings" | "sde" | "ebitda" | "ebit";
+
 export type ExitPlan = {
   path: ExitPath;
   targetDate: string;
   desiredProceeds: number;
+  earningsBasis?: EarningsBasis;
+  reportedAnnualEarnings?: number;
+  ownerNormalisation?: number;
+  oneOffNormalisations?: number;
+  replacementManagerCost?: number;
   maintainableAnnualEarnings: number;
   lowMultiple: number;
   highMultiple: number;
@@ -65,6 +72,11 @@ export const emptyExitPlan = (): ExitPlan => ({
   path: "undecided",
   targetDate: "",
   desiredProceeds: 0,
+  earningsBasis: "maintainable-earnings",
+  reportedAnnualEarnings: 0,
+  ownerNormalisation: 0,
+  oneOffNormalisations: 0,
+  replacementManagerCost: 0,
   maintainableAnnualEarnings: 0,
   lowMultiple: 2,
   highMultiple: 4,
@@ -99,7 +111,17 @@ export function buildExitAnalysis(saved: SavedReport, plan: ExitPlan, operating?
   const dataRoomValues = Object.values(plan.dataRoom);
   const dataRoomScore = Math.round(dataRoomValues.filter(Boolean).length / Math.max(1, dataRoomValues.length) * 100);
   const annualisedCurrentResult = Math.max(0, saved.report.metrics.monthlyOperatingResult * 12);
-  const earnings = plan.maintainableAnnualEarnings > 0 ? plan.maintainableAnnualEarnings : annualisedCurrentResult;
+  const normalisedFromInputs = Math.max(0,
+    (plan.reportedAnnualEarnings ?? 0) +
+    (plan.ownerNormalisation ?? 0) +
+    (plan.oneOffNormalisations ?? 0) -
+    (plan.replacementManagerCost ?? 0)
+  );
+  const earnings = plan.maintainableAnnualEarnings > 0
+    ? plan.maintainableAnnualEarnings
+    : normalisedFromInputs > 0
+      ? normalisedFromInputs
+      : annualisedCurrentResult;
   const lowIndicative = earnings * Math.max(0, plan.lowMultiple);
   const highIndicative = earnings * Math.max(plan.lowMultiple, plan.highMultiple);
   const risks: string[] = [];
@@ -178,6 +200,11 @@ export function buildBuyerReadinessPack(saved: SavedReport, plan: ExitPlan, oper
       dataRoomScore: analysis.dataRoomScore,
     },
     planningScenario: {
+      earningsBasis: plan.earningsBasis ?? "maintainable-earnings",
+      reportedAnnualEarnings: plan.reportedAnnualEarnings ?? 0,
+      ownerNormalisation: plan.ownerNormalisation ?? 0,
+      oneOffNormalisations: plan.oneOffNormalisations ?? 0,
+      replacementManagerCost: plan.replacementManagerCost ?? 0,
       maintainableAnnualEarnings: analysis.earnings,
       userEnteredLowMultiple: plan.lowMultiple,
       userEnteredHighMultiple: plan.highMultiple,
