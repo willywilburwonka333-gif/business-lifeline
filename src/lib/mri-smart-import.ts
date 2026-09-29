@@ -160,12 +160,21 @@ export function writeSmartImport(draft: SmartImportDraft) {
     (values as Record<string, unknown>)[String(field.key)] = field.value;
     return values;
   }, {});
+  let existing: { data?: Partial<BusinessData>; [key: string]: unknown } | null = null;
+  try {
+    existing = JSON.parse(window.localStorage.getItem("business-lifeline-mri-v2") ?? "null") as typeof existing;
+  } catch {
+    existing = null;
+  }
   window.localStorage.setItem("business-lifeline-mri-v2", JSON.stringify({
-    data: { ...emptyBusiness, ...importedData },
+    ...(existing ?? {}),
+    data: { ...emptyBusiness, ...(existing?.data ?? {}), ...importedData },
     report: null,
     importedFields: draft.fields,
     diagnosticSignals: draft.signals ?? [],
     importWarnings: draft.warnings ?? [],
     importConflicts: draft.conflicts ?? [],
+    evidenceUpdatedAt: draft.updatedAt,
   }));
+  window.dispatchEvent(new CustomEvent("business-lifeline-evidence-updated", { detail: { updatedAt: draft.updatedAt } }));
 }
