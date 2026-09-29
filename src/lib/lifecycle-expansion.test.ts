@@ -51,3 +51,21 @@ if (hospitality.id !== "hospitality" || hospitality.kpis.length < 4) throw new E
 
 const construction = industryModule({ ...saved, data: { ...saved.data, industry: "Construction trades" } });
 if (construction.id !== "construction") throw new Error("Construction diagnostic module failed.");
+
+
+const dealPlan = emptyExitPlan();
+dealPlan.offers = [{ id: "o1", buyer: "Buyer", headlinePrice: 500000, cashAtCompletion: 350000, deferredOrEarnout: 150000, structure: "mixed", conditions: "Due diligence", expiryDate: "", status: "accepted" }];
+dealPlan.diligenceIssues = [{ id: "d1", title: "Contract gap", area: "Legal", severity: "high", owner: "Owner", dueDate: "", status: "open", notes: "" }];
+dealPlan.handoverItems = [{ id: "h1", title: "Train successor", owner: "Owner", dueDate: "", status: "complete" }];
+const dealAnalysis = buildExitAnalysis(saved, dealPlan);
+if (dealAnalysis.lifecycleStage !== "handover" || dealAnalysis.highDiligenceIssues !== 1 || dealAnalysis.handoverComplete !== 100) throw new Error("Sell deal-process tracking failed.");
+
+const marketingPlan: GrowthPlan = {
+  ...plan,
+  monthlyMarketingSpend: 2000,
+  newCustomersPerMonth: 10,
+  monthlyGrossProfitPerCustomer: 200,
+  averageCustomerLifetimeMonths: 12,
+};
+const marketing = buildGrowthAnalysis(saved, marketingPlan, { ...operating, quoteCount: 10, acceptedQuotes: 4, pipelineConversionPercent: 40 });
+if (marketing.customerAcquisitionCost !== 200 || marketing.customerLifetimeGrossProfit !== 2400 || marketing.pipelineConversionPercent !== 40) throw new Error("Growth unit economics failed.");
