@@ -16,19 +16,37 @@ import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc } from "fireba
 import { firebaseAuth, firebaseConfigured, firebaseDb } from "@/lib/firebase-client";
 
 const CLOUD_KEYS = [
+  "business-lifeline-mri-v2",
   "business-lifeline-report-v1",
-  "business-lifeline-connected-operations-v2",
-  "business-lifeline-operating-automation-v1",
-  "business-lifeline-run-operating-core-v2",
   "business-lifeline-mri-import-v1",
   "business-lifeline-mri-smart-import-v1",
   "business-lifeline-records-v1",
+  "business-lifeline-completed-actions-v1",
+  "business-lifeline-recovery-coach-v1",
+  "business-lifeline-recovery-history-v1",
+  "business-lifeline-operating-system-v1",
+  "business-lifeline-connected-operations-v2",
+  "business-lifeline-operating-automation-v1",
+  "business-lifeline-run-operating-core-v2",
+  "business-lifeline-operating-platform-v1",
+  "business-lifeline-live-control-v1",
+  "business-lifeline-native-finance-v1",
+  "business-lifeline-advanced-accounting-v1",
+  "business-lifeline-commercial-finance-controls-v1",
+  "business-lifeline-document-vault-v1",
+  "business-lifeline-ledger-sync-status-v1",
+  "business-lifeline-record-sync-meta-v1",
 ] as const;
-const CLOUD_PREFIXES = ["business-lifeline-13-week-v1:"] as const;
+const CLOUD_PREFIXES = [
+  "business-lifeline-13-week-v1:",
+  "business-lifeline-accuracy-profile-v1:",
+  "business-lifeline-cashflow-v2:",
+] as const;
 
 const businessIdFor = (uid: string) => `business-${uid}`;
 type SyncState = "local" | "syncing" | "synced" | "error";
 type CloudPayload = Record<string, string | null>;
+type BillingStatus = { configured?: boolean; plan?: "free" | "pro" | "rescue"; subscriptionStatus?: string | null; rescuePurchased?: boolean; customerReady?: boolean };
 
 function cloudEligibleKeys() {
   const keys = new Set<string>(CLOUD_KEYS);
@@ -81,6 +99,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
   const [notice, setNotice] = useState("");
   const [syncState, setSyncState] = useState<SyncState>("local");
   const [syncMessage, setSyncMessage] = useState("Stored privately on this device");
+  const [billing, setBilling] = useState<BillingStatus>({ plan: "free" });
 
   const displayName = useMemo(() => user?.displayName || user?.email || "Business owner", [user]);
   const usesPassword = Boolean(user?.providerData.some((provider) => provider.providerId === "password"));
@@ -163,10 +182,14 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
     return onAuthStateChanged(firebaseAuth, (nextUser) => {
       setUser(nextUser);
       setAuthReady(true);
-      if (nextUser) void syncWorkspace(nextUser);
+      if (nextUser) {
+        void syncWorkspace(nextUser);
+        void nextUser.getIdToken().then((token) => fetch("/api/billing/status", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" })).then((response) => response.ok ? response.json() : null).then((value) => value && setBilling(value)).catch(() => setBilling({ plan: "free" }));
+      }
       else {
         setSyncState("local");
         setSyncMessage("Stored privately on this device");
+        setBilling({ plan: "free" });
       }
     });
   }, [syncWorkspace]);
@@ -273,6 +296,62 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
     window.location.reload();
   };
 
+  const startCheckout = async (plan: "pro" | "rescue") => {
+    if (!user) return;
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${await user.getIdToken()}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
+      const payload = await response.json() as { url?: string; error?: string };
+      if (!response.ok || !payload.url) throw new Error(payload.error || "Unable to start checkout.");
+      window.location.assign(payload.url);
+    } catch (billingError) {
+      setError(billingError instanceof Error ? billingError.message : "Unable to start checkout.");
+      setBusy(false);
+    }
+  };
+
+  const openBillingPortal = async () => {
+    if (!user) return;
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/billing/portal", { method: "POST", headers: { Authorization: `Bearer ${await user.getIdToken()}` } });
+      const payload = await response.json() as { url?: string; error?: string };
+      if (!response.ok || !payload.url) throw new Error(payload.error || "Unable to open billing portal.");
+      window.location.assign(payload.url);
+    } catch (billingError) {
+      setError(billingError instanceof Error ? billingError.message : "Unable to open billing portal.");
+      setBusy(false);
+    }
+  };
+
+  const deleteAccount = async () => {
+    if (!firebaseAuth || !user) return;
+    const confirmed = window.confirm("Permanently delete this Business Lifeline account and its owned cloud workspace data? This cannot be undone.");
+    if (!confirmed) return;
+    const typed = window.prompt('Type DELETE to confirm permanent account deletion.');
+    if (typed !== "DELETE") return;
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/account/delete", { method: "DELETE", headers: { Authorization: `Bearer ${await user.getIdToken()}` } });
+      const payload = await response.json() as { deleted?: boolean; error?: string };
+      if (!response.ok || !payload.deleted) throw new Error(payload.error || "Account deletion failed.");
+      clearLocalPayload();
+      window.localStorage.removeItem("business-lifeline-active-business-v1");
+      setNotice("Account deleted.");
+      window.location.reload();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Account deletion failed.");
+      setBusy(false);
+    }
+  };
+
   const logOut = async () => {
     if (!firebaseAuth) return;
     await signOut(firebaseAuth);
@@ -303,9 +382,14 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
               <p>Your Business Lifeline workspace remains available locally and can be copied to your private cloud workspace.</p>
               <div className="commercial-security-status">
                 <strong>{usesPassword ? (user.emailVerified ? "Email verified" : "Email verification required") : "Verified Google account"}</strong>
-                <span>Role: Owner · Workspace: Active beta</span>
+                <span>Role: Owner · Workspace: Active beta · Plan: {billing.plan === "pro" ? "Pro" : billing.rescuePurchased ? "Rescue access" : "Free"}</span>
               </div>
               {usesPassword && !user.emailVerified && <button className="cloud-mode-switch" type="button" onClick={() => void resendVerification()} disabled={busy}>Resend verification email</button>}
+              {billing.configured && <div className="cloud-account-panel-actions">
+                {billing.plan !== "pro" && <button type="button" className="button primary" onClick={() => void startCheckout("pro")} disabled={busy}>Upgrade to Pro</button>}
+                {!billing.rescuePurchased && <button type="button" className="button ghost" onClick={() => void startCheckout("rescue")} disabled={busy}>Buy Rescue package</button>}
+                {billing.customerReady && <button type="button" className="button ghost" onClick={() => void openBillingPortal()} disabled={busy}>Manage billing</button>}
+              </div>}
               {notice && <p className="cloud-account-notice" role="status">{notice}</p>}
               {error && <p className="cloud-account-error" role="alert">{error}</p>}
               <div className="cloud-account-panel-actions">
@@ -314,6 +398,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
                 <button type="button" className="button ghost" onClick={() => void exportWorkspace()}>Download my data</button>
                 <button type="button" className="button ghost" onClick={() => void clearThisDevice()}>Clear this device</button>
                 <button type="button" className="button ghost" onClick={() => void logOut()}>Sign out</button>
+                <button type="button" className="button ghost" onClick={() => void deleteAccount()} disabled={busy}>Delete account permanently</button>
               </div>
             </div>
           ) : (

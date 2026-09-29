@@ -63,11 +63,32 @@ export async function POST(request: Request) {
       return response.json() as Promise<QuickBooksReport>;
     };
     const period = `start_date=${isoDate(periodStartDate)}&end_date=${isoDate(periodEndDate)}&`;
-    const [profitAndLoss, balanceSheet] = await Promise.all([
+    const queryEntities = async <T>(statement: string, key: string): Promise<T[]> => {
+      const response = await fetch(`${base}/query?query=${encodeURIComponent(statement)}&minorversion=75`, {
+        headers: reportHeaders,
+        signal: AbortSignal.timeout(20_000),
+      });
+      if (!response.ok) return [];
+      const payload = await response.json() as { QueryResponse?: Record<string, unknown> };
+      const rows = payload.QueryResponse?.[key];
+      return Array.isArray(rows) ? rows as T[] : [];
+    };
+
+    type OpenDocument = { DueDate?: string; Balance?: number };
+    const [profitAndLoss, balanceSheet, openInvoices, openBills] = await Promise.all([
       readReport("ProfitAndLoss", period),
       readReport("BalanceSheet"),
+      queryEntities<OpenDocument>("select * from Invoice where Balance > '0' maxresults 1000", "Invoice"),
+      queryEntities<OpenDocument>("select * from Bill where Balance > '0' maxresults 1000", "Bill"),
     ]);
     const financials = combineQuickBooksFacts(profitAndLoss, balanceSheet);
+    const today = isoDate(now);
+    const overdueReceivables = openInvoices
+      .filter((item) => item.DueDate && item.DueDate < today)
+      .reduce((sum, item) => sum + Math.max(0, Number(item.Balance) || 0), 0);
+    const overduePayables = openBills
+      .filter((item) => item.DueDate && item.DueDate < today)
+      .reduce((sum, item) => sum + Math.max(0, Number(item.Balance) || 0), 0);
 
     const organisationName = companyPayload.CompanyInfo?.CompanyName || companyPayload.CompanyInfo?.LegalName || "QuickBooks company";
     const sourceRecords = Number(countPayload.QueryResponse?.totalCount || 0);
@@ -81,6 +102,8 @@ export async function POST(request: Request) {
       lastSyncedAt,
       financialSnapshot: {
         ...financials,
+        overdueReceivables,
+        overduePayables,
         periodStart: isoDate(periodStartDate),
         periodEnd: isoDate(periodEndDate),
       },
@@ -88,7 +111,7 @@ export async function POST(request: Request) {
       status: "connected",
     }, { merge: true });
 
-    return NextResponse.json({ connected: true, organisationName, sourceRecords, lastSyncedAt, financialSnapshot: { ...financials, periodStart: isoDate(periodStartDate), periodEnd: isoDate(periodEndDate) } }, { headers: privateResponseHeaders() });
+    return NextResponse.json({ connected: true, organisationName, sourceRecords, lastSyncedAt, financialSnapshot: { ...financials, overdueReceivables, overduePayables, periodStart: isoDate(periodStartDate), periodEnd: isoDate(periodEndDate) } }, { headers: privateResponseHeaders() });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "QuickBooks sync failed." }, { status: 502, headers: privateResponseHeaders() });
   }

@@ -34,7 +34,19 @@ Business Lifeline is organised around three connected product areas:
    - Staff roster
    - Operating automation activity feed
 
-## September 2026 completion pass
+## September 2026 final-plan completion pass
+
+Implemented on `final-plan-completion` / PR #41:
+- Fixed invisible inactive Commercial OS navigation labels on mobile.
+- Expanded cloud backup to cover the current MRI, recovery, forecast, operating, finance and document metadata state.
+- Added authenticated permanent account deletion including owned cloud data, accounting tokens and owner-scoped vault files.
+- Added production-code Xero OAuth, tenant discovery, token refresh, Profit and Loss / Balance Sheet sync and MRI fact ingestion.
+- Added Stripe Checkout, billing portal, webhook verification, subscription lifecycle and Rescue purchase foundation.
+- QuickBooks now also calculates overdue open invoices and bills and feeds them into the MRI.
+- New evidence now preserves the existing business context and automatically recalculates the deterministic MRI instead of wiping the assessment.
+- Added Xero and Stripe validation tests and an exact external owner setup checklist.
+
+## Earlier September 2026 completion pass
 
 Implemented on `lifeline-completion-pass` / PR #40:
 - MRI evidence is conflict-aware: materially different sources no longer silently overwrite each other.
@@ -44,11 +56,11 @@ Implemented on `lifeline-completion-pass` / PR #40:
 - Automated tests cover conflict handling and QuickBooks report normalisation.
 
 Still externally blocked or intentionally incomplete:
-- Xero production OAuth/sync validation and MYOB/Sage direct connections.
-- Stripe checkout, subscriptions, entitlements, cancellation and webhook lifecycle.
+- Xero production credential/scope validation and MYOB/Sage direct connections.
+- Stripe production account, price IDs, webhook secret, test purchases and final entitlement/pricing approval.
 - Production credential/configuration verification for Firebase, QuickBooks and AI providers.
 - Independent legal/privacy/security review, penetration testing and professional validation of diagnostic accuracy.
-- Full transaction-level accounting normalisation, aged receivable/payable ageing and bank-feed reconciliation.
+- Full transaction-level provider normalisation and automated bank-feed reconciliation beyond the current native finance controls.
 - Mature Grow/Sell lifecycle modules beyond existing recovery/succession foundations.
 
 ## Current source of truth

@@ -23,7 +23,7 @@ export const accountingProviders: AccountingProvider[] = [
     name: "Xero",
     description: "Connect one or more Xero organisations through OAuth 2.0 and import only the approved accounting information.",
     connection: "oauth",
-    status: "foundation",
+    status: "available",
     dataScopes: ["Organisation", "Profit and loss", "Balance sheet", "Aged receivables", "Aged payables", "Invoices and bills", "Payments", "Accounts", "Items", "Bank transactions"],
   },
   {

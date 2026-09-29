@@ -1,4 +1,5 @@
 import { emptyBusiness } from "@/lib/demo";
+import { generateReport } from "@/lib/planner";
 import type { BusinessData } from "@/lib/types";
 
 export const MRI_IMPORT_KEY = "business-lifeline-mri-smart-import-v1";
@@ -160,12 +161,23 @@ export function writeSmartImport(draft: SmartImportDraft) {
     (values as Record<string, unknown>)[String(field.key)] = field.value;
     return values;
   }, {});
+  let existing: { data?: Partial<BusinessData>; [key: string]: unknown } | null = null;
+  try {
+    existing = JSON.parse(window.localStorage.getItem("business-lifeline-mri-v2") ?? "null") as typeof existing;
+  } catch {
+    existing = null;
+  }
+  const mergedData = { ...emptyBusiness, ...(existing?.data ?? {}), ...importedData } as BusinessData;
+  const refreshedReport = generateReport(mergedData);
   window.localStorage.setItem("business-lifeline-mri-v2", JSON.stringify({
-    data: { ...emptyBusiness, ...importedData },
-    report: null,
+    ...(existing ?? {}),
+    data: mergedData,
+    report: { ...refreshedReport, aiStatus: "fallback" },
     importedFields: draft.fields,
     diagnosticSignals: draft.signals ?? [],
     importWarnings: draft.warnings ?? [],
     importConflicts: draft.conflicts ?? [],
+    evidenceUpdatedAt: draft.updatedAt,
   }));
+  window.dispatchEvent(new CustomEvent("business-lifeline-evidence-updated", { detail: { updatedAt: draft.updatedAt } }));
 }

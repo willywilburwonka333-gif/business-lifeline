@@ -1,6 +1,7 @@
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 
 function adminConfig() {
   const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
@@ -17,8 +18,9 @@ export function firebaseAdminConfigured() {
 export function getFirebaseAdmin() {
   const config = adminConfig();
   if (!config) throw new Error("Firebase Admin is not configured.");
-  const app = getApps()[0] || initializeApp({ credential: cert(config), projectId: config.projectId });
-  return { auth: getAuth(app), db: getFirestore(app) };
+  const storageBucket = process.env.FIREBASE_ADMIN_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+  const app = getApps()[0] || initializeApp({ credential: cert(config), projectId: config.projectId, storageBucket });
+  return { auth: getAuth(app), db: getFirestore(app), storage: storageBucket ? getStorage(app) : null };
 }
 
 export async function requireFirebaseUser(request: Request) {
