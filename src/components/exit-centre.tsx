@@ -1,21 +1,37 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { EXIT_PLAN_KEY, buildExitAnalysis, dataRoomLabels, readExitPlan, readinessLabels, type ExitPath, type ExitPlan, type ReadinessKey } from "@/lib/exit-readiness";
+import { EXIT_PLAN_KEY, buildBuyerReadinessPack, buildExitAnalysis, dataRoomLabels, readExitPlan, readinessLabels, type ExitPath, type ExitPlan, type ReadinessKey } from "@/lib/exit-readiness";
+import { readOperatingSnapshot } from "@/lib/growth-engine";
 import type { SavedReport } from "@/lib/saved-report";
 
 const money = (value: number) => value.toLocaleString("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 0 });
 
 export function ExitCentre({ saved }: { saved: SavedReport }) {
   const [plan, setPlan] = useState<ExitPlan>(() => readExitPlan());
-  const analysis = useMemo(() => buildExitAnalysis(saved, plan), [saved, plan]);
+  const [operating, setOperating] = useState(() => readOperatingSnapshot());
+  const analysis = useMemo(() => buildExitAnalysis(saved, plan, operating), [saved, plan, operating]);
 
   useEffect(() => {
     window.localStorage.setItem(EXIT_PLAN_KEY, JSON.stringify(plan));
   }, [plan]);
+  useEffect(() => {
+    const timer = window.setInterval(() => setOperating(readOperatingSnapshot()), 1500);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const setReadiness = (key: ReadinessKey, value: 0 | 1 | 2) => setPlan((current) => ({ ...current, readiness: { ...current.readiness, [key]: value } }));
   const setDataRoom = (key: string, value: boolean) => setPlan((current) => ({ ...current, dataRoom: { ...current.dataRoom, [key]: value } }));
+  const exportBuyerPack = () => {
+    const pack = buildBuyerReadinessPack(saved, plan, operating);
+    const blob = new Blob([JSON.stringify(pack, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `business-lifeline-buyer-readiness-${saved.data.businessName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-") || "business"}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return <section className="workspace-section-stack lifecycle-centre">
     <header className="panel lifecycle-hero">
@@ -29,6 +45,17 @@ export function ExitCentre({ saved }: { saved: SavedReport }) {
       <article><span>Data room readiness</span><strong>{analysis.dataRoomScore}%</strong><small>Buyer / adviser records organised</small></article>
       <article><span>Maintainable earnings used</span><strong>{money(analysis.earnings)}</strong><small>Planning input, not a formal valuation</small></article>
       <article><span>Indicative scenario range</span><strong>{money(analysis.lowIndicative)} – {money(analysis.highIndicative)}</strong><small>User-selected multiples only</small></article>
+    </section>
+
+    <section className="panel">
+      <div className="section-heading"><span>Run evidence</span><h3>Operating proof carried forward automatically</h3></div>
+      <div className="metric-grid">
+        <article><span>Customers on record</span><strong>{analysis.operatingEvidence?.customers ?? 0}</strong></article>
+        <article><span>90-day recorded sales</span><strong>{money(analysis.operatingEvidence?.sales90 ?? 0)}</strong></article>
+        <article><span>Open pipeline</span><strong>{money(analysis.operatingEvidence?.pipeline ?? 0)}</strong></article>
+        <article><span>Open operating tasks</span><strong>{analysis.operatingEvidence?.openTasks ?? 0}</strong></article>
+      </div>
+      <button type="button" className="button primary" onClick={exportBuyerPack}>Download buyer-readiness pack</button>
     </section>
 
     <section className="panel">
