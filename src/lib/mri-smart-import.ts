@@ -1,4 +1,5 @@
 import { emptyBusiness } from "@/lib/demo";
+import { generateReport } from "@/lib/planner";
 import type { BusinessData } from "@/lib/types";
 
 export const MRI_IMPORT_KEY = "business-lifeline-mri-smart-import-v1";
@@ -166,10 +167,12 @@ export function writeSmartImport(draft: SmartImportDraft) {
   } catch {
     existing = null;
   }
+  const mergedData = { ...emptyBusiness, ...(existing?.data ?? {}), ...importedData } as BusinessData;
+  const refreshedReport = generateReport(mergedData);
   window.localStorage.setItem("business-lifeline-mri-v2", JSON.stringify({
     ...(existing ?? {}),
-    data: { ...emptyBusiness, ...(existing?.data ?? {}), ...importedData },
-    report: null,
+    data: mergedData,
+    report: { ...refreshedReport, aiStatus: "fallback" },
     importedFields: draft.fields,
     diagnosticSignals: draft.signals ?? [],
     importWarnings: draft.warnings ?? [],
