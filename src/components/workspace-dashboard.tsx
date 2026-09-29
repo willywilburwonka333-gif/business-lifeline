@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnalysisProvenance } from "@/components/analysis-provenance";
 import { calculateCashflowForecast, type CashflowForecast, type CashflowForecastResult } from "@/lib/cashflow-forecast";
+import { industryModule } from "@/lib/industry-intelligence";
 import { selectPlaybook } from "@/lib/recovery-playbooks";
 import type { SavedReport } from "@/lib/saved-report";
 import type { WorkspaceTab } from "@/lib/workspace";
@@ -63,6 +64,7 @@ export function WorkspaceDashboard({ saved, openTab }: { saved: SavedReport; ope
   }, [report.warnings, report.risks, forecast]);
   const scoreTone = metrics.overallScore >= 70 ? "good" : metrics.overallScore >= 45 ? "watch" : "danger";
   const playbook = selectPlaybook(data, report);
+  const industry = industryModule(saved);
   const primaryPressure = report.aiAnalysis?.rootCauses?.[0] || report.warnings[0] || report.risks[0] || playbook.summary;
 
   const shortcuts: Array<{ tab: WorkspaceTab; title: string; copy: string }> = [
@@ -108,6 +110,18 @@ export function WorkspaceDashboard({ saved, openTab }: { saved: SavedReport; ope
       </section>
 
       <AnalysisProvenance report={report} compact />
+
+      <section className="panel">
+        <div className="section-heading"><span>{industry.name.toUpperCase()} MODULE</span><h3>Industry-specific diagnosis</h3></div>
+        <div className="insight-grid">
+          <article><h4>KPIs to watch</h4><ul>{industry.kpis.map((item) => <li key={item}>{item}</li>)}</ul></article>
+          <article><h4>Questions the numbers alone cannot answer</h4><ul>{industry.diagnosticQuestions.map((item) => <li key={item}>{item}</li>)}</ul></article>
+        </div>
+        <div className="insight-grid">
+          <article><h4>Watch points</h4><ul>{industry.watchPoints.map((item) => <li key={item}>{item}</li>)}</ul></article>
+          <article><h4>Recommended operating checks</h4><ul>{industry.actions.map((item) => <li key={item}>{item}</li>)}</ul></article>
+        </div>
+      </section>
 
       <div className="workspace-metric-grid stage9-metrics">
         <article>
