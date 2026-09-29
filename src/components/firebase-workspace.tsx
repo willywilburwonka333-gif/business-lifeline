@@ -21,29 +21,41 @@ const CLOUD_KEYS = [
   "business-lifeline-operating-automation-v1",
   "business-lifeline-run-operating-core-v2",
   "business-lifeline-mri-import-v1",
+  "business-lifeline-mri-smart-import-v1",
+  "business-lifeline-records-v1",
 ] as const;
+const CLOUD_PREFIXES = ["business-lifeline-13-week-v1:"] as const;
 
 const businessIdFor = (uid: string) => `business-${uid}`;
 type SyncState = "local" | "syncing" | "synced" | "error";
-type CloudPayload = Record<(typeof CLOUD_KEYS)[number], string | null>;
+type CloudPayload = Record<string, string | null>;
+
+function cloudEligibleKeys() {
+  const keys = new Set<string>(CLOUD_KEYS);
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const key = window.localStorage.key(index);
+    if (key && CLOUD_PREFIXES.some((prefix) => key.startsWith(prefix))) keys.add(key);
+  }
+  return [...keys];
+}
 
 function readLocalPayload(): CloudPayload {
-  return Object.fromEntries(CLOUD_KEYS.map((key) => [key, window.localStorage.getItem(key)])) as CloudPayload;
+  return Object.fromEntries(cloudEligibleKeys().map((key) => [key, window.localStorage.getItem(key)]));
 }
 
 function hasUsefulLocalData(payload: CloudPayload) {
-  return CLOUD_KEYS.some((key) => Boolean(payload[key]));
+  return Object.values(payload).some(Boolean);
 }
 
 function restoreLocalPayload(payload: Partial<CloudPayload>) {
-  CLOUD_KEYS.forEach((key) => {
-    const value = payload[key];
-    if (typeof value === "string") window.localStorage.setItem(key, value);
+  Object.entries(payload).forEach(([key, value]) => {
+    const eligible = CLOUD_KEYS.includes(key as (typeof CLOUD_KEYS)[number]) || CLOUD_PREFIXES.some((prefix) => key.startsWith(prefix));
+    if (eligible && typeof value === "string") window.localStorage.setItem(key, value);
   });
 }
 
 function clearLocalPayload() {
-  CLOUD_KEYS.forEach((key) => window.localStorage.removeItem(key));
+  cloudEligibleKeys().forEach((key) => window.localStorage.removeItem(key));
 }
 
 function messageForError(error: unknown) {
