@@ -40,7 +40,7 @@ export async function DELETE(request: Request) {
     await db.collection("userWorkspaces").doc(user.uid).delete().catch(() => undefined);
     await db.collection("users").doc(user.uid).delete().catch(() => undefined);
 
-    const connectionDocs = await db.collection("accountingConnections").where("userId", "==", user.uid).get().catch(() => null);
+    const connectionDocs = await db.collection("accountingConnections").where("uid", "==", user.uid).get().catch(() => null);
     if (connectionDocs) await Promise.all(connectionDocs.docs.map((doc) => doc.ref.delete().catch(() => undefined)));
     await db.collection("accountingConnections").doc(`${user.uid}_quickbooks`).delete().catch(() => undefined);
     await db.collection("accountingConnections").doc(`${user.uid}_xero`).delete().catch(() => undefined);
