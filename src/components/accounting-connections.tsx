@@ -20,7 +20,7 @@ type AccountingStatus = {
   sourceRecords?: number;
   financialSnapshot?: {
     revenue?: number; expenses?: number; cash?: number; accountsReceivable?: number;
-    accountsPayable?: number; totalDebt?: number; periodStart?: string; periodEnd?: string;
+    accountsPayable?: number; overdueReceivables?: number; overduePayables?: number; totalDebt?: number; periodStart?: string; periodEnd?: string;
   };
 };
 
@@ -125,6 +125,8 @@ export function AccountingConnections() {
           ["monthlyRevenue", snapshot.revenue, "QuickBooks Profit and Loss"],
           ["cashAvailable", snapshot.cash, "QuickBooks Balance Sheet"],
           ["accountsReceivable", snapshot.accountsReceivable, "QuickBooks Balance Sheet"],
+          ["overdueInvoices", snapshot.overdueReceivables, "QuickBooks open overdue invoices"],
+          ["overdueSuppliers", snapshot.overduePayables, "QuickBooks open overdue bills"],
           ["totalDebt", snapshot.totalDebt, "QuickBooks Balance Sheet"],
         ];
         const fields: ImportedField[] = candidates
