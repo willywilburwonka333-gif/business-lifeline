@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 
 const KEY = "business-lifeline-commercial-finance-controls-v1";
 const ACCOUNTING_KEY = "business-lifeline-advanced-accounting-v1";
@@ -59,6 +59,8 @@ export function CommercialFinanceControls() {
   const [bankTx, setBankTx] = useState({ accountId: "bank-main", date: "", description: "", amount: 0, direction: "in" as BankTransaction["direction"] });
   const [recurring, setRecurring] = useState({ customer: "", description: "", amount: 0, frequency: "monthly" as Recurring["frequency"], nextDate: "" });
   const [plan, setPlan] = useState({ customer: "", reference: "", total: 0, deposit: 0, instalments: 4, dueDate: "" });
+  const [accountForm, setAccountForm] = useState({ name: "", openingBalance: 0, statementBalance: 0 });
+  const [postingAccount, setPostingAccount] = useState<Record<string, string>>({});
 
   useEffect(() => {
     try {
@@ -82,6 +84,71 @@ export function CommercialFinanceControls() {
     const bookBalance = round(account.openingBalance + movements);
     return { ...account, bookBalance, difference: round(account.statementBalance - bookBalance) };
   }), [store]);
+
+  const addBankAccount = (event: FormEvent) => {
+    event.preventDefault();
+    if (!accountForm.name.trim()) return;
+    const account: BankAccount = { id: id("bank"), name: accountForm.name.trim(), openingBalance: accountForm.openingBalance, statementBalance: accountForm.statementBalance };
+    setStore((current) => ({ ...current, accounts: [account, ...current.accounts] }));
+    setBankTx((current) => ({ ...current, accountId: account.id }));
+    setAccountForm({ name: "", openingBalance: 0, statementBalance: 0 });
+  };
+
+  const parseStatementCsv = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const rows = text.split(/\r?\n/).filter(Boolean);
+    if (rows.length < 2) return;
+    const headers = rows[0].split(",").map((value) => value.trim().toLowerCase().replace(/[^a-z0-9]+/g, ""));
+    const field = (...names: string[]) => names.map((name) => headers.indexOf(name)).find((index) => typeof index === "number" && index >= 0) ?? -1;
+    const dateIndex = field("date", "transactiondate", "valuedate");
+    const descIndex = field("description", "narrative", "details", "transaction", "memo");
+    const amountIndex = field("amount", "value");
+    const debitIndex = field("debit", "withdrawal", "moneyout");
+    const creditIndex = field("credit", "deposit", "moneyin");
+    const directionIndex = field("direction", "type");
+    const accountId = bankTx.accountId || store.accounts[0]?.id || "bank-main";
+    const imported: BankTransaction[] = [];
+    for (const line of rows.slice(1)) {
+      const cols = line.split(",").map((value) => value.trim().replace(/^"|"$/g, ""));
+      const description = descIndex >= 0 ? cols[descIndex] : cols[1] || "Imported bank transaction";
+      const rawDebit = debitIndex >= 0 ? Number((cols[debitIndex] || "").replace(/[$,]/g, "")) : 0;
+      const rawCredit = creditIndex >= 0 ? Number((cols[creditIndex] || "").replace(/[$,]/g, "")) : 0;
+      let amount = amountIndex >= 0 ? Number((cols[amountIndex] || "").replace(/[$,]/g, "")) : rawCredit || rawDebit;
+      let direction: BankTransaction["direction"] = rawDebit > 0 ? "out" : "in";
+      if (amount < 0) { direction = "out"; amount = Math.abs(amount); }
+      if (directionIndex >= 0 && /debit|out|withdraw/i.test(cols[directionIndex] || "")) direction = "out";
+      if (directionIndex >= 0 && /credit|in|deposit/i.test(cols[directionIndex] || "")) direction = "in";
+      if (!Number.isFinite(amount) || amount <= 0) continue;
+      imported.push({ id: id("bankcsv"), accountId, date: dateIndex >= 0 ? (cols[dateIndex] || today()) : today(), description, amount: round(amount), direction, matchedSource: "", status: "unmatched" });
+    }
+    setStore((current) => ({ ...current, transactions: [...imported, ...current.transactions] }));
+    event.target.value = "";
+  };
+
+  const autoMatch = () => {
+    setStore((current) => {
+      const alreadyUsed = new Set(current.transactions.filter((tx) => tx.matchedSource).map((tx) => tx.matchedSource));
+      const transactions = current.transactions.map((tx) => {
+        if (tx.status !== "unmatched") return tx;
+        const matches = journalSources.filter((journal) => !alreadyUsed.has(journal.source) && Math.abs(journal.amount - tx.amount) < 0.01);
+        if (matches.length !== 1) return tx;
+        alreadyUsed.add(matches[0].source);
+        return { ...tx, matchedSource: matches[0].source, status: "matched" as const };
+      });
+      return { ...current, transactions };
+    });
+  };
+
+  const postUnmatched = (transaction: BankTransaction) => {
+    const account = postingAccount[transaction.id] || (transaction.direction === "in" ? "Sales Revenue" : "Operating Expense");
+    const source = "BANK:POST:" + transaction.id;
+    const lines: JournalLine[] = transaction.direction === "in"
+      ? [{ account: "Bank", side: "debit", amount: transaction.amount }, { account, side: "credit", amount: transaction.amount }]
+      : [{ account, side: "debit", amount: transaction.amount }, { account: "Bank", side: "credit", amount: transaction.amount }];
+    if (writeJournal({ id: id("journal"), date: transaction.date, memo: transaction.description, source, lines })) matchTransaction(transaction, source);
+  };
 
   const addBankTransaction = (event: FormEvent) => {
     event.preventDefault();
@@ -168,13 +235,17 @@ export function CommercialFinanceControls() {
   const customers = [...new Set([...store.instalments.map((item) => item.customer), ...store.recurring.map((item) => item.customer)])];
 
   return <section className="commercial-finance-controls">
-    <header><small>COMMERCIAL FINANCE CONTROLS</small><h2>Banking, reconciliation, recurring billing and payment plans</h2><p>Close the gap between operational accounting and real cash movement.</p></header>
-    <nav>{([["banking", "Bank reconciliation"], ["recurring", "Recurring billing"], ["instalments", "Deposits & instalments"], ["statements", "Customer statements"]] as const).map(([key, label]) => <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{label}</button>)}</nav>
+    <header><small>LIFELINE BANK + LIFELINE PAY</small><h2>Bank reconciliation, customer payments and recurring cash flow</h2><p>Import statements, reconcile to Lifeline Books, post unmatched transactions, create recurring billing and manage instalment plans without another accounting app.</p></header>
+    <nav>{([["banking", "Lifeline Bank"], ["recurring", "Lifeline Pay · Recurring"], ["instalments", "Lifeline Pay · Instalments"], ["statements", "Lifeline Pay · Statements"]] as const).map(([key, label]) => <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{label}</button>)}</nav>
 
     {tab === "banking" && <main>
       <div className="cfc-kpis">{balances.map((account) => <article key={account.id}><small>{account.name}</small><strong>{money(account.bookBalance)}</strong><span>Statement {money(account.statementBalance)}</span><b className={account.difference === 0 ? "ok" : "warn"}>Difference {money(account.difference)}</b><input type="number" step="0.01" value={account.statementBalance || ""} placeholder="Statement balance" onChange={(event) => setStore((current) => ({ ...current, accounts: current.accounts.map((item) => item.id === account.id ? { ...item, statementBalance: Number(event.target.value) } : item) }))}/></article>)}</div>
+      <div className="lifeline-report-grid">
+        <form onSubmit={addBankAccount} className="cfc-form"><h3>Add bank account</h3><input placeholder="Account name" value={accountForm.name} onChange={(event) => setAccountForm({ ...accountForm, name: event.target.value })}/><input type="number" step="0.01" placeholder="Opening balance" value={accountForm.openingBalance || ""} onChange={(event) => setAccountForm({ ...accountForm, openingBalance: Number(event.target.value) || 0 })}/><input type="number" step="0.01" placeholder="Statement balance" value={accountForm.statementBalance || ""} onChange={(event) => setAccountForm({ ...accountForm, statementBalance: Number(event.target.value) || 0 })}/><button>Add account</button></form>
+        <section className="cfc-form"><h3>Import bank statement</h3><p>CSV import works without a bank API. Recognised columns include date, description, amount, debit and credit.</p><select value={bankTx.accountId} onChange={(event) => setBankTx({ ...bankTx, accountId: event.target.value })}>{store.accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select><input type="file" accept=".csv,text/csv" onChange={parseStatementCsv}/><button type="button" onClick={autoMatch}>Auto-match exact amounts</button></section>
+      </div>
       <form onSubmit={addBankTransaction} className="cfc-form"><h3>Add/import bank line</h3><select value={bankTx.accountId} onChange={(event) => setBankTx({ ...bankTx, accountId: event.target.value })}>{store.accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select><input type="date" value={bankTx.date} onChange={(event) => setBankTx({ ...bankTx, date: event.target.value })}/><input placeholder="Statement description" value={bankTx.description} onChange={(event) => setBankTx({ ...bankTx, description: event.target.value })}/><input type="number" step="0.01" placeholder="Amount" value={bankTx.amount || ""} onChange={(event) => setBankTx({ ...bankTx, amount: Number(event.target.value) })}/><select value={bankTx.direction} onChange={(event) => setBankTx({ ...bankTx, direction: event.target.value as BankTransaction["direction"] })}><option value="in">Money in</option><option value="out">Money out</option></select><button>Add statement line</button></form>
-      <div className="cfc-list">{store.transactions.map((transaction) => <article key={transaction.id}><div><strong>{transaction.date} · {transaction.description}</strong><span>{transaction.direction === "in" ? "+" : "-"}{money(transaction.amount)} · {transaction.status}</span>{transaction.matchedSource && <small>{transaction.matchedSource}</small>}</div><div>{transaction.status === "unmatched" && transaction.direction === "in" && <button onClick={() => settleCardClearing(transaction)}>Settle card clearing</button>}{transaction.status === "unmatched" && <select defaultValue="" onChange={(event) => event.target.value && matchTransaction(transaction, event.target.value)}><option value="">Match ledger source…</option>{journalSources.filter((journal) => Math.abs(journal.amount - transaction.amount) < 0.01).map((journal) => <option key={journal.source} value={journal.source}>{journal.date} · {journal.memo}</option>)}</select>}<button onClick={() => setStore((current) => ({ ...current, transactions: current.transactions.map((item) => item.id === transaction.id ? { ...item, status: "ignored" } : item) }))}>Ignore</button></div></article>)}</div>
+      <div className="cfc-list">{store.transactions.map((transaction) => <article key={transaction.id}><div><strong>{transaction.date} · {transaction.description}</strong><span>{transaction.direction === "in" ? "+" : "-"}{money(transaction.amount)} · {transaction.status}</span>{transaction.matchedSource && <small>{transaction.matchedSource}</small>}</div><div>{transaction.status === "unmatched" && transaction.direction === "in" && <button onClick={() => settleCardClearing(transaction)}>Settle card clearing</button>}{transaction.status === "unmatched" && <select defaultValue="" onChange={(event) => event.target.value && matchTransaction(transaction, event.target.value)}><option value="">Match ledger source…</option>{journalSources.filter((journal) => Math.abs(journal.amount - transaction.amount) < 0.01).map((journal) => <option key={journal.source} value={journal.source}>{journal.date} · {journal.memo}</option>)}</select>}{transaction.status === "unmatched" && <><select value={postingAccount[transaction.id] || (transaction.direction === "in" ? "Sales Revenue" : "Operating Expense")} onChange={(event) => setPostingAccount((current) => ({ ...current, [transaction.id]: event.target.value }))}>{(transaction.direction === "in" ? ["Sales Revenue","Service Revenue","Owner Equity","Business Loan"] : ["Operating Expense","Rent","Utilities","Advertising & Marketing","Insurance","Motor Vehicle","Repairs & Maintenance","Professional Fees","Bank & Merchant Fees","Business Loan"]).map((account) => <option key={account}>{account}</option>)}</select><button onClick={() => postUnmatched(transaction)}>Post to Books</button></>}<button onClick={() => setStore((current) => ({ ...current, transactions: current.transactions.map((item) => item.id === transaction.id ? { ...item, status: "ignored" } : item) }))}>Ignore</button></div></article>)}</div>
     </main>}
 
     {tab === "recurring" && <main><form onSubmit={addRecurring} className="cfc-form"><h3>Create recurring billing rule</h3><input placeholder="Customer" value={recurring.customer} onChange={(event) => setRecurring({ ...recurring, customer: event.target.value })}/><input placeholder="Description" value={recurring.description} onChange={(event) => setRecurring({ ...recurring, description: event.target.value })}/><input type="number" step="0.01" placeholder="Amount" value={recurring.amount || ""} onChange={(event) => setRecurring({ ...recurring, amount: Number(event.target.value) })}/><select value={recurring.frequency} onChange={(event) => setRecurring({ ...recurring, frequency: event.target.value as Recurring["frequency"] })}><option value="weekly">Weekly</option><option value="fortnightly">Fortnightly</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option></select><input type="date" value={recurring.nextDate} onChange={(event) => setRecurring({ ...recurring, nextDate: event.target.value })}/><button>Add recurring rule</button></form><div className="cfc-list">{store.recurring.map((rule) => <article key={rule.id}><div><strong>{rule.customer} · {rule.description}</strong><span>{money(rule.amount)} · {rule.frequency} · next {rule.nextDate}</span><small>{rule.generated} invoice journal{rule.generated === 1 ? "" : "s"} generated</small></div><div><button onClick={() => generateRecurring(rule)}>Generate now</button><button onClick={() => setStore((current) => ({ ...current, recurring: current.recurring.map((item) => item.id === rule.id ? { ...item, active: !item.active } : item) }))}>{rule.active ? "Pause" : "Resume"}</button></div></article>)}</div></main>}
