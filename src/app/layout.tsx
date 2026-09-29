@@ -36,6 +36,7 @@ import "./team-workspace.css";
 import "./structured-record-sync.css";
 import "./beta-safety.css";
 import "./product-architecture.css";
+import "./lifecycle.css";
 import "./business-records.css";
 import "./stage7-reliability.css";
 import "./judge-onboarding.css";
