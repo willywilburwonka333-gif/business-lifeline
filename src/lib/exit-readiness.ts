@@ -1,4 +1,5 @@
 import type { SavedReport } from "./saved-report";
+import type { OperatingSnapshot } from "./growth-engine";
 
 export const EXIT_PLAN_KEY = "business-lifeline-exit-plan-v1";
 
@@ -92,7 +93,7 @@ export function readExitPlan(storage: Storage = window.localStorage): ExitPlan {
   }
 }
 
-export function buildExitAnalysis(saved: SavedReport, plan: ExitPlan) {
+export function buildExitAnalysis(saved: SavedReport, plan: ExitPlan, operating?: OperatingSnapshot) {
   const readinessValues = Object.values(plan.readiness);
   const readinessScore = Math.round(readinessValues.reduce((sum, value) => sum + value, 0) / Math.max(1, readinessValues.length * 2) * 100);
   const dataRoomValues = Object.values(plan.dataRoom);
@@ -107,12 +108,24 @@ export function buildExitAnalysis(saved: SavedReport, plan: ExitPlan) {
   if (plan.ownerHoursPerWeek > 45) risks.push("High owner dependence can reduce transferability.");
   if (plan.largestCustomerPercent >= 30) risks.push("Customer concentration is a material buyer risk.");
   if (plan.recurringRevenuePercent < 20) risks.push("Low recurring/repeat revenue may make future earnings less predictable.");
+  if (operating && operating.customers === 0) risks.push("No customer operating records are present in Run, which weakens buyer evidence.");
+  if (operating && operating.openTasks > 20) risks.push("A high open-task load may indicate process or resourcing dependence that should be resolved before transition.");
   for (const [key, value] of Object.entries(plan.readiness) as Array<[ReadinessKey, 0 | 1 | 2]>) if (value === 0) risks.push(`${readinessLabels[key]} needs work.`);
 
   const priorities = (Object.entries(plan.readiness) as Array<[ReadinessKey, 0 | 1 | 2]>)
     .sort((a, b) => a[1] - b[1])
     .slice(0, 5)
     .map(([key]) => readinessLabels[key]);
+
+  const operatingEvidence = operating ? {
+    customers: operating.customers,
+    products: operating.products,
+    sales30: operating.sales30,
+    sales90: operating.sales90,
+    pipeline: operating.pipeline,
+    openTasks: operating.openTasks,
+    activeJobs: operating.activeJobs,
+  } : null;
 
   return {
     readinessScore,
@@ -123,5 +136,56 @@ export function buildExitAnalysis(saved: SavedReport, plan: ExitPlan) {
     risks: risks.slice(0, 8),
     priorities,
     gapToDesired: plan.desiredProceeds > 0 ? Math.max(0, plan.desiredProceeds - highIndicative) : 0,
+    operatingEvidence,
+  };
+}
+
+
+export function buildBuyerReadinessPack(saved: SavedReport, plan: ExitPlan, operating?: OperatingSnapshot) {
+  const analysis = buildExitAnalysis(saved, plan, operating);
+  return {
+    generatedAt: new Date().toISOString(),
+    business: {
+      name: saved.data.businessName,
+      industry: saved.data.industry,
+      country: saved.data.country,
+      yearsOperating: saved.data.yearsOperating,
+      employees: saved.data.employees,
+    },
+    financialSummary: {
+      monthlyRevenue: saved.data.monthlyRevenue,
+      monthlyOperatingResult: saved.report.metrics.monthlyOperatingResult,
+      operatingMargin: saved.report.metrics.operatingMargin,
+      cashAvailable: saved.data.cashAvailable,
+      accountsReceivable: saved.data.accountsReceivable,
+      totalDebt: saved.data.totalDebt,
+      overdueTax: saved.data.overdueTax,
+      overdueSuppliers: saved.data.overdueSuppliers,
+    },
+    exitPlan: {
+      path: plan.path,
+      targetDate: plan.targetDate,
+      desiredProceeds: plan.desiredProceeds,
+      ownerHoursPerWeek: plan.ownerHoursPerWeek,
+      ownerCriticalTasks: plan.ownerCriticalTasks,
+      recurringRevenuePercent: plan.recurringRevenuePercent,
+      largestCustomerPercent: plan.largestCustomerPercent,
+    },
+    readiness: {
+      score: analysis.readinessScore,
+      priorities: analysis.priorities,
+      risks: analysis.risks,
+      dataRoomScore: analysis.dataRoomScore,
+    },
+    planningScenario: {
+      maintainableAnnualEarnings: analysis.earnings,
+      userEnteredLowMultiple: plan.lowMultiple,
+      userEnteredHighMultiple: plan.highMultiple,
+      indicativeLow: analysis.lowIndicative,
+      indicativeHigh: analysis.highIndicative,
+      disclaimer: "Indicative planning scenario only. Not a formal valuation.",
+    },
+    operatingEvidence: analysis.operatingEvidence,
+    handoverNotes: plan.notes,
   };
 }
