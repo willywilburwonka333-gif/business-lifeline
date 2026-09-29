@@ -5,7 +5,8 @@ import { GROWTH_PLAN_KEY, buildGrowthAnalysis, growthScenario, readGrowthPlan, r
 import type { SavedReport } from "@/lib/saved-report";
 
 const id = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-const money = (value: number) => value.toLocaleString("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 0 });
+const currencyFor = (country: string) => country.toLowerCase().includes("australia") ? "AUD" : country.toLowerCase().includes("new zealand") ? "NZD" : country.toLowerCase().includes("united kingdom") ? "GBP" : country.toLowerCase().includes("canada") ? "CAD" : "USD";
+const money = (value: number, country: string) => value.toLocaleString("en", { style: "currency", currency: currencyFor(country), maximumFractionDigits: 0 });
 
 export function GrowthCentre({ saved }: { saved: SavedReport }) {
   const [plan, setPlan] = useState<GrowthPlan>(() => readGrowthPlan());
@@ -62,11 +63,11 @@ export function GrowthCentre({ saved }: { saved: SavedReport }) {
     </header>
 
     <section className="metric-grid">
-      <article><span>Current annualised revenue</span><strong>{money(analysis.currentAnnualRevenue)}</strong><small>From the latest MRI</small></article>
-      <article><span>Target annual revenue</span><strong>{money(analysis.targetAnnualRevenue)}</strong><small>{money(analysis.revenueGap)} growth gap</small></article>
+      <article><span>Current annualised revenue</span><strong>{money(analysis.currentAnnualRevenue, saved.data.country)}</strong><small>From the latest MRI</small></article>
+      <article><span>Target annual revenue</span><strong>{money(analysis.targetAnnualRevenue, saved.data.country)}</strong><small>{money(analysis.revenueGap, saved.data.country)} growth gap</small></article>
       <article><span>Current margin</span><strong>{analysis.currentMargin}%</strong><small>Target {analysis.targetMargin}%</small></article>
       <article><span>Experiment coverage</span><strong>{analysis.targetCoveragePercent}%</strong><small>Of the monthly growth gap currently covered by active experiments</small></article>
-      <article><span>Funding readiness</span><strong>{analysis.fundingReadiness}</strong><small>{money(analysis.capitalRequired)} three-month test capital indicated from current plan</small></article>
+      <article><span>Funding readiness</span><strong>{analysis.fundingReadiness}</strong><small>{money(analysis.capitalRequired, saved.data.country)} three-month test capital indicated from current plan</small></article>
       <article><span>Catalogue margin</span><strong>{analysis.averageCatalogueMargin ? `${analysis.averageCatalogueMargin}%` : "Needs price/cost data"}</strong><small>{analysis.lowMarginItems} recorded item(s) below 20% gross margin</small></article>
     </section>
 
@@ -105,7 +106,7 @@ export function GrowthCentre({ saved }: { saved: SavedReport }) {
         </div>
         <button className="button primary">Add segment</button>
       </form>
-      <div className="item-list">{(plan.segments ?? []).map((item) => <article key={item.id}><div><strong>{item.name}</strong><span>{item.customers} customers · {money(item.monthlyRevenue)} monthly revenue</span></div><b>{item.grossMarginPercent}% margin · {item.repeatRatePercent}% repeat</b></article>)}</div>
+      <div className="item-list">{(plan.segments ?? []).map((item) => <article key={item.id}><div><strong>{item.name}</strong><span>{item.customers} customers · {money(item.monthlyRevenue, saved.data.country)} monthly revenue</span></div><b>{item.grossMarginPercent}% margin · {item.repeatRatePercent}% repeat</b></article>)}</div>
     </section>
 
     <section className="panel">
@@ -118,10 +119,10 @@ export function GrowthCentre({ saved }: { saved: SavedReport }) {
         <label className="field"><span>Extra marketing / month</span><input type="number" min="0" value={scenario.addedMonthlyMarketing || ""} onChange={(e) => setScenario({ ...scenario, addedMonthlyMarketing: Number(e.target.value) || 0 })} /></label>
       </div>
       <div className="metric-grid">
-        <article><span>Projected monthly revenue</span><strong>{money(scenarioResult.projectedRevenue)}</strong></article>
-        <article><span>Projected monthly result</span><strong className={scenarioResult.projectedResult < 0 ? "negative" : "positive"}>{money(scenarioResult.projectedResult)}</strong></article>
-        <article><span>Change vs today</span><strong className={scenarioResult.incrementalResult < 0 ? "negative" : "positive"}>{money(scenarioResult.incrementalResult)}</strong></article>
-        <article><span>Revenue needed to cover new spend</span><strong>{money(scenarioResult.breakEvenExtraRevenue)}</strong></article>
+        <article><span>Projected monthly revenue</span><strong>{money(scenarioResult.projectedRevenue, saved.data.country)}</strong></article>
+        <article><span>Projected monthly result</span><strong className={scenarioResult.projectedResult < 0 ? "negative" : "positive"}>{money(scenarioResult.projectedResult, saved.data.country)}</strong></article>
+        <article><span>Change vs today</span><strong className={scenarioResult.incrementalResult < 0 ? "negative" : "positive"}>{money(scenarioResult.incrementalResult, saved.data.country)}</strong></article>
+        <article><span>Revenue needed to cover new spend</span><strong>{money(scenarioResult.breakEvenExtraRevenue, saved.data.country)}</strong></article>
       </div>
     </section>
 
@@ -143,7 +144,7 @@ export function GrowthCentre({ saved }: { saved: SavedReport }) {
       <div className="item-list">
         {plan.initiatives.map((item) => <article key={item.id}>
           <div><strong>{item.name}</strong><span>{item.hypothesis || "No hypothesis recorded"} · owner {item.owner || "unassigned"} · review {item.reviewDate || "not set"}</span></div>
-          <b>{money(item.expectedMonthlyRevenue)} expected / {money(item.actualMonthlyRevenue)} actual</b>
+          <b>{money(item.expectedMonthlyRevenue, saved.data.country)} expected / {money(item.actualMonthlyRevenue, saved.data.country)} actual</b>
           <select value={item.status} onChange={(e) => updateInitiative(item.id, { status: e.target.value as GrowthInitiative["status"] })}><option value="idea">Idea</option><option value="testing">Testing</option><option value="scale">Scale</option><option value="stop">Stop</option><option value="complete">Complete</option></select>
           <input aria-label="Actual monthly revenue" type="number" min="0" placeholder="Actual monthly revenue" value={item.actualMonthlyRevenue || ""} onChange={(e) => updateInitiative(item.id, { actualMonthlyRevenue: Number(e.target.value) || 0 })} />
           <input aria-label="Actual monthly gross profit" type="number" min="0" placeholder="Actual monthly gross profit" value={item.actualMonthlyGrossProfit || ""} onChange={(e) => updateInitiative(item.id, { actualMonthlyGrossProfit: Number(e.target.value) || 0 })} />
