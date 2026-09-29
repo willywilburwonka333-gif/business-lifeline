@@ -45,13 +45,13 @@ const STORAGE_KEY = "business-lifeline-connected-operations-v2";
 const defaultRules: RuleSettings = { acceptedQuoteCreatesJob: true, overdueInvoiceCreatesTask: true, lowStockCreatesReorder: true, saleReducesStock: true };
 const emptyStore: Store = { customers: [], quotes: [], jobs: [], invoices: [], products: [], sales: [], expenses: [], timesheets: [], tasks: [], reorders: [], stocktakes: [], activity: [], rules: defaultRules };
 const tabs: Array<{ id: View; label: string; detail: string }> = [
-  { id: "overview", label: "Overview", detail: "Connected alerts and activity" },
-  { id: "customers", label: "Customers", detail: "CRM history and relationships" },
-  { id: "transactions", label: "Quote → Job → Invoice", detail: "One connected transaction chain" },
-  { id: "stocktake", label: "Stocktake", detail: "Count, reconcile and reorder" },
-  { id: "market", label: "Market Day", detail: "Fast sales and end-of-day close" },
-  { id: "team", label: "Timesheets", detail: "Hours and payroll preparation" },
-  { id: "rules", label: "Automation Rules", detail: "Control what updates automatically" },
+  { id: "overview", label: "Lifeline Ops", detail: "Connected alerts and activity" },
+  { id: "customers", label: "Lifeline Sales", detail: "CRM history and customer relationships" },
+  { id: "transactions", label: "Lifeline Jobs", detail: "Quote → job → invoice workflow" },
+  { id: "stocktake", label: "Lifeline Stock", detail: "Count, reconcile and reorder" },
+  { id: "market", label: "Lifeline Sales · POS", detail: "Fast sales and end-of-day close" },
+  { id: "team", label: "Lifeline People · Time", detail: "Hours and payroll preparation" },
+  { id: "rules", label: "Lifeline Automate", detail: "Control what updates automatically" },
 ];
 
 const nowIso = () => new Date().toISOString();
@@ -65,10 +65,43 @@ function readStore(): Store {
 
     const oldHub = JSON.parse(window.localStorage.getItem("business-lifeline-operating-automation-v1") ?? "null") as { customers?: Array<{ id: string; name: string; contact: string }>; quotes?: Array<{ id: string; customer: string; description: string; amount: number; status: QuoteStatus; createdAt: string }>; expenses?: Expense[] } | null;
     const oldRun = JSON.parse(window.localStorage.getItem("business-lifeline-run-operating-core-v2") ?? "null") as { stock?: Product[]; sales?: Sale[] } | null;
-    if (!oldHub && !oldRun) return emptyStore;
-    const customers = (oldHub?.customers ?? []).map((item) => ({ ...item, notes: "Imported from earlier CRM", createdAt: nowIso() }));
-    const quotes = (oldHub?.quotes ?? []).map((item) => ({ ...item, customerId: customers.find((customer) => customer.name === item.customer)?.id ?? "", customerName: item.customer }));
-    return { ...emptyStore, customers, quotes, products: oldRun?.stock ?? [], sales: oldRun?.sales ?? [], expenses: oldHub?.expenses ?? [], activity: [activity("Operating data connected", "Earlier CRM, quote, stock, sales and expense records were imported into the connected operating model.")] };
+    const commercial = JSON.parse(window.localStorage.getItem("business-lifeline-operating-platform-v1") ?? "null") as {
+      customers?: Array<{ id: string; name: string; email?: string; phone?: string; notes?: string }>;
+      quotes?: Array<{ id: string; customerId?: string; customerName: string; items?: Array<{ description: string; qty: number; price: number }>; status?: string; createdAt?: string }>;
+      products?: Array<{ id: string; name: string; sku?: string; barcode?: string; qty?: number; price?: number; cost?: number }>;
+      sales?: Array<{ id: string; items?: Array<{ productId: string; name: string; qty: number; price: number }>; total: number; payment?: string; createdAt?: string }>;
+    } | null;
+    if (!oldHub && !oldRun && !commercial) return emptyStore;
+    const oldCustomers = (oldHub?.customers ?? []).map((item) => ({ ...item, notes: "Imported from earlier CRM", createdAt: nowIso() }));
+    const commercialCustomers: Customer[] = (commercial?.customers ?? []).map((item) => ({ id: item.id, name: item.name, contact: [item.email, item.phone].filter(Boolean).join(" · "), notes: item.notes || "Imported from Lifeline Sales", createdAt: nowIso() }));
+    const customersById = new Map<string, Customer>();
+    [...oldCustomers, ...commercialCustomers].forEach((item) => customersById.set(item.id, item));
+    const customers = [...customersById.values()];
+    const hubQuotes = (oldHub?.quotes ?? []).map((item) => ({ ...item, customerId: customers.find((customer) => customer.name === item.customer)?.id ?? "", customerName: item.customer }));
+    const commercialQuotes: Quote[] = (commercial?.quotes ?? []).map((item) => ({
+      id: item.id,
+      customerId: item.customerId || customers.find((customer) => customer.name === item.customerName)?.id || "",
+      customerName: item.customerName,
+      description: (item.items ?? []).map((line) => line.description).filter(Boolean).join(", ") || "Imported quote",
+      amount: (item.items ?? []).reduce((sum, line) => sum + Number(line.qty || 0) * Number(line.price || 0), 0),
+      status: item.status === "accepted" ? "accepted" : "draft",
+      createdAt: item.createdAt || nowIso(),
+    }));
+    const commercialProducts: Product[] = (commercial?.products ?? []).map((item) => ({ id: item.id, name: item.name, sku: item.sku || "", barcode: item.barcode || "", quantity: Number(item.qty || 0), reorderAt: 0, targetLevel: Number(item.qty || 0), sellPrice: Number(item.price || 0), costPrice: Number(item.cost || 0), supplier: "" }));
+    const commercialSales: Sale[] = (commercial?.sales ?? []).flatMap((sale) => {
+      const first = sale.items?.[0];
+      if (!first) return [];
+      return [{ id: sale.id, productId: first.productId, productName: first.name, quantity: first.qty, total: sale.total, payment: sale.payment || "Other", soldAt: sale.createdAt || nowIso() }];
+    });
+    return {
+      ...emptyStore,
+      customers,
+      quotes: [...hubQuotes, ...commercialQuotes],
+      products: [...commercialProducts, ...(oldRun?.stock ?? [])],
+      sales: [...commercialSales, ...(oldRun?.sales ?? [])],
+      expenses: oldHub?.expenses ?? [],
+      activity: [activity("Lifeline operations connected", "Earlier CRM, Sales, Stock and quote records were migrated into the native Lifeline operating model.")],
+    };
   } catch {
     return emptyStore;
   }
@@ -205,7 +238,7 @@ export function ConnectedOperationsV2() {
   const toggleRule = (key: keyof RuleSettings) => setStore((current) => ({ ...current, rules: { ...current.rules, [key]: !current.rules[key] } }));
 
   return <section className="connected-v2">
-    <div className="connected-v2-hero"><div><p className="eyebrow">CONNECTED OPERATIONS V2</p><h2>One record drives the next action.</h2><p>Customers, quotes, jobs, invoices, stock, market sales, tasks and timesheets now share one connected operating model.</p></div><div className="connected-v2-metrics"><span><strong>{store.customers.length}</strong><small>Customers</small></span><span><strong>{outstanding.toLocaleString("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 0 })}</strong><small>Outstanding</small></span><span><strong>{lowStock.length}</strong><small>Low stock</small></span></div></div>
+    <div className="connected-v2-hero"><div><p className="eyebrow">LIFELINE SALES · JOBS · STOCK · PEOPLE</p><h2>One business record drives the next action.</h2><p>Customers, quotes, jobs, invoices, stock, market sales, expenses, tasks and timesheets share one native Business Lifeline operating model.</p></div><div className="connected-v2-metrics"><span><strong>{store.customers.length}</strong><small>Customers</small></span><span><strong>{outstanding.toLocaleString("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 0 })}</strong><small>Outstanding</small></span><span><strong>{lowStock.length}</strong><small>Low stock</small></span></div></div>
     <nav className="connected-v2-nav">{tabs.map((tab) => <button key={tab.id} type="button" className={view === tab.id ? "active" : ""} onClick={() => setView(tab.id)}><strong>{tab.label}</strong><small>{tab.detail}</small></button>)}</nav>
 
     {view === "overview" && <div className="connected-v2-grid"><section className="connected-card"><div className="section-heading"><div><p className="eyebrow">ATTENTION</p><h3>What needs action</h3></div><button className="button ghost" type="button" onClick={refreshAutomation}>Refresh automation</button></div>{store.tasks.map((task) => <article className="connected-alert" key={task.id}><strong>{task.title}</strong><p>{task.detail}</p></article>)}{store.reorders.map((draft) => <article className="connected-alert" key={draft.productId}><strong>Reorder {draft.productName}</strong><p>{draft.quantity} units from {draft.supplier} · estimated {draft.estimatedCost.toLocaleString("en-AU", { style: "currency", currency: "AUD" })}</p></article>)}{store.tasks.length + store.reorders.length === 0 && <p>No automated alerts are waiting.</p>}</section><section className="connected-card"><p className="eyebrow">ACTIVITY</p><h3>Connected updates</h3>{store.activity.slice(0, 12).map((item) => <article key={item.id}><strong>{item.title}</strong><p>{item.detail}</p><small>{new Date(item.createdAt).toLocaleString()}</small></article>)}</section></div>}
