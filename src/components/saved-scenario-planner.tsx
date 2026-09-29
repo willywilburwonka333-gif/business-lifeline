@@ -70,6 +70,8 @@ const tutorialSteps: Record<TutorialId, TutorialStep[]> = {
     { title: "Diagnose with Business MRI", body: "Start here to understand the Business Pressure Indicator, data confidence, risks, evidence and the most urgent priorities.", target: '.main-area-nav button:nth-child(1)' },
     { title: "Recover with Business Lifeline", body: "Turn the diagnosis into a recovery plan, weekly coaching, a 13-week cash forecast and practical actions.", target: '.main-area-nav button:nth-child(2)' },
     { title: "Run with the Operating System", body: "Manage the everyday business through live monitoring, CRM, sales, jobs, invoices, stock, suppliers, money and team workflow.", target: '.main-area-nav button:nth-child(3)' },
+    { title: "Grow deliberately", body: "Set growth targets, expose constraints, model the economics and run measurable experiments before scaling spend or headcount.", target: '.main-area-nav button:nth-child(4)' },
+    { title: "Prepare to sell or succeed", body: "Improve transferability, organise due diligence and plan a sale, management buyout, family succession, partner buyout or orderly closure.", target: '.main-area-nav button:nth-child(5)' },
   ],
   mri: [
     { title: "Diagnosis", body: "Review the pressure indicator, data confidence, escalation triggers, financial pressure and recommended priorities.", target: '.area-tool-list button:nth-child(1)' },
