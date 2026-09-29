@@ -75,18 +75,22 @@ const emptyPlan = (): GrowthPlan => ({
   initiatives: [],
 });
 
-export function readGrowthPlan(storage: Storage = window.localStorage): GrowthPlan {
+export function readGrowthPlan(storage?: Storage): GrowthPlan {
   try {
-    const raw = storage.getItem(GROWTH_PLAN_KEY);
+    const target = storage ?? (typeof window !== "undefined" ? window.localStorage : null);
+    if (!target) return emptyPlan();
+    const raw = target.getItem(GROWTH_PLAN_KEY);
     return raw ? { ...emptyPlan(), ...JSON.parse(raw) } : emptyPlan();
   } catch {
     return emptyPlan();
   }
 }
 
-export function readOperatingSnapshot(storage: Storage = window.localStorage): OperatingSnapshot {
+export function readOperatingSnapshot(storage?: Storage): OperatingSnapshot {
   try {
-    const raw = storage.getItem(OPERATING_KEY);
+    const target = storage ?? (typeof window !== "undefined" ? window.localStorage : null);
+    if (!target) return { customers: 0, products: 0, sales30: 0, sales90: 0, pipeline: 0, lowStock: 0, activeJobs: 0, openTasks: 0, averageCatalogueMargin: 0, lowMarginItems: 0 };
+    const raw = target.getItem(OPERATING_KEY);
     if (!raw) return { customers: 0, products: 0, sales30: 0, sales90: 0, pipeline: 0, lowStock: 0, activeJobs: 0, openTasks: 0, averageCatalogueMargin: 0, lowMarginItems: 0 };
     const store = JSON.parse(raw) as {
       customers?: unknown[];
