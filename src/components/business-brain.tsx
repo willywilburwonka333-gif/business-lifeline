@@ -5,6 +5,9 @@ import { AnalysisProvenance } from "@/components/analysis-provenance";
 import { assessMriAccuracyProfile, emptyMriAccuracyProfile, type MriAccuracyProfile } from "@/lib/mri-accuracy-profile";
 import type { SavedReport } from "@/lib/saved-report";
 import { coachProgress, readCoachCheckIn } from "@/lib/recovery-coach";
+import { calculateCashflowForecast, type CashflowForecast } from "@/lib/cashflow-forecast";
+import { buildGrowthAnalysis, readGrowthPlan, readOperatingSnapshot } from "@/lib/growth-engine";
+import { buildExitAnalysis, readExitPlan } from "@/lib/exit-readiness";
 
 type BrainAnswer = {
   answer: string;
@@ -24,6 +27,8 @@ const suggestions = [
   "How can I improve cash flow fastest?",
   "Which cost should I investigate first?",
   "Is it time to get professional help?",
+  "What is stopping this business from growing safely?",
+  "What should I fix before trying to sell or hand over the business?",
 ];
 
 const accuracyStorageKey = (businessName: string) =>
@@ -129,6 +134,14 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
     const coach = readCoachCheckIn();
     const accuracyProfile = readAccuracyProfile(saved.data.businessName);
     const accuracyAssessment = assessMriAccuracyProfile(accuracyProfile);
+    let forecastSummary: ReturnType<typeof calculateCashflowForecast> | null = null;
+    try {
+      const rawForecast = window.localStorage.getItem(`business-lifeline-13-week-v1:${saved.data.businessName.trim().toLowerCase() || "current"}`);
+      if (rawForecast) forecastSummary = calculateCashflowForecast(JSON.parse(rawForecast) as CashflowForecast);
+    } catch { forecastSummary = null; }
+    const growthAnalysis = buildGrowthAnalysis(saved, readGrowthPlan(), readOperatingSnapshot());
+    const exitAnalysis = buildExitAnalysis(saved, readExitPlan());
+
     const context = {
       industry: saved.data.industry,
       country: saved.data.country,
@@ -159,6 +172,26 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
       risks: saved.report.risks.slice(0, 5),
       today: saved.report.today.slice(0, 5).map(({ title, urgency, impact, difficulty, reason }) => ({ title, urgency, impact, difficulty, reason })),
       coachProgress: coachProgress(coach, saved.report),
+      forecast: forecastSummary ? {
+        firstShortfallWeek: forecastSummary.firstShortfallWeek,
+        fundingGap: forecastSummary.fundingGap,
+        endingCash: forecastSummary.endingCash,
+        confidence: forecastSummary.confidence,
+        warnings: forecastSummary.warnings.slice(0, 4),
+      } : null,
+      growth: {
+        targetAnnualRevenue: growthAnalysis.targetAnnualRevenue,
+        revenueGap: growthAnalysis.revenueGap,
+        profitGap: growthAnalysis.profitGap,
+        constraints: growthAnalysis.constraints.slice(0, 5),
+        opportunities: growthAnalysis.opportunities.slice(0, 5),
+      },
+      exit: {
+        readinessScore: exitAnalysis.readinessScore,
+        dataRoomScore: exitAnalysis.dataRoomScore,
+        priorities: exitAnalysis.priorities,
+        risks: exitAnalysis.risks.slice(0, 5),
+      },
     };
 
     try {
