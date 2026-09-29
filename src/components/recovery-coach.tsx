@@ -21,6 +21,7 @@ export function RecoveryCoach({ data, report }: { data: BusinessData; report: Bu
   const prompts = useMemo(() => {
     const items: string[] = [];
     try {
+      if (typeof window === "undefined") return items;
       const key = `business-lifeline-13-week-v1:${data.businessName.trim().toLowerCase() || "current"}`;
       const raw = window.localStorage.getItem(key);
       if (raw) {
