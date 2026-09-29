@@ -10,6 +10,34 @@ export type ReadinessKey =
   | "management" | "workingCapital" | "dataRoom";
 
 export type EarningsBasis = "maintainable-earnings" | "sde" | "ebitda" | "ebit";
+export type DealOffer = {
+  id: string;
+  buyer: string;
+  headlinePrice: number;
+  cashAtCompletion: number;
+  deferredOrEarnout: number;
+  structure: "cash" | "earnout" | "vendor-finance" | "mixed" | "other";
+  conditions: string;
+  expiryDate: string;
+  status: "received" | "reviewing" | "shortlisted" | "accepted" | "declined" | "withdrawn";
+};
+export type DiligenceIssue = {
+  id: string;
+  title: string;
+  area: string;
+  severity: "low" | "medium" | "high";
+  owner: string;
+  dueDate: string;
+  status: "open" | "in-progress" | "resolved";
+  notes: string;
+};
+export type HandoverItem = {
+  id: string;
+  title: string;
+  owner: string;
+  dueDate: string;
+  status: "not-started" | "in-progress" | "complete";
+};
 
 export type ExitPlan = {
   path: ExitPath;
@@ -30,6 +58,9 @@ export type ExitPlan = {
   notes: string;
   readiness: Record<ReadinessKey, 0 | 1 | 2>;
   dataRoom: Record<string, boolean>;
+  offers?: DealOffer[];
+  diligenceIssues?: DiligenceIssue[];
+  handoverItems?: HandoverItem[];
 };
 
 export const readinessLabels: Record<ReadinessKey, string> = {
@@ -87,6 +118,9 @@ export const emptyExitPlan = (): ExitPlan => ({
   notes: "",
   readiness: defaultReadiness(),
   dataRoom: defaultDataRoom(),
+  offers: [],
+  diligenceIssues: [],
+  handoverItems: [],
 });
 
 export function readExitPlan(storage?: Storage): ExitPlan {
@@ -101,6 +135,9 @@ export function readExitPlan(storage?: Storage): ExitPlan {
       ...parsed,
       readiness: { ...defaultReadiness(), ...(parsed.readiness ?? {}) },
       dataRoom: { ...defaultDataRoom(), ...(parsed.dataRoom ?? {}) },
+      offers: Array.isArray(parsed.offers) ? parsed.offers : [],
+      diligenceIssues: Array.isArray(parsed.diligenceIssues) ? parsed.diligenceIssues : [],
+      handoverItems: Array.isArray(parsed.handoverItems) ? parsed.handoverItems : [],
     };
   } catch {
     return emptyExitPlan();
@@ -141,6 +178,27 @@ export function buildExitAnalysis(saved: SavedReport, plan: ExitPlan, operating?
     .slice(0, 5)
     .map(([key]) => readinessLabels[key]);
 
+  const offers = plan.offers ?? [];
+  const diligenceIssues = plan.diligenceIssues ?? [];
+  const handoverItems = plan.handoverItems ?? [];
+  const activeOffers = offers.filter((offer) => !["declined", "withdrawn"].includes(offer.status));
+  const bestHeadlineOffer = activeOffers.reduce((max, offer) => Math.max(max, offer.headlinePrice), 0);
+  const bestCashAtCompletion = activeOffers.reduce((max, offer) => Math.max(max, offer.cashAtCompletion), 0);
+  const openDiligenceIssues = diligenceIssues.filter((issue) => issue.status !== "resolved");
+  const highDiligenceIssues = openDiligenceIssues.filter((issue) => issue.severity === "high").length;
+  const handoverComplete = handoverItems.length
+    ? Math.round(handoverItems.filter((item) => item.status === "complete").length / handoverItems.length * 100)
+    : 0;
+  const lifecycleStage = offers.some((offer) => offer.status === "accepted")
+    ? "handover"
+    : activeOffers.length
+      ? "offers"
+      : dataRoomScore >= 80 && readinessScore >= 70
+        ? "market-ready"
+        : dataRoomScore >= 50
+          ? "due-diligence-prep"
+          : "prepare";
+
   const operatingEvidence = operating ? {
     customers: operating.customers,
     products: operating.products,
@@ -161,6 +219,13 @@ export function buildExitAnalysis(saved: SavedReport, plan: ExitPlan, operating?
     priorities,
     gapToDesired: plan.desiredProceeds > 0 ? Math.max(0, plan.desiredProceeds - highIndicative) : 0,
     operatingEvidence,
+    activeOffers: activeOffers.length,
+    bestHeadlineOffer,
+    bestCashAtCompletion,
+    openDiligenceIssues: openDiligenceIssues.length,
+    highDiligenceIssues,
+    handoverComplete,
+    lifecycleStage,
   };
 }
 
@@ -215,6 +280,12 @@ export function buildBuyerReadinessPack(saved: SavedReport, plan: ExitPlan, oper
       disclaimer: "Indicative planning scenario only. Not a formal valuation.",
     },
     operatingEvidence: analysis.operatingEvidence,
+    dealProcess: {
+      stage: analysis.lifecycleStage,
+      offers: plan.offers ?? [],
+      diligenceIssues: plan.diligenceIssues ?? [],
+      handoverItems: plan.handoverItems ?? [],
+    },
     handoverNotes: plan.notes,
   };
 }
