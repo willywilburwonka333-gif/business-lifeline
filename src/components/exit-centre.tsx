@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { EXIT_PLAN_KEY, buildBuyerReadinessPack, buildExitAnalysis, dataRoomLabels, readExitPlan, readinessLabels, type EarningsBasis, type ExitPath, type ExitPlan, type ReadinessKey } from "@/lib/exit-readiness";
+import { EXIT_PLAN_KEY, buildBuyerReadinessPack, buildExitAnalysis, dataRoomLabels, readExitPlan, readinessLabels, type DealOffer, type DiligenceIssue, type EarningsBasis, type ExitPath, type ExitPlan, type HandoverItem, type ReadinessKey } from "@/lib/exit-readiness";
 import { readOperatingSnapshot } from "@/lib/growth-engine";
 import type { SavedReport } from "@/lib/saved-report";
 
@@ -11,6 +11,9 @@ const money = (value: number, country: string) => value.toLocaleString("en", { s
 export function ExitCentre({ saved }: { saved: SavedReport }) {
   const [plan, setPlan] = useState<ExitPlan>(() => readExitPlan());
   const [operating, setOperating] = useState(() => readOperatingSnapshot());
+  const [offer, setOffer] = useState({ buyer: "", headlinePrice: 0, cashAtCompletion: 0, deferredOrEarnout: 0, structure: "cash" as DealOffer["structure"], conditions: "", expiryDate: "" });
+  const [issue, setIssue] = useState({ title: "", area: "Financial", severity: "medium" as DiligenceIssue["severity"], owner: "", dueDate: "", notes: "" });
+  const [handover, setHandover] = useState({ title: "", owner: "", dueDate: "" });
   const analysis = useMemo(() => buildExitAnalysis(saved, plan, operating), [saved, plan, operating]);
 
   useEffect(() => {
@@ -23,6 +26,24 @@ export function ExitCentre({ saved }: { saved: SavedReport }) {
 
   const setReadiness = (key: ReadinessKey, value: 0 | 1 | 2) => setPlan((current) => ({ ...current, readiness: { ...current.readiness, [key]: value } }));
   const setDataRoom = (key: string, value: boolean) => setPlan((current) => ({ ...current, dataRoom: { ...current.dataRoom, [key]: value } }));
+  const addOffer = () => {
+    if (!offer.buyer.trim() || offer.headlinePrice <= 0) return;
+    const next: DealOffer = { id: `offer-${Date.now()}`, ...offer, buyer: offer.buyer.trim(), status: "received" };
+    setPlan((current) => ({ ...current, offers: [next, ...(current.offers ?? [])] }));
+    setOffer({ buyer: "", headlinePrice: 0, cashAtCompletion: 0, deferredOrEarnout: 0, structure: "cash", conditions: "", expiryDate: "" });
+  };
+  const addIssue = () => {
+    if (!issue.title.trim()) return;
+    const next: DiligenceIssue = { id: `dd-${Date.now()}`, ...issue, title: issue.title.trim(), status: "open" };
+    setPlan((current) => ({ ...current, diligenceIssues: [next, ...(current.diligenceIssues ?? [])] }));
+    setIssue({ title: "", area: "Financial", severity: "medium", owner: "", dueDate: "", notes: "" });
+  };
+  const addHandoverItem = () => {
+    if (!handover.title.trim()) return;
+    const next: HandoverItem = { id: `handover-${Date.now()}`, ...handover, title: handover.title.trim(), status: "not-started" };
+    setPlan((current) => ({ ...current, handoverItems: [next, ...(current.handoverItems ?? [])] }));
+    setHandover({ title: "", owner: "", dueDate: "" });
+  };
   const exportBuyerPack = () => {
     const pack = buildBuyerReadinessPack(saved, plan, operating);
     const blob = new Blob([JSON.stringify(pack, null, 2)], { type: "application/json" });
@@ -46,6 +67,7 @@ export function ExitCentre({ saved }: { saved: SavedReport }) {
       <article><span>Data room readiness</span><strong>{analysis.dataRoomScore}%</strong><small>Buyer / adviser records organised</small></article>
       <article><span>Maintainable earnings used</span><strong>{money(analysis.earnings, saved.data.country)}</strong><small>Planning input, not a formal valuation</small></article>
       <article><span>Indicative scenario range</span><strong>{money(analysis.lowIndicative, saved.data.country)} – {money(analysis.highIndicative, saved.data.country)}</strong><small>User-selected multiples only</small></article>
+      <article><span>Exit process stage</span><strong>{analysis.lifecycleStage}</strong><small>{analysis.openDiligenceIssues} open diligence issue(s) · {analysis.activeOffers} active offer(s)</small></article>
     </section>
 
     <section className="panel">
@@ -114,6 +136,51 @@ export function ExitCentre({ saved }: { saved: SavedReport }) {
       <div className="checks">
         {Object.entries(dataRoomLabels).map(([key, label]) => <label key={key}><input type="checkbox" checked={Boolean(plan.dataRoom[key])} onChange={(e) => setDataRoom(key, e.target.checked)} /><span>{label}</span></label>)}
       </div>
+    </section>
+
+    <section className="panel">
+      <div className="section-heading"><span>Due diligence issues</span><h3>Track what could delay or reduce a deal</h3></div>
+      <div className="fields">
+        <label className="field"><span>Issue</span><input value={issue.title} onChange={(e) => setIssue({ ...issue, title: e.target.value })} placeholder="Example: customer contract unsigned / asset ownership unclear" /></label>
+        <div className="two-cols">
+          <label className="field"><span>Area</span><input value={issue.area} onChange={(e) => setIssue({ ...issue, area: e.target.value })} /></label>
+          <label className="field"><span>Severity</span><select value={issue.severity} onChange={(e) => setIssue({ ...issue, severity: e.target.value as DiligenceIssue["severity"] })}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></label>
+          <label className="field"><span>Owner</span><input value={issue.owner} onChange={(e) => setIssue({ ...issue, owner: e.target.value })} /></label>
+          <label className="field"><span>Due date</span><input type="date" value={issue.dueDate} onChange={(e) => setIssue({ ...issue, dueDate: e.target.value })} /></label>
+        </div>
+        <label className="field"><span>Notes / evidence needed</span><textarea value={issue.notes} onChange={(e) => setIssue({ ...issue, notes: e.target.value })} /></label>
+        <button type="button" className="button primary" onClick={addIssue}>Add diligence issue</button>
+      </div>
+      <div className="item-list">{(plan.diligenceIssues ?? []).map((item) => <article key={item.id}><div><strong>{item.title}</strong><span>{item.area} · {item.severity} · owner {item.owner || "unassigned"} · due {item.dueDate || "not set"}</span></div><select value={item.status} onChange={(e) => setPlan((current) => ({ ...current, diligenceIssues: (current.diligenceIssues ?? []).map((entry) => entry.id === item.id ? { ...entry, status: e.target.value as DiligenceIssue["status"] } : entry) }))}><option value="open">Open</option><option value="in-progress">In progress</option><option value="resolved">Resolved</option></select>{item.notes && <small>{item.notes}</small>}</article>)}</div>
+    </section>
+
+    <section className="panel">
+      <div className="section-heading"><span>Offers</span><h3>Compare price with structure and conditions</h3></div>
+      <p className="template-note">A higher headline price is not automatically a better deal. Record cash at completion, deferred/earn-out amounts and conditions for professional review.</p>
+      <div className="fields">
+        <label className="field"><span>Buyer / bidder</span><input value={offer.buyer} onChange={(e) => setOffer({ ...offer, buyer: e.target.value })} /></label>
+        <div className="two-cols">
+          <label className="field"><span>Headline price</span><input type="number" min="0" value={offer.headlinePrice || ""} onChange={(e) => setOffer({ ...offer, headlinePrice: Number(e.target.value) || 0 })} /></label>
+          <label className="field"><span>Cash at completion</span><input type="number" min="0" value={offer.cashAtCompletion || ""} onChange={(e) => setOffer({ ...offer, cashAtCompletion: Number(e.target.value) || 0 })} /></label>
+          <label className="field"><span>Deferred / earn-out</span><input type="number" min="0" value={offer.deferredOrEarnout || ""} onChange={(e) => setOffer({ ...offer, deferredOrEarnout: Number(e.target.value) || 0 })} /></label>
+          <label className="field"><span>Structure</span><select value={offer.structure} onChange={(e) => setOffer({ ...offer, structure: e.target.value as DealOffer["structure"] })}><option value="cash">Cash</option><option value="earnout">Earn-out</option><option value="vendor-finance">Vendor finance</option><option value="mixed">Mixed</option><option value="other">Other</option></select></label>
+          <label className="field"><span>Offer expiry</span><input type="date" value={offer.expiryDate} onChange={(e) => setOffer({ ...offer, expiryDate: e.target.value })} /></label>
+        </div>
+        <label className="field"><span>Conditions</span><textarea value={offer.conditions} onChange={(e) => setOffer({ ...offer, conditions: e.target.value })} placeholder="Finance, due diligence, retention, working capital, employment, earn-out milestones…" /></label>
+        <button type="button" className="button primary" onClick={addOffer}>Record offer</button>
+      </div>
+      <div className="item-list">{(plan.offers ?? []).map((item) => <article key={item.id}><div><strong>{item.buyer} · {money(item.headlinePrice, saved.data.country)}</strong><span>{money(item.cashAtCompletion, saved.data.country)} cash · {money(item.deferredOrEarnout, saved.data.country)} deferred/earn-out · {item.structure}</span></div><select value={item.status} onChange={(e) => setPlan((current) => ({ ...current, offers: (current.offers ?? []).map((entry) => entry.id === item.id ? { ...entry, status: e.target.value as DealOffer["status"] } : entry) }))}><option value="received">Received</option><option value="reviewing">Reviewing</option><option value="shortlisted">Shortlisted</option><option value="accepted">Accepted</option><option value="declined">Declined</option><option value="withdrawn">Withdrawn</option></select>{item.conditions && <small>{item.conditions}</small>}</article>)}</div>
+    </section>
+
+    <section className="panel">
+      <div className="section-heading"><span>Handover</span><h3>Turn accepted terms into a controlled transition</h3></div>
+      <div className="metric-grid"><article><span>Handover complete</span><strong>{analysis.handoverComplete}%</strong></article><article><span>Best active headline offer</span><strong>{money(analysis.bestHeadlineOffer, saved.data.country)}</strong></article><article><span>Best cash at completion</span><strong>{money(analysis.bestCashAtCompletion, saved.data.country)}</strong></article><article><span>High diligence issues</span><strong>{analysis.highDiligenceIssues}</strong></article></div>
+      <div className="fields">
+        <label className="field"><span>Handover action</span><input value={handover.title} onChange={(e) => setHandover({ ...handover, title: e.target.value })} placeholder="Document supplier relationship / train successor / transfer system access" /></label>
+        <div className="two-cols"><label className="field"><span>Owner</span><input value={handover.owner} onChange={(e) => setHandover({ ...handover, owner: e.target.value })} /></label><label className="field"><span>Due date</span><input type="date" value={handover.dueDate} onChange={(e) => setHandover({ ...handover, dueDate: e.target.value })} /></label></div>
+        <button type="button" className="button primary" onClick={addHandoverItem}>Add handover action</button>
+      </div>
+      <div className="item-list">{(plan.handoverItems ?? []).map((item) => <article key={item.id}><div><strong>{item.title}</strong><span>{item.owner || "Unassigned"} · {item.dueDate || "No due date"}</span></div><select value={item.status} onChange={(e) => setPlan((current) => ({ ...current, handoverItems: (current.handoverItems ?? []).map((entry) => entry.id === item.id ? { ...entry, status: e.target.value as HandoverItem["status"] } : entry) }))}><option value="not-started">Not started</option><option value="in-progress">In progress</option><option value="complete">Complete</option></select></article>)}</div>
     </section>
 
     <section className="panel">
