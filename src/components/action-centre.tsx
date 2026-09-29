@@ -37,7 +37,7 @@ export function ActionCentre({ report, data }: { report: BusinessReport; data?: 
         id: `${timeframe}-${index}-${item.title}`,
       })),
     );
-    if (data) {
+    if (data && typeof window !== "undefined") {
       try {
         const key = `business-lifeline-13-week-v1:${data.businessName.trim().toLowerCase() || "current"}`;
         const raw = window.localStorage.getItem(key);
