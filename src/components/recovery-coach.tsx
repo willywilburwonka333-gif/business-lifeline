@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { calculateCashflowForecast, type CashflowForecast } from "@/lib/cashflow-forecast";
 import type { BusinessData, BusinessReport } from "@/lib/types";
 import { coachProgress, readCoachCheckIn, writeCoachCheckIn, type CoachCheckIn } from "@/lib/recovery-coach";
 
@@ -19,6 +20,16 @@ export function RecoveryCoach({ data, report }: { data: BusinessData; report: Bu
 
   const prompts = useMemo(() => {
     const items: string[] = [];
+    try {
+      if (typeof window === "undefined") return items;
+      const key = `business-lifeline-13-week-v1:${data.businessName.trim().toLowerCase() || "current"}`;
+      const raw = window.localStorage.getItem(key);
+      if (raw) {
+        const forecast = calculateCashflowForecast(JSON.parse(raw) as CashflowForecast);
+        if (forecast.firstShortfallWeek !== null) items.push(`The saved 13-week forecast falls below zero in week ${forecast.firstShortfallWeek}. Close the ${money(forecast.fundingGap, data.country)} funding gap before it arrives.`);
+      }
+    } catch {}
+
     if (data.overdueInvoices > 0 && !checkIn.contactedCustomers) items.push(`Call overdue customers about ${money(data.overdueInvoices, data.country)} still outstanding.`);
     if (data.overdueTax > 0 && !checkIn.contactedTaxAuthority) items.push(`Contact the ATO or your tax agent about ${money(data.overdueTax, data.country)} overdue tax.`);
     if (data.overdueSuppliers > 0 && !checkIn.contactedSuppliers) items.push(`Contact key suppliers before ${money(data.overdueSuppliers, data.country)} in arrears becomes harder to negotiate.`);

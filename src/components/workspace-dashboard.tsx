@@ -1,6 +1,9 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { AnalysisProvenance } from "@/components/analysis-provenance";
+import { calculateCashflowForecast, type CashflowForecast, type CashflowForecastResult } from "@/lib/cashflow-forecast";
+import { industryModule } from "@/lib/industry-intelligence";
 import { selectPlaybook } from "@/lib/recovery-playbooks";
 import type { SavedReport } from "@/lib/saved-report";
 import type { WorkspaceTab } from "@/lib/workspace";
@@ -29,12 +32,39 @@ const healthLabel = (score: number) => {
 
 export function WorkspaceDashboard({ saved, openTab }: { saved: SavedReport; openTab: (tab: WorkspaceTab) => void }) {
   const { data, report } = saved;
+  const forecastKey = `business-lifeline-13-week-v1:${data.businessName.trim().toLowerCase() || "current"}`;
+  const [forecast, setForecast] = useState<CashflowForecastResult | null>(null);
+  useEffect(() => {
+    const refresh = () => {
+      try {
+        const raw = window.localStorage.getItem(forecastKey);
+        setForecast(raw ? calculateCashflowForecast(JSON.parse(raw) as CashflowForecast) : null);
+      } catch { setForecast(null); }
+    };
+    refresh();
+    window.addEventListener("business-lifeline-forecast-updated", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("business-lifeline-forecast-updated", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, [forecastKey]);
   const metrics = report.metrics;
   const obligations = data.overdueTax + data.overdueSuppliers;
-  const topActions = [...report.today, ...report.sevenDays].slice(0, 3);
-  const topRisks = [...report.warnings, ...report.risks].filter((item, index, all) => all.indexOf(item) === index).slice(0, 3);
+  const topActions = useMemo(() => {
+    const actions = [...report.today, ...report.sevenDays];
+    if (forecast?.firstShortfallWeek !== null && forecast?.firstShortfallWeek !== undefined) {
+      actions.unshift({ title: `Close the week ${forecast.firstShortfallWeek} cash shortfall`, urgency: "Critical", impact: "High", difficulty: "Moderate", reason: `The saved 13-week forecast shows a funding gap of ${money(forecast.fundingGap, data.country)}.` });
+    }
+    return actions.slice(0, 3);
+  }, [report.today, report.sevenDays, forecast, data.country]);
+  const topRisks = useMemo(() => {
+    const risks = [...report.warnings, ...report.risks, ...(forecast?.warnings ?? [])];
+    return risks.filter((item, index, all) => all.indexOf(item) === index).slice(0, 3);
+  }, [report.warnings, report.risks, forecast]);
   const scoreTone = metrics.overallScore >= 70 ? "good" : metrics.overallScore >= 45 ? "watch" : "danger";
   const playbook = selectPlaybook(data, report);
+  const industry = industryModule(saved);
   const primaryPressure = report.aiAnalysis?.rootCauses?.[0] || report.warnings[0] || report.risks[0] || playbook.summary;
 
   const shortcuts: Array<{ tab: WorkspaceTab; title: string; copy: string }> = [
@@ -81,6 +111,18 @@ export function WorkspaceDashboard({ saved, openTab }: { saved: SavedReport; ope
 
       <AnalysisProvenance report={report} compact />
 
+      <section className="panel">
+        <div className="section-heading"><span>{industry.name.toUpperCase()} MODULE</span><h3>Industry-specific diagnosis</h3></div>
+        <div className="insight-grid">
+          <article><h4>KPIs to watch</h4><ul>{industry.kpis.map((item) => <li key={item}>{item}</li>)}</ul></article>
+          <article><h4>Questions the numbers alone cannot answer</h4><ul>{industry.diagnosticQuestions.map((item) => <li key={item}>{item}</li>)}</ul></article>
+        </div>
+        <div className="insight-grid">
+          <article><h4>Watch points</h4><ul>{industry.watchPoints.map((item) => <li key={item}>{item}</li>)}</ul></article>
+          <article><h4>Recommended operating checks</h4><ul>{industry.actions.map((item) => <li key={item}>{item}</li>)}</ul></article>
+        </div>
+      </section>
+
       <div className="workspace-metric-grid stage9-metrics">
         <article>
           <span>Monthly result</span>
@@ -102,6 +144,11 @@ export function WorkspaceDashboard({ saved, openTab }: { saved: SavedReport; ope
           <strong className={obligations > 0 ? "negative" : ""}>{money(obligations, data.country)}</strong>
           <small>Tax and supplier arrears</small>
         </article>
+        {forecast && <article>
+          <span>13-week forecast</span>
+          <strong className={forecast.fundingGap > 0 ? "negative" : "positive"}>{forecast.firstShortfallWeek ? `Shortfall week ${forecast.firstShortfallWeek}` : "No cash shortfall"}</strong>
+          <small>{forecast.fundingGap > 0 ? `${money(forecast.fundingGap, data.country)} funding gap` : `${money(forecast.endingCash, data.country)} projected ending cash`}</small>
+        </article>}
       </div>
 
       <div className="workspace-dashboard-columns stage9-main-grid">

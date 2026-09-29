@@ -73,6 +73,7 @@ export function AccuracyBoost({ data }: { data: BusinessData }) {
 
   const save = () => {
     localStorage.setItem(storageKey, JSON.stringify(forecast));
+    window.dispatchEvent(new CustomEvent("business-lifeline-forecast-updated", { detail: { businessName: data.businessName } }));
     setMessage("13-week forecast saved in this browser.");
     window.setTimeout(() => setMessage(""), 2500);
   };
@@ -81,6 +82,7 @@ export function AccuracyBoost({ data }: { data: BusinessData }) {
     const next = buildForecastFromMRI(data, profile ?? undefined);
     setForecast(next);
     localStorage.removeItem(storageKey);
+    window.dispatchEvent(new CustomEvent("business-lifeline-forecast-updated", { detail: { businessName: data.businessName } }));
     setExpandedWeek(1);
     setMessage("Forecast reset using the latest MRI and Accuracy Inputs.");
     window.setTimeout(() => setMessage(""), 2500);

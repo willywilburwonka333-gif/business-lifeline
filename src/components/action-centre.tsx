@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { BusinessReport, PlanAction } from "@/lib/types";
+import { calculateCashflowForecast, type CashflowForecast } from "@/lib/cashflow-forecast";
+import type { BusinessData, BusinessReport, PlanAction } from "@/lib/types";
 
 type TimedAction = PlanAction & {
   id: string;
@@ -20,7 +21,7 @@ function loadCompleted(): string[] {
   }
 }
 
-export function ActionCentre({ report }: { report: BusinessReport }) {
+export function ActionCentre({ report, data }: { report: BusinessReport; data?: BusinessData }) {
   const actions = useMemo<TimedAction[]>(() => {
     const groups: Array<[TimedAction["timeframe"], PlanAction[]]> = [
       ["Today", report.today],
@@ -29,14 +30,33 @@ export function ActionCentre({ report }: { report: BusinessReport }) {
       ["90 days", report.ninetyDays],
     ];
 
-    return groups.flatMap(([timeframe, items]) =>
+    const actions = groups.flatMap(([timeframe, items]) =>
       items.map((item, index) => ({
         ...item,
         timeframe,
         id: `${timeframe}-${index}-${item.title}`,
       })),
     );
-  }, [report]);
+    if (data && typeof window !== "undefined") {
+      try {
+        const key = `business-lifeline-13-week-v1:${data.businessName.trim().toLowerCase() || "current"}`;
+        const raw = window.localStorage.getItem(key);
+        if (raw) {
+          const forecast = calculateCashflowForecast(JSON.parse(raw) as CashflowForecast);
+          if (forecast.firstShortfallWeek !== null) actions.unshift({
+            id: `forecast-shortfall-${forecast.firstShortfallWeek}`,
+            timeframe: "Today",
+            title: `Close the forecast cash gap before week ${forecast.firstShortfallWeek}`,
+            urgency: "Critical",
+            impact: "High",
+            difficulty: "Moderate",
+            reason: `The saved 13-week forecast shows a funding gap of ${forecast.fundingGap.toLocaleString("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 0 })}.`,
+          });
+        }
+      } catch {}
+    }
+    return actions;
+  }, [report, data]);
 
   const [completed, setCompleted] = useState<string[]>(loadCompleted);
   const [filter, setFilter] = useState<"All" | TimedAction["timeframe"]>("All");

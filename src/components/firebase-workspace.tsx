@@ -36,6 +36,9 @@ const CLOUD_KEYS = [
   "business-lifeline-document-vault-v1",
   "business-lifeline-ledger-sync-status-v1",
   "business-lifeline-record-sync-meta-v1",
+  "business-lifeline-growth-plan-v1",
+  "business-lifeline-exit-plan-v1",
+  "business-lifeline-professional-validation-v1",
 ] as const;
 const CLOUD_PREFIXES = [
   "business-lifeline-13-week-v1:",

@@ -36,6 +36,7 @@ import "./team-workspace.css";
 import "./structured-record-sync.css";
 import "./beta-safety.css";
 import "./product-architecture.css";
+import "./lifecycle.css";
 import "./business-records.css";
 import "./stage7-reliability.css";
 import "./judge-onboarding.css";
@@ -56,9 +57,9 @@ import "./accounting-connections.css";
 
 export const metadata: Metadata = {
   title: { default: "Business Lifeline", template: "%s | Business Lifeline" },
-  description: "Run a Business MRI, diagnose financial pressure, and turn the result into a practical recovery plan and operating system.",
+  description: "Diagnose, recover, run, grow and prepare a small business for succession or sale from one connected operating system.",
   applicationName: "Business Lifeline",
-  keywords: ["business recovery", "cashflow", "small business", "business MRI", "turnaround planning"],
+  keywords: ["business recovery", "cashflow", "small business", "business MRI", "turnaround planning", "business growth", "succession planning", "exit readiness"],
   robots: { index: true, follow: true },
 };
 
