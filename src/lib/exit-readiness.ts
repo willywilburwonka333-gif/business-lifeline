@@ -89,9 +89,11 @@ export const emptyExitPlan = (): ExitPlan => ({
   dataRoom: defaultDataRoom(),
 });
 
-export function readExitPlan(storage: Storage = window.localStorage): ExitPlan {
+export function readExitPlan(storage?: Storage): ExitPlan {
   try {
-    const raw = storage.getItem(EXIT_PLAN_KEY);
+    const target = storage ?? (typeof window !== "undefined" ? window.localStorage : null);
+    if (!target) return emptyExitPlan();
+    const raw = target.getItem(EXIT_PLAN_KEY);
     if (!raw) return emptyExitPlan();
     const parsed = JSON.parse(raw) as Partial<ExitPlan>;
     return {
