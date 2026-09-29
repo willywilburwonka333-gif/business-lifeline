@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { readRecoveryHistory, recordRecoveryCheckpoint, type RecoveryCheckpoint } from "@/lib/recovery-history";
+import { recordRecoveryCheckpoint, type RecoveryCheckpoint } from "@/lib/recovery-history";
 import type { SavedReport } from "@/lib/saved-report";
 
-const money = (value: number) => value.toLocaleString("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 0 });
+const currencyFor = (country: string) => country.toLowerCase().includes("australia") ? "AUD" : country.toLowerCase().includes("new zealand") ? "NZD" : country.toLowerCase().includes("united kingdom") ? "GBP" : country.toLowerCase().includes("canada") ? "CAD" : "USD";
+const money = (value: number, country: string) => value.toLocaleString("en", { style: "currency", currency: currencyFor(country), maximumFractionDigits: 0 });
 
 export function RecoveryProgress({ saved }: { saved: SavedReport }) {
   const [history, setHistory] = useState<RecoveryCheckpoint[]>([]);
@@ -35,9 +36,9 @@ export function RecoveryProgress({ saved }: { saved: SavedReport }) {
     <p className="template-note">Each materially changed MRI creates a checkpoint. This tracks outcomes rather than assuming that completing actions automatically means recovery.</p>
     <div className="metric-grid">
       <article><span>Pressure score change</span><strong className={summary.scoreChange >= 0 ? "positive" : "negative"}>{summary.scoreChange >= 0 ? "+" : ""}{summary.scoreChange}</strong><small>Across {summary.days} day{summary.days === 1 ? "" : "s"}</small></article>
-      <article><span>Monthly result change</span><strong className={summary.monthlyResultChange >= 0 ? "positive" : "negative"}>{money(summary.monthlyResultChange)}</strong></article>
-      <article><span>Cash change</span><strong className={summary.cashChange >= 0 ? "positive" : "negative"}>{money(summary.cashChange)}</strong></article>
-      <article><span>Overdue obligations change</span><strong className={summary.obligationsChange <= 0 ? "positive" : "negative"}>{money(summary.obligationsChange)}</strong></article>
+      <article><span>Monthly result change</span><strong className={summary.monthlyResultChange >= 0 ? "positive" : "negative"}>{money(summary.monthlyResultChange, saved.data.country)}</strong></article>
+      <article><span>Cash change</span><strong className={summary.cashChange >= 0 ? "positive" : "negative"}>{money(summary.cashChange, saved.data.country)}</strong></article>
+      <article><span>Overdue obligations change</span><strong className={summary.obligationsChange <= 0 ? "positive" : "negative"}>{money(summary.obligationsChange, saved.data.country)}</strong></article>
     </div>
     <div className="health-history">{history.slice(-12).map((point) => <div key={point.id}><i style={{ height: `${point.healthScore}%` }} /><span>{point.healthScore}</span><small>{new Date(point.recordedAt).toLocaleDateString("en-AU")}</small></div>)}</div>
   </section>;
