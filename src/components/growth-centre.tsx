@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { GROWTH_PLAN_KEY, buildGrowthAnalysis, growthScenario, readGrowthPlan, readOperatingSnapshot, type GrowthInitiative, type GrowthPlan } from "@/lib/growth-engine";
+import { GROWTH_PLAN_KEY, buildGrowthAnalysis, growthScenario, readGrowthPlan, readOperatingSnapshot, type GrowthInitiative, type GrowthPlan, type GrowthSegment } from "@/lib/growth-engine";
 import type { SavedReport } from "@/lib/saved-report";
 
 const id = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -12,6 +12,7 @@ export function GrowthCentre({ saved }: { saved: SavedReport }) {
   const [operating, setOperating] = useState(() => readOperatingSnapshot());
   const [initiative, setInitiative] = useState({ name: "", hypothesis: "", cost: 0, expectedMonthlyRevenue: 0, expectedMonthlyGrossProfit: 0, owner: "", reviewDate: "" });
   const [scenario, setScenario] = useState({ priceChangePercent: 0, volumeChangePercent: 0, addedMonthlyFixedCost: 0, addedMonthlyPayroll: 0, addedMonthlyMarketing: 0 });
+  const [segment, setSegment] = useState({ name: "", customers: 0, monthlyRevenue: 0, grossMarginPercent: 0, repeatRatePercent: 0 });
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -42,6 +43,14 @@ export function GrowthCentre({ saved }: { saved: SavedReport }) {
     setMessage("Growth experiment added.");
   };
 
+  const addSegment = (event: FormEvent) => {
+    event.preventDefault();
+    if (!segment.name.trim()) return;
+    const next: GrowthSegment = { id: id("segment"), ...segment, name: segment.name.trim() };
+    setPlan((current) => ({ ...current, segments: [next, ...(current.segments ?? [])] }));
+    setSegment({ name: "", customers: 0, monthlyRevenue: 0, grossMarginPercent: 0, repeatRatePercent: 0 });
+  };
+
   const updateInitiative = (initiativeId: string, patch: Partial<GrowthInitiative>) =>
     setPlan((current) => ({ ...current, initiatives: current.initiatives.map((item) => item.id === initiativeId ? { ...item, ...patch } : item) }));
 
@@ -57,6 +66,8 @@ export function GrowthCentre({ saved }: { saved: SavedReport }) {
       <article><span>Target annual revenue</span><strong>{money(analysis.targetAnnualRevenue)}</strong><small>{money(analysis.revenueGap)} growth gap</small></article>
       <article><span>Current margin</span><strong>{analysis.currentMargin}%</strong><small>Target {analysis.targetMargin}%</small></article>
       <article><span>Experiment coverage</span><strong>{analysis.targetCoveragePercent}%</strong><small>Of the monthly growth gap currently covered by active experiments</small></article>
+      <article><span>Funding readiness</span><strong>{analysis.fundingReadiness}</strong><small>{money(analysis.capitalRequired)} three-month test capital indicated from current plan</small></article>
+      <article><span>Catalogue margin</span><strong>{analysis.averageCatalogueMargin ? `${analysis.averageCatalogueMargin}%` : "Needs price/cost data"}</strong><small>{analysis.lowMarginItems} recorded item(s) below 20% gross margin</small></article>
     </section>
 
     <section className="panel">
@@ -67,6 +78,12 @@ export function GrowthCentre({ saved }: { saved: SavedReport }) {
         <label className="field"><span>Target monthly owner income</span><input type="number" min="0" value={plan.targetMonthlyOwnerIncome || ""} onChange={(e) => setPlan({ ...plan, targetMonthlyOwnerIncome: Number(e.target.value) || 0 })} /></label>
         <label className="field"><span>Target cash buffer (months)</span><input type="number" min="0" step="0.5" value={plan.targetCashBufferMonths} onChange={(e) => setPlan({ ...plan, targetCashBufferMonths: Number(e.target.value) || 0 })} /></label>
         <label className="field"><span>Target date</span><input type="date" value={plan.targetDate} onChange={(e) => setPlan({ ...plan, targetDate: e.target.value })} /></label>
+        <label className="field"><span>Recurring / contracted revenue %</span><input type="number" min="0" max="100" value={plan.recurringRevenuePercent ?? 0} onChange={(e) => setPlan({ ...plan, recurringRevenuePercent: Number(e.target.value) || 0 })} /></label>
+        <label className="field"><span>Repeat customer %</span><input type="number" min="0" max="100" value={plan.repeatCustomerPercent ?? 0} onChange={(e) => setPlan({ ...plan, repeatCustomerPercent: Number(e.target.value) || 0 })} /></label>
+        <label className="field"><span>Current capacity utilisation %</span><input type="number" min="0" max="150" value={plan.capacityUtilisationPercent ?? 0} onChange={(e) => setPlan({ ...plan, capacityUtilisationPercent: Number(e.target.value) || 0 })} /></label>
+        <label className="field"><span>Owner hours per week</span><input type="number" min="0" value={plan.ownerHoursPerWeek ?? 0} onChange={(e) => setPlan({ ...plan, ownerHoursPerWeek: Number(e.target.value) || 0 })} /></label>
+        <label className="field"><span>Largest customer % of revenue</span><input type="number" min="0" max="100" value={plan.largestCustomerPercent ?? 0} onChange={(e) => setPlan({ ...plan, largestCustomerPercent: Number(e.target.value) || 0 })} /></label>
+        <label className="field"><span>Monthly growth test budget</span><input type="number" min="0" value={plan.monthlyGrowthBudget ?? 0} onChange={(e) => setPlan({ ...plan, monthlyGrowthBudget: Number(e.target.value) || 0 })} /></label>
         <label className="field"><span>Growth strategy</span><textarea value={plan.strategy} onChange={(e) => setPlan({ ...plan, strategy: e.target.value })} placeholder="Example: grow recurring service revenue without increasing owner hours." /></label>
       </div>
     </section>
@@ -75,6 +92,21 @@ export function GrowthCentre({ saved }: { saved: SavedReport }) {
       <section className="panel"><p className="eyebrow">Constraints</p><h3>What could break first</h3><ul>{analysis.constraints.map((item) => <li key={item}>{item}</li>)}</ul></section>
       <section className="panel"><p className="eyebrow">Opportunities</p><h3>Where to test first</h3><ul>{analysis.opportunities.map((item) => <li key={item}>{item}</li>)}</ul></section>
     </div>
+
+    <section className="panel">
+      <div className="section-heading"><span>Customer economics</span><h3>Segment customers by quality, not just revenue</h3></div>
+      <form onSubmit={addSegment} className="fields">
+        <label className="field"><span>Segment name</span><input value={segment.name} onChange={(e) => setSegment({ ...segment, name: e.target.value })} placeholder="Example: maintenance contracts / one-off residential / commercial" /></label>
+        <div className="two-cols">
+          <label className="field"><span>Customers</span><input type="number" min="0" value={segment.customers || ""} onChange={(e) => setSegment({ ...segment, customers: Number(e.target.value) || 0 })} /></label>
+          <label className="field"><span>Monthly revenue</span><input type="number" min="0" value={segment.monthlyRevenue || ""} onChange={(e) => setSegment({ ...segment, monthlyRevenue: Number(e.target.value) || 0 })} /></label>
+          <label className="field"><span>Gross margin %</span><input type="number" min="0" max="100" value={segment.grossMarginPercent || ""} onChange={(e) => setSegment({ ...segment, grossMarginPercent: Number(e.target.value) || 0 })} /></label>
+          <label className="field"><span>Repeat / retention %</span><input type="number" min="0" max="100" value={segment.repeatRatePercent || ""} onChange={(e) => setSegment({ ...segment, repeatRatePercent: Number(e.target.value) || 0 })} /></label>
+        </div>
+        <button className="button primary">Add segment</button>
+      </form>
+      <div className="item-list">{(plan.segments ?? []).map((item) => <article key={item.id}><div><strong>{item.name}</strong><span>{item.customers} customers · {money(item.monthlyRevenue)} monthly revenue</span></div><b>{item.grossMarginPercent}% margin · {item.repeatRatePercent}% repeat</b></article>)}</div>
+    </section>
 
     <section className="panel">
       <div className="section-heading"><span>Growth scenario</span><h3>Test the economics before committing</h3></div>
