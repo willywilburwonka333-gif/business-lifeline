@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { EXIT_PLAN_KEY, buildBuyerReadinessPack, buildExitAnalysis, dataRoomLabels, readExitPlan, readinessLabels, type ExitPath, type ExitPlan, type ReadinessKey } from "@/lib/exit-readiness";
+import { EXIT_PLAN_KEY, buildBuyerReadinessPack, buildExitAnalysis, dataRoomLabels, readExitPlan, readinessLabels, type EarningsBasis, type ExitPath, type ExitPlan, type ReadinessKey } from "@/lib/exit-readiness";
 import { readOperatingSnapshot } from "@/lib/growth-engine";
 import type { SavedReport } from "@/lib/saved-report";
 
@@ -93,9 +93,14 @@ export function ExitCentre({ saved }: { saved: SavedReport }) {
 
     <section className="panel">
       <div className="section-heading"><span>Planning scenario</span><h3>Indicative earnings-multiple scenario</h3></div>
-      <aside className="urgent"><b>Not a business valuation</b><p>This calculator only multiplies the maintainable earnings figure and multiples you enter. A qualified valuer/accountant should determine maintainable earnings, normalisations, working-capital treatment and appropriate market methodology.</p></aside>
+      <aside className="urgent"><b>Not a business valuation</b><p>This calculator lets you test maintainable earnings, SDE, EBITDA or EBIT-style scenarios using your own normalisations and multiples. A qualified valuer/accountant should determine the correct earnings basis, normalisations, working-capital treatment and market methodology.</p></aside>
       <div className="fields money-fields">
-        <label className="field"><span>Maintainable annual earnings</span><input type="number" min="0" value={plan.maintainableAnnualEarnings || ""} onChange={(e) => setPlan({ ...plan, maintainableAnnualEarnings: Number(e.target.value) || 0 })} /></label>
+        <label className="field"><span>Earnings basis</span><select value={plan.earningsBasis ?? "maintainable-earnings"} onChange={(e) => setPlan({ ...plan, earningsBasis: e.target.value as EarningsBasis })}><option value="maintainable-earnings">Maintainable earnings</option><option value="sde">SDE</option><option value="ebitda">EBITDA</option><option value="ebit">EBIT</option></select></label>
+        <label className="field"><span>Reported annual earnings</span><input type="number" value={plan.reportedAnnualEarnings ?? 0} onChange={(e) => setPlan({ ...plan, reportedAnnualEarnings: Number(e.target.value) || 0 })} /></label>
+        <label className="field"><span>Owner normalisation add-back</span><input type="number" value={plan.ownerNormalisation ?? 0} onChange={(e) => setPlan({ ...plan, ownerNormalisation: Number(e.target.value) || 0 })} /></label>
+        <label className="field"><span>One-off normalisation add-back</span><input type="number" value={plan.oneOffNormalisations ?? 0} onChange={(e) => setPlan({ ...plan, oneOffNormalisations: Number(e.target.value) || 0 })} /></label>
+        <label className="field"><span>Replacement manager cost</span><input type="number" min="0" value={plan.replacementManagerCost ?? 0} onChange={(e) => setPlan({ ...plan, replacementManagerCost: Number(e.target.value) || 0 })} /></label>
+        <label className="field"><span>Maintainable annual earnings override</span><input type="number" min="0" value={plan.maintainableAnnualEarnings || ""} onChange={(e) => setPlan({ ...plan, maintainableAnnualEarnings: Number(e.target.value) || 0 })} /></label>
         <label className="field"><span>Low multiple</span><input type="number" min="0" step="0.1" value={plan.lowMultiple} onChange={(e) => setPlan({ ...plan, lowMultiple: Number(e.target.value) || 0 })} /></label>
         <label className="field"><span>High multiple</span><input type="number" min="0" step="0.1" value={plan.highMultiple} onChange={(e) => setPlan({ ...plan, highMultiple: Number(e.target.value) || 0 })} /></label>
       </div>
