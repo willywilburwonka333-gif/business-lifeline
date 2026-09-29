@@ -19,6 +19,15 @@ export type GrowthInitiative = {
   status: GrowthInitiativeStatus;
 };
 
+export type GrowthSegment = {
+  id: string;
+  name: string;
+  customers: number;
+  monthlyRevenue: number;
+  grossMarginPercent: number;
+  repeatRatePercent: number;
+};
+
 export type GrowthPlan = {
   annualRevenueTarget: number;
   targetOperatingMargin: number;
@@ -26,6 +35,13 @@ export type GrowthPlan = {
   targetCashBufferMonths: number;
   targetDate: string;
   strategy: string;
+  recurringRevenuePercent?: number;
+  repeatCustomerPercent?: number;
+  capacityUtilisationPercent?: number;
+  ownerHoursPerWeek?: number;
+  monthlyGrowthBudget?: number;
+  largestCustomerPercent?: number;
+  segments?: GrowthSegment[];
   initiatives: GrowthInitiative[];
 };
 
@@ -38,6 +54,8 @@ export type OperatingSnapshot = {
   lowStock: number;
   activeJobs: number;
   openTasks: number;
+  averageCatalogueMargin?: number;
+  lowMarginItems?: number;
 };
 
 const emptyPlan = (): GrowthPlan => ({
@@ -47,6 +65,13 @@ const emptyPlan = (): GrowthPlan => ({
   targetCashBufferMonths: 3,
   targetDate: "",
   strategy: "",
+  recurringRevenuePercent: 0,
+  repeatCustomerPercent: 0,
+  capacityUtilisationPercent: 0,
+  ownerHoursPerWeek: 0,
+  monthlyGrowthBudget: 0,
+  largestCustomerPercent: 0,
+  segments: [],
   initiatives: [],
 });
 
@@ -62,10 +87,10 @@ export function readGrowthPlan(storage: Storage = window.localStorage): GrowthPl
 export function readOperatingSnapshot(storage: Storage = window.localStorage): OperatingSnapshot {
   try {
     const raw = storage.getItem(OPERATING_KEY);
-    if (!raw) return { customers: 0, products: 0, sales30: 0, sales90: 0, pipeline: 0, lowStock: 0, activeJobs: 0, openTasks: 0 };
+    if (!raw) return { customers: 0, products: 0, sales30: 0, sales90: 0, pipeline: 0, lowStock: 0, activeJobs: 0, openTasks: 0, averageCatalogueMargin: 0, lowMarginItems: 0 };
     const store = JSON.parse(raw) as {
       customers?: unknown[];
-      products?: Array<{ qty?: number; reorder?: number }>;
+      products?: Array<{ qty?: number; reorder?: number; price?: number; cost?: number }>;
       sales?: Array<{ total?: number; createdAt?: string }>;
       quotes?: Array<{ status?: string; amount?: number; items?: Array<{ qty?: number; price?: number }> }>;
       jobs?: Array<{ status?: string }>;
@@ -79,6 +104,10 @@ export function readOperatingSnapshot(storage: Storage = window.localStorage): O
       if (typeof quote.amount === "number") return sum + quote.amount;
       return sum + (quote.items ?? []).reduce((lineTotal, line) => lineTotal + Number(line.qty ?? 0) * Number(line.price ?? 0), 0);
     }, 0);
+    const products = store.products ?? [];
+    const marginValues = products.filter((product) => Number(product.price ?? 0) > 0).map((product) => (Number(product.price ?? 0) - Number(product.cost ?? 0)) / Number(product.price ?? 1) * 100);
+    const averageCatalogueMargin = marginValues.length ? marginValues.reduce((sum, value) => sum + value, 0) / marginValues.length : 0;
+    const lowMarginItems = marginValues.filter((value) => value < 20).length;
     return {
       customers: store.customers?.length ?? 0,
       products: store.products?.length ?? 0,
@@ -88,9 +117,11 @@ export function readOperatingSnapshot(storage: Storage = window.localStorage): O
       lowStock: (store.products ?? []).filter((product) => Number(product.qty ?? 0) <= Number(product.reorder ?? 0)).length,
       activeJobs: (store.jobs ?? []).filter((job) => !["complete", "cancelled"].includes(job.status ?? "")).length,
       openTasks: (store.tasks ?? []).filter((task) => !task.done).length,
+      averageCatalogueMargin: Number(averageCatalogueMargin.toFixed(1)),
+      lowMarginItems,
     };
   } catch {
-    return { customers: 0, products: 0, sales30: 0, sales90: 0, pipeline: 0, lowStock: 0, activeJobs: 0, openTasks: 0 };
+    return { customers: 0, products: 0, sales30: 0, sales90: 0, pipeline: 0, lowStock: 0, activeJobs: 0, openTasks: 0, averageCatalogueMargin: 0, lowMarginItems: 0 };
   }
 }
 
@@ -115,6 +146,10 @@ export function buildGrowthAnalysis(saved: SavedReport, plan: GrowthPlan, operat
   if (runway !== null && runway < 2) constraints.push("Cash runway is below two months. Growth spending should be staged and reversible.");
   if (operating.lowStock > 0) constraints.push("Current stock exceptions may constrain additional sales.");
   if (operating.openTasks > 20) constraints.push("The operating workload is already high; capacity should be tested before adding demand.");
+  if ((plan.capacityUtilisationPercent ?? 0) >= 85) constraints.push("Declared capacity utilisation is at least 85%; additional demand may require process, equipment or staffing capacity.");
+  if ((plan.ownerHoursPerWeek ?? 0) >= 50) constraints.push("Owner workload is already high; owner dependence is a growth constraint.");
+  if ((plan.largestCustomerPercent ?? 0) >= 30) constraints.push("Customer concentration is high; growth should diversify rather than deepen a single-customer dependency.");
+  if ((operating.lowMarginItems ?? 0) > 0) constraints.push(`${operating.lowMarginItems} catalogue item(s) show less than 20% gross margin from recorded price/cost data.`);
   if (!constraints.length) constraints.push("No major growth blocker is visible from current MRI and operating data. Validate capacity before scaling.");
 
   const opportunities: string[] = [];
@@ -122,7 +157,19 @@ export function buildGrowthAnalysis(saved: SavedReport, plan: GrowthPlan, operat
   if (currentMargin > 0 && currentMargin < targetMargin) opportunities.push("Test pricing and product/customer mix before pursuing pure volume growth.");
   if (operating.pipeline > 0) opportunities.push("Work the existing quote pipeline before increasing acquisition spend.");
   if (operating.customers > 0) opportunities.push("Segment current customers by value, margin and repeat potential.");
+  if ((plan.recurringRevenuePercent ?? 0) < 25) opportunities.push("Test an appropriate recurring, contracted or repeat-purchase offer to improve revenue predictability.");
+  if ((plan.repeatCustomerPercent ?? 0) < 30 && operating.customers > 0) opportunities.push("Build a retention/reactivation experiment before relying only on new-customer acquisition.");
+  if ((operating.averageCatalogueMargin ?? 0) > 0) opportunities.push(`Recorded catalogue gross margin averages about ${operating.averageCatalogueMargin}%; use product/service mix to prioritise contribution.`);
   if (plan.initiatives.length === 0) opportunities.push("Create one low-cost, measurable growth experiment with a review date.");
+
+  const activeInitiativeCost = plan.initiatives.filter((item) => !["stop", "complete"].includes(item.status)).reduce((sum, item) => sum + item.cost, 0);
+  const monthlyGrowthBudget = Math.max(0, plan.monthlyGrowthBudget ?? 0);
+  const capitalRequired = activeInitiativeCost + monthlyGrowthBudget * 3;
+  const fundingReadiness = saved.report.metrics.overallScore >= 70 && (runway === null || runway >= 2) && saved.data.overdueTax === 0
+    ? "strong"
+    : saved.report.metrics.overallScore >= 55 && saved.data.overdueTax === 0
+      ? "caution"
+      : "repair-first";
 
   return {
     currentAnnualRevenue,
@@ -140,6 +187,13 @@ export function buildGrowthAnalysis(saved: SavedReport, plan: GrowthPlan, operat
     constraints,
     opportunities,
     targetCoveragePercent: monthlyRevenueGap <= 0 ? 100 : Math.min(100, Math.round(initiativeExpectedRevenue / monthlyRevenueGap * 100)),
+    capitalRequired,
+    fundingReadiness,
+    averageCatalogueMargin: operating.averageCatalogueMargin ?? 0,
+    lowMarginItems: operating.lowMarginItems ?? 0,
+    recurringRevenuePercent: plan.recurringRevenuePercent ?? 0,
+    repeatCustomerPercent: plan.repeatCustomerPercent ?? 0,
+    capacityUtilisationPercent: plan.capacityUtilisationPercent ?? 0,
   };
 }
 
