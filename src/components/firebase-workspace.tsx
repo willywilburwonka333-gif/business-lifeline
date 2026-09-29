@@ -273,6 +273,28 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
     window.location.reload();
   };
 
+  const deleteAccount = async () => {
+    if (!firebaseAuth || !user) return;
+    const confirmed = window.confirm("Permanently delete this Business Lifeline account and its owned cloud workspace data? This cannot be undone.");
+    if (!confirmed) return;
+    const typed = window.prompt('Type DELETE to confirm permanent account deletion.');
+    if (typed !== "DELETE") return;
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/account/delete", { method: "DELETE", headers: { Authorization: `Bearer ${await user.getIdToken()}` } });
+      const payload = await response.json() as { deleted?: boolean; error?: string };
+      if (!response.ok || !payload.deleted) throw new Error(payload.error || "Account deletion failed.");
+      clearLocalPayload();
+      window.localStorage.removeItem("business-lifeline-active-business-v1");
+      setNotice("Account deleted.");
+      window.location.reload();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Account deletion failed.");
+      setBusy(false);
+    }
+  };
+
   const logOut = async () => {
     if (!firebaseAuth) return;
     await signOut(firebaseAuth);
@@ -314,6 +336,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
                 <button type="button" className="button ghost" onClick={() => void exportWorkspace()}>Download my data</button>
                 <button type="button" className="button ghost" onClick={() => void clearThisDevice()}>Clear this device</button>
                 <button type="button" className="button ghost" onClick={() => void logOut()}>Sign out</button>
+                <button type="button" className="button ghost" onClick={() => void deleteAccount()} disabled={busy}>Delete account permanently</button>
               </div>
             </div>
           ) : (
