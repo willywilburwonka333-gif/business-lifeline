@@ -88,6 +88,7 @@ export function BusinessRecords({ compact = false, aiEnabled = false }: { compac
   const [dragging, setDragging] = useState(false);
   const [importedCount, setImportedCount] = useState(0);
   const [signalCount, setSignalCount] = useState(0);
+  const [conflictCount, setConflictCount] = useState(0);
   const [processing, setProcessing] = useState(false);
   const [processingLabel, setProcessingLabel] = useState("");
 
@@ -96,6 +97,7 @@ export function BusinessRecords({ compact = false, aiEnabled = false }: { compac
     setRecords(readStored());
     setImportedCount(draft?.fields.length ?? 0);
     setSignalCount(draft?.signals?.length ?? 0);
+    setConflictCount(draft?.conflicts?.length ?? 0);
     setReady(true);
   }, []);
 
@@ -177,6 +179,7 @@ export function BusinessRecords({ compact = false, aiEnabled = false }: { compac
     setRecords(nextRecords);
     setImportedCount(draft?.fields.length ?? 0);
     setSignalCount(draft?.signals?.length ?? 0);
+    setConflictCount(draft?.conflicts?.length ?? 0);
     setProcessing(false);
     setProcessingLabel("");
   };
@@ -199,6 +202,7 @@ export function BusinessRecords({ compact = false, aiEnabled = false }: { compac
           <button type="button" className="button outline" disabled={processing} onClick={() => inputRef.current?.click()}>{processing ? processingLabel || "Reading files…" : "Upload business records"}</button>
           <span><strong>{importedCount}</strong> MRI field{importedCount === 1 ? "" : "s"} pre-filled</span>
           <span><strong>{signalCount}</strong> diagnostic signal{signalCount === 1 ? "" : "s"} found</span>
+          {conflictCount > 0 && <span><strong>{conflictCount}</strong> conflicting fact{conflictCount === 1 ? "" : "s"} to confirm</span>
           <span><strong>{summary.total}</strong> file{summary.total === 1 ? "" : "s"} ready</span>
         </div>
       </section>
@@ -209,7 +213,7 @@ export function BusinessRecords({ compact = false, aiEnabled = false }: { compac
     <div className="records-shell">
       <section className="records-hero">
         <div><p className="eyebrow">BUSINESS RECORDS · UNIVERSAL READER</p><h1>Turn existing records into verified MRI inputs.</h1><p>Business Lifeline reads supported reports, spreadsheets, documents and images when AI document reading is enabled, while keeping every imported value linked to its source for confirmation.</p></div>
-        <div className="records-summary" aria-label="Records summary"><span><strong>{summary.total}</strong><small>Files added</small></span><span><strong>{importedCount}</strong><small>MRI fields found</small></span><span><strong>{signalCount}</strong><small>Health signals</small></span></div>
+        <div className="records-summary" aria-label="Records summary"><span><strong>{summary.total}</strong><small>Files added</small></span><span><strong>{importedCount}</strong><small>MRI fields found</small></span><span><strong>{signalCount}</strong><small>Health signals</small></span><span><strong>{conflictCount}</strong><small>Conflicts to confirm</small></span></div>
       </section>
 
       <section className={`records-dropzone ${dragging ? "dragging" : ""}`} onDragEnter={(event) => { event.preventDefault(); setDragging(true); }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { event.preventDefault(); setDragging(false); }} onDrop={(event) => { event.preventDefault(); setDragging(false); void addFiles(event.dataTransfer.files); }}>
