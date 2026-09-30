@@ -38,6 +38,7 @@ const CLOUD_KEYS = [
   "business-lifeline-tax-v1",
   "business-lifeline-spend-v1",
   "business-lifeline-assets-v1",
+  "business-lifeline-plan-v1",
   "business-lifeline-spend-v1",
   "business-lifeline-assets-v1",
   "business-lifeline-plan-v1",
