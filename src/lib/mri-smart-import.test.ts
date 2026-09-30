@@ -20,3 +20,18 @@ export function runMriSmartImportAudit() {
 }
 
 runMriSmartImportAudit();
+
+
+{
+  const first = mergeImportDraft(null, [{ key: "cashAvailable", value: 10000, source: "Lifeline Books", confidence: "high", reportingPeriod: "2026-08-31" }]);
+  const refreshed = mergeImportDraft(first, [{ key: "cashAvailable", value: 14000, source: "Lifeline Books", confidence: "high", reportingPeriod: "2026-09-30" }]);
+  if (refreshed.conflicts?.some((item) => item.key === "cashAvailable")) throw new Error("Same-source refresh created a false conflict.");
+  if (refreshed.fields.find((item) => item.key === "cashAvailable")?.value !== 14000) throw new Error("Same-source refresh did not replace the old value.");
+}
+
+{
+  const external = mergeImportDraft(null, [{ key: "cashAvailable", value: 9000, source: "Bank statement", confidence: "high" }]);
+  const conflict = mergeImportDraft(external, [{ key: "cashAvailable", value: 12000, source: "Lifeline Books", confidence: "high", reportingPeriod: "2026-08-31" }]);
+  const refreshed = mergeImportDraft(conflict, [{ key: "cashAvailable", value: 13000, source: "Lifeline Books", confidence: "high", reportingPeriod: "2026-09-30" }]);
+  if (!refreshed.conflicts?.some((item) => item.key === "cashAvailable")) throw new Error("Refreshing Lifeline Books erased a real cross-source conflict.");
+}
