@@ -25,7 +25,10 @@ const SOURCES = [
   ["operations", "business-lifeline-operating-platform-v1"],
   ["health", "business-lifeline-live-control-v1"],
   ["finance", "business-lifeline-advanced-accounting-v1"],
+  ["books-settings", "business-lifeline-books-settings-v1"],
   ["banking", "business-lifeline-commercial-finance-controls-v1"],
+  ["people", "business-lifeline-people-v1"],
+  ["tax", "business-lifeline-tax-v1"],
   ["documents", "business-lifeline-document-vault-v1"],
   ["growth", "business-lifeline-growth-plan-v1"],
   ["exit", "business-lifeline-exit-plan-v1"],
@@ -36,6 +39,9 @@ const LIFECYCLE_KEYS = [
   "business-lifeline-growth-plan-v1",
   "business-lifeline-exit-plan-v1",
   "business-lifeline-professional-validation-v1",
+  "business-lifeline-books-settings-v1",
+  "business-lifeline-people-v1",
+  "business-lifeline-tax-v1",
 ] as const;
 
 const token = () => crypto.randomUUID().replaceAll("-", "").slice(0, 16).toUpperCase();
@@ -249,7 +255,7 @@ export function TeamWorkspaceManager() {
         <section><h3>Team</h3>{active ? <><p><strong>{active.name}</strong> · Your role: {active.role}</p>{members.map((member) => <article className="team-member" key={member.userId}><div><strong>{member.displayName || member.email}</strong><span>{member.email}</span></div><div>{active.role === "owner" && member.role !== "owner" ? <select value={member.role} onChange={(event) => changeRole(member, event.target.value as Role)}><option value="manager">Manager</option><option value="staff">Staff</option><option value="accountant">Accountant</option></select> : <span>{member.role}</span>}{active.role === "owner" && member.role !== "owner" && <button onClick={() => removeMember(member)}>Remove</button>}</div></article>)}
           {(active.role === "owner" || active.role === "manager") && <form onSubmit={createInvite}><h4>Invite a team member</h4><input type="email" placeholder="Their email" value={invite.email} onChange={(event) => setInvite({ ...invite, email: event.target.value })} /><select value={invite.role} onChange={(event) => setInvite({ ...invite, role: event.target.value as Role })}><option value="manager">Manager</option><option value="staff">Staff</option><option value="accountant">Accountant</option></select><button>Create secure invite code</button>{latestInvite && <output className="invite-code">{latestInvite}</output>}</form>}</> : <p>Create or join a business to manage a team.</p>}</section>
       </div>
-      <footer><strong>Live modules:</strong> Operations, health, finance, banking, documents, growth, exit and professional validation. Accountant access is read-only; staff cannot manage membership.</footer>
+      <footer><strong>Live modules:</strong> Operations, Books, Bank, People, Tax, Vault, health, growth, exit and professional validation. Accountant access is read-only; staff cannot manage membership.</footer>
     </section></div>}
   </>;
 }
