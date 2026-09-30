@@ -149,6 +149,12 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
       status: "active",
       updatedAt: serverTimestamp(),
     }, { merge: true });
+    await setDoc(doc(firebaseDb, "users", activeUser.uid, "businessMemberships", businessId), {
+      businessId,
+      role: "owner",
+      status: "active",
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
   }, []);
 
   const syncWorkspace = useCallback(async (activeUser: User, preferCloud = false) => {

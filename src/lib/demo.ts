@@ -30,7 +30,7 @@ export const largeDemoBusiness: BusinessData = {
   urgentConcerns: [], pressureFactors: ["operations"],
 };
 export const demoBusinesses = [distressedDemoBusiness, mediumDemoBusiness, largeDemoBusiness] as const;
-export const demoBusiness: BusinessData = distressedDemoBusiness;
+export const demoBusiness: BusinessData = riverbendLegacyDemo;
 export const riverbendLegacyDemo: BusinessData = {
   businessName: "Riverbend Café", industry: "Café and hospitality", country: "Australia",
   yearsOperating: 6, employees: 9, monthlyRevenue: 32000, fixedExpenses: 19000,

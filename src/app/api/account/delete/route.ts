@@ -37,6 +37,20 @@ export async function DELETE(request: Request) {
       await membership.ref.delete().catch(() => undefined);
     }
 
+    const canonicalBusinessRef = db.collection("businesses").doc(`business-${user.uid}`);
+    const canonicalBusiness = await canonicalBusinessRef.get().catch(() => null);
+    if (canonicalBusiness?.exists && canonicalBusiness.data()?.ownerId === user.uid) {
+      const members = await canonicalBusinessRef.collection("members").where("status", "==", "active").limit(2).get();
+      const otherMembers = members.docs.filter((member) => member.id !== user.uid);
+      if (otherMembers.length > 0) {
+        return NextResponse.json(
+          { error: "Transfer ownership or remove other active members before deleting this account." },
+          { status: 409, headers: privateResponseHeaders() },
+        );
+      }
+      await db.recursiveDelete(canonicalBusinessRef);
+    }
+
     await db.collection("userWorkspaces").doc(user.uid).delete().catch(() => undefined);
     await db.collection("users").doc(user.uid).delete().catch(() => undefined);
 
