@@ -246,7 +246,7 @@ export function LifelineSpend() {
 
   const advanceTrip = (item: MileageTrip) => {
     if (item.status === "draft") {
-      setStore((current) => ({ ...current, mileage: (current.mileage ?? []).map((tripItem) => tripItem.id === item.id ? { ...tripItem, status: "submitted" } : tripItem) }));
+      setStore((current) => ({ ...current, mileage: (current.mileage ?? []).map((tripItem) => tripItem.id === item.id ? { ...tripItem, status: "submitted" as const } : tripItem) }));
       return;
     }
     if (item.status === "submitted") {
@@ -256,7 +256,7 @@ export function LifelineSpend() {
         lines: [{ account: "Motor Vehicle", side: "debit", amount: item.claimAmount }, { account: "Employee Reimbursements Payable", side: "credit", amount: item.claimAmount }],
       };
       if (!postJournal(journal)) { setMessage("Mileage claim could not be approved into Books."); return; }
-      setStore((current) => ({ ...current, mileage: (current.mileage ?? []).map((tripItem) => tripItem.id === item.id ? { ...tripItem, status: "approved" } : tripItem) }));
+      setStore((current) => ({ ...current, mileage: (current.mileage ?? []).map((tripItem) => tripItem.id === item.id ? { ...tripItem, status: "approved" as const } : tripItem) }));
       return;
     }
     if (item.status === "approved") {
@@ -266,13 +266,13 @@ export function LifelineSpend() {
         lines: [{ account: "Employee Reimbursements Payable", side: "debit", amount: item.claimAmount }, { account: "Bank", side: "credit", amount: item.claimAmount }],
       };
       if (!postJournal(journal)) { setMessage("Mileage reimbursement could not be posted."); return; }
-      setStore((current) => ({ ...current, mileage: (current.mileage ?? []).map((tripItem) => tripItem.id === item.id ? { ...tripItem, status: "reimbursed" } : tripItem) }));
+      setStore((current) => ({ ...current, mileage: (current.mileage ?? []).map((tripItem) => tripItem.id === item.id ? { ...tripItem, status: "reimbursed" as const } : tripItem) }));
     }
   };
 
   const advanceClaim = (item: ExpenseClaim) => {
     if (item.status === "draft") {
-      setStore((current) => ({ ...current, claims: current.claims.map((claimItem) => claimItem.id === item.id ? { ...claimItem, status: "submitted" } : claimItem) }));
+      setStore((current) => ({ ...current, claims: current.claims.map((claimItem) => claimItem.id === item.id ? { ...claimItem, status: "submitted" as const } : claimItem) }));
       return;
     }
     if (item.status === "submitted") {
@@ -282,7 +282,7 @@ export function LifelineSpend() {
         lines: expenseLines(item.category, item.amount, item.gstIncluded, "Employee Reimbursements Payable"),
       };
       if (!postJournal(journal)) { setMessage("Claim could not be approved into Books. Check the period lock or existing journal."); return; }
-      setStore((current) => ({ ...current, claims: current.claims.map((claimItem) => claimItem.id === item.id ? { ...claimItem, status: "approved" } : claimItem) }));
+      setStore((current) => ({ ...current, claims: current.claims.map((claimItem) => claimItem.id === item.id ? { ...claimItem, status: "approved" as const } : claimItem) }));
       setMessage("Expense claim approved and posted to Lifeline Books.");
       return;
     }
@@ -293,7 +293,7 @@ export function LifelineSpend() {
         lines: [{ account: "Employee Reimbursements Payable", side: "debit", amount: item.amount }, { account: "Bank", side: "credit", amount: item.amount }],
       };
       if (!postJournal(journal)) { setMessage("Reimbursement could not be posted."); return; }
-      setStore((current) => ({ ...current, claims: current.claims.map((claimItem) => claimItem.id === item.id ? { ...claimItem, status: "reimbursed" } : claimItem) }));
+      setStore((current) => ({ ...current, claims: current.claims.map((claimItem) => claimItem.id === item.id ? { ...claimItem, status: "reimbursed" as const } : claimItem) }));
       setMessage("Reimbursement posted to Lifeline Books.");
     }
   };
@@ -358,7 +358,7 @@ export function LifelineSpend() {
       </form>
 
       <section className="panel"><p className="eyebrow">CLAIMS</p><h3>Submit → approve → reimburse</h3><div className="item-list">
-        {store.claims.map((item) => <article key={item.id}><div><strong>{item.person} · {item.merchant}</strong><span>{item.date} · {item.category} · {item.status}</span><small>{money(item.amount)}{item.receiptReference ? " · receipt " + item.receiptReference : ""}</small></div><div>{!["reimbursed","declined"].includes(item.status) && <button type="button" onClick={() => advanceClaim(item)}>{item.status === "draft" ? "Submit" : item.status === "submitted" ? "Approve to Books" : "Reimburse"}</button>}<button type="button" onClick={() => setStore((current) => ({ ...current, claims: current.claims.map((claimItem) => claimItem.id === item.id ? { ...claimItem, status: "declined" } : claimItem) }))}>Decline</button></div></article>)}
+        {store.claims.map((item) => <article key={item.id}><div><strong>{item.person} · {item.merchant}</strong><span>{item.date} · {item.category} · {item.status}</span><small>{money(item.amount)}{item.receiptReference ? " · receipt " + item.receiptReference : ""}</small></div><div>{!["reimbursed","declined"].includes(item.status) && <button type="button" onClick={() => advanceClaim(item)}>{item.status === "draft" ? "Submit" : item.status === "submitted" ? "Approve to Books" : "Reimburse"}</button>}<button type="button" onClick={() => setStore((current) => ({ ...current, claims: current.claims.map((claimItem) => claimItem.id === item.id ? { ...claimItem, status: "declined" as const } : claimItem) }))}>Decline</button></div></article>)}
       </div>{approvedClaims.length > 0 && <small>{approvedClaims.length} approved claim(s) are waiting for reimbursement.</small>}</section>
     </div>
 

@@ -167,7 +167,7 @@ export function LifelinePeople() {
     if (!postJournal(journal)) { setMessage("Pay run could not be posted. Check the period lock or existing journal."); return; }
     setStore((current) => ({
       ...current,
-      payRuns: current.payRuns.map((item) => item.id === run.id ? { ...item, status: "finalised" } : item),
+      payRuns: current.payRuns.map((item) => item.id === run.id ? { ...item, status: "finalised" as const } : item),
       employees: current.employees.map((person) => {
         const line = run.lines.find((payLine) => payLine.employeeId === person.id);
         return line ? { ...person, annualLeaveHours: round(Number(person.annualLeaveHours || 0) + line.annualLeaveAccrued), personalLeaveHours: round(Number(person.personalLeaveHours || 0) + line.personalLeaveAccrued) } : person;
@@ -183,7 +183,7 @@ export function LifelinePeople() {
       lines: [{ account: "Payroll Clearing", side: "debit", amount: net }, { account: "Bank", side: "credit", amount: net }],
     };
     if (!postJournal(journal)) { setMessage("Payroll payment could not be posted."); return; }
-    setStore((current) => ({ ...current, payRuns: current.payRuns.map((item) => item.id === run.id ? { ...item, status: "paid" } : item) }));
+    setStore((current) => ({ ...current, payRuns: current.payRuns.map((item) => item.id === run.id ? { ...item, status: "paid" as const } : item) }));
     setMessage("Payroll payment posted to Lifeline Books.");
   };
 

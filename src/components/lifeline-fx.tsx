@@ -119,7 +119,7 @@ export function LifelineFx() {
       setMessage("Settlement could not be posted.");
       return;
     }
-    setStore((current) => ({ ...current, transactions: current.transactions.map((item) => item.id === tx.id ? { ...item, status: "settled", settlementRate: rate, settlementDate: date, settlementBaseAmount } : item) }));
+    setStore((current) => ({ ...current, transactions: current.transactions.map((item) => item.id === tx.id ? { ...item, status: "settled" as const, settlementRate: rate, settlementDate: date, settlementBaseAmount } : item) }));
     setMessage("Settlement posted and the exchange difference was recognised.");
   };
 

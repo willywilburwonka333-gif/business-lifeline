@@ -143,7 +143,7 @@ export function LifelineAssets() {
     if (gainLoss > 0) lines.push({ account: "Gain on Asset Disposal", side: "credit", amount: gainLoss });
     const journal: LedgerJournal = { id: id("journal"), date: today(), memo: "Asset disposal · " + item.name, source: "ASSET:DISPOSE:" + item.id, lines };
     if (!postJournal(journal)) { setMessage("Disposal journal could not be posted. Review the carrying value and period lock."); return; }
-    setStore((current) => ({ ...current, assets: current.assets.map((assetItem) => assetItem.id === item.id ? { ...assetItem, status: "disposed", disposalDate: today(), disposalProceeds: proceeds } : assetItem) }));
+    setStore((current) => ({ ...current, assets: current.assets.map((assetItem) => assetItem.id === item.id ? { ...assetItem, status: "disposed" as const, disposalDate: today(), disposalProceeds: proceeds } : assetItem) }));
     setMessage("Asset disposal posted to Lifeline Books.");
   };
 
