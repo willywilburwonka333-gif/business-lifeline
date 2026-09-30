@@ -45,7 +45,8 @@ test("applies payroll, PAYG, facilities and one-off accuracy inputs", () => {
     oneOffExpenses: 2500,
   });
 
-  assert.equal(forecast.openingCash, 15000);
+  assert.equal(forecast.openingCash, 8000);
+  assert.ok(forecast.warnings.some((warning) => /not counted as cash/i.test(warning)));
   assert.ok(forecast.weeks[0].wagesAndSuper > 0);
   assert.equal(forecast.weeks[0].taxPayments, 3000);
   assert.equal(forecast.weeks[0].oneOffCashIn, 1000);
