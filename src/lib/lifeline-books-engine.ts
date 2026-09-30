@@ -311,9 +311,14 @@ export function balanceSheet(store: BooksStore, chart = DEFAULT_CHART, asAt?: st
   };
 }
 
-function isCashAccount(name: string) {
+function isCashAccount(name: string, chart: LifelineAccount[]) {
+  const account = accountFor(name, chart);
   const value = normalise(name);
-  return value === "bank" || value.includes("cash on hand") || value.includes("card clearing") || value.includes("business account");
+  return account.type === "asset" && account.cashflow === "transfer"
+    || value === "bank"
+    || value.includes("cash on hand")
+    || value.includes("card clearing")
+    || value.includes("business account");
 }
 
 export function cashflowSummary(store: BooksStore, chart = DEFAULT_CHART, start?: string, end?: string): CashflowSummary {
@@ -323,11 +328,11 @@ export function cashflowSummary(store: BooksStore, chart = DEFAULT_CHART, start?
   let transfers = 0;
   for (const journal of store.journals) {
     if (!inPeriod(journal.date, start, end)) continue;
-    const cashLines = journal.lines.filter((line) => isCashAccount(line.account));
+    const cashLines = journal.lines.filter((line) => isCashAccount(line.account, chart));
     if (!cashLines.length) continue;
     const cashMovement = round(cashLines.reduce((sum, line) => sum + (line.side === "debit" ? line.amount : -line.amount), 0));
     if (cashMovement === 0) continue;
-    const counterparts = journal.lines.filter((line) => !isCashAccount(line.account));
+    const counterparts = journal.lines.filter((line) => !isCashAccount(line.account, chart));
     const classes = counterparts.map((line) => accountFor(line.account, chart).cashflow);
     const classification: CashflowClass =
       classes.includes("financing") ? "financing" :
