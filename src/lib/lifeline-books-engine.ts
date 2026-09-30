@@ -162,19 +162,19 @@ export const DEFAULT_CHART: LifelineAccount[] = [
   { code: "6510", name: "Foreign Exchange Loss", type: "expense", cashflow: "operating", active: true },
 ];
 
-const EMPTY: BooksStore = { journals: [], docs: [], bills: [], refunds: [], nextQuote: 1, nextInvoice: 1, nextCredit: 1, lockDate: "" };
+const emptyStore = (): BooksStore => ({ journals: [], docs: [], bills: [], refunds: [], nextQuote: 1, nextInvoice: 1, nextCredit: 1, lockDate: "" });
 const round = (value: number) => Math.round((Number(value) || 0) * 100) / 100;
 const normalise = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 export function readBooksStore(storage?: Storage): BooksStore {
   try {
     const target = storage ?? (typeof window !== "undefined" ? window.localStorage : null);
-    if (!target) return EMPTY;
+    if (!target) return emptyStore();
     const raw = target.getItem(LIFELINE_BOOKS_KEY);
-    if (!raw) return EMPTY;
+    if (!raw) return emptyStore();
     const parsed = JSON.parse(raw) as Partial<BooksStore>;
     return {
-      ...EMPTY,
+      ...emptyStore(),
       ...parsed,
       journals: Array.isArray(parsed.journals) ? parsed.journals : [],
       docs: Array.isArray(parsed.docs) ? parsed.docs : [],
@@ -182,7 +182,7 @@ export function readBooksStore(storage?: Storage): BooksStore {
       refunds: Array.isArray(parsed.refunds) ? parsed.refunds : [],
     };
   } catch {
-    return EMPTY;
+    return emptyStore();
   }
 }
 
