@@ -6,6 +6,7 @@ export const lifelineSuite = [
   { id: "people", name: "Lifeline People", purpose: "Employees, timesheets, payroll preparation, leave, PAYG and super liabilities." },
   { id: "spend", name: "Lifeline Spend", purpose: "Supplier spend, purchase orders, expense claims, receipts and reimbursements." },
   { id: "assets", name: "Lifeline Assets", purpose: "Fixed assets, acquisition records and depreciation schedules." },
+  { id: "plan", name: "Lifeline Plan", purpose: "Budgets, actuals and variance tracking from Lifeline Books." },
   { id: "plan", name: "Lifeline Plan", purpose: "Budgets, account targets, actual-vs-budget variance and rolling forecasts." },
   { id: "fx", name: "Lifeline FX", purpose: "Foreign-currency receivables, payables, settlement rates and exchange gains/losses." },
   { id: "sales", name: "Lifeline Sales", purpose: "CRM, quotes, pipeline, counter/market sales and customer history." },
