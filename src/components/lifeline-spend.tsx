@@ -37,13 +37,26 @@ type ExpenseClaim = {
   status: "draft" | "submitted" | "approved" | "reimbursed" | "declined";
 };
 
+type MileageTrip = {
+  id: string;
+  person: string;
+  date: string;
+  from: string;
+  to: string;
+  purpose: string;
+  kilometres: number;
+  ratePerKm: number;
+  claimAmount: number;
+  status: "draft" | "submitted" | "approved" | "reimbursed";
+};
 type SpendStore = {
   purchaseOrders: PurchaseOrder[];
   claims: ExpenseClaim[];
+  mileage: MileageTrip[];
   nextPo: number;
 };
 
-const empty: SpendStore = { purchaseOrders: [], claims: [], nextPo: 1 };
+const empty: SpendStore = { purchaseOrders: [], claims: [], mileage: [], nextPo: 1 };
 const round = (value: number) => Math.round((Number(value) || 0) * 100) / 100;
 const money = (value: number) => value.toLocaleString("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 2 });
 const today = () => new Date().toISOString().slice(0, 10);
@@ -87,6 +100,7 @@ export function LifelineSpend() {
   const [message, setMessage] = useState("");
   const [po, setPo] = useState({ supplier: "", description: "", category: "Operating Expense", amount: 0, gstIncluded: true, dueDate: "" });
   const [claim, setClaim] = useState({ person: "", merchant: "", date: today(), category: "Operating Expense", amount: 0, gstIncluded: true, receiptReference: "", notes: "" });
+  const [trip, setTrip] = useState({ person: "", date: today(), from: "", to: "", purpose: "", kilometres: 0, ratePerKm: 0 });
 
   useEffect(() => { setStore(readSpend()); setReady(true); }, []);
   useEffect(() => { if (ready) localStorage.setItem(LIFELINE_SPEND_KEY, JSON.stringify(store)); }, [store, ready]);
@@ -94,6 +108,7 @@ export function LifelineSpend() {
   const committed = useMemo(() => store.purchaseOrders.filter((item) => !["billed", "cancelled"].includes(item.status)).reduce((sum, item) => sum + item.amount, 0), [store.purchaseOrders]);
   const claimsOutstanding = useMemo(() => store.claims.filter((item) => ["submitted", "approved"].includes(item.status)).reduce((sum, item) => sum + item.amount, 0), [store.claims]);
   const approvedClaims = store.claims.filter((item) => item.status === "approved");
+  const mileageValue = (store.mileage ?? []).filter((item) => item.status !== "reimbursed").reduce((sum, item) => sum + item.claimAmount, 0);
 
   const addPo = (event: FormEvent) => {
     event.preventDefault();
@@ -151,6 +166,40 @@ export function LifelineSpend() {
     setClaim({ person: "", merchant: "", date: today(), category: "Operating Expense", amount: 0, gstIncluded: true, receiptReference: "", notes: "" });
   };
 
+  const addTrip = (event: FormEvent) => {
+    event.preventDefault();
+    if (!trip.person.trim() || trip.kilometres <= 0 || trip.ratePerKm < 0) return;
+    const next: MileageTrip = { id: id("mileage"), ...trip, person: trip.person.trim(), claimAmount: round(trip.kilometres * trip.ratePerKm), status: "draft" };
+    setStore((current) => ({ ...current, mileage: [next, ...(current.mileage ?? [])] }));
+    setTrip({ person: "", date: today(), from: "", to: "", purpose: "", kilometres: 0, ratePerKm: 0 });
+  };
+
+  const advanceTrip = (item: MileageTrip) => {
+    if (item.status === "draft") {
+      setStore((current) => ({ ...current, mileage: (current.mileage ?? []).map((tripItem) => tripItem.id === item.id ? { ...tripItem, status: "submitted" } : tripItem) }));
+      return;
+    }
+    if (item.status === "submitted") {
+      const journal: LedgerJournal = {
+        id: id("journal"), date: item.date, memo: "Mileage claim · " + item.person + " · " + item.purpose,
+        source: "SPEND:MILEAGE:" + item.id,
+        lines: [{ account: "Motor Vehicle", side: "debit", amount: item.claimAmount }, { account: "Employee Reimbursements Payable", side: "credit", amount: item.claimAmount }],
+      };
+      if (!postJournal(journal)) { setMessage("Mileage claim could not be approved into Books."); return; }
+      setStore((current) => ({ ...current, mileage: (current.mileage ?? []).map((tripItem) => tripItem.id === item.id ? { ...tripItem, status: "approved" } : tripItem) }));
+      return;
+    }
+    if (item.status === "approved") {
+      const journal: LedgerJournal = {
+        id: id("journal"), date: today(), memo: "Mileage reimbursement · " + item.person,
+        source: "SPEND:MILEAGE-PAY:" + item.id,
+        lines: [{ account: "Employee Reimbursements Payable", side: "debit", amount: item.claimAmount }, { account: "Bank", side: "credit", amount: item.claimAmount }],
+      };
+      if (!postJournal(journal)) { setMessage("Mileage reimbursement could not be posted."); return; }
+      setStore((current) => ({ ...current, mileage: (current.mileage ?? []).map((tripItem) => tripItem.id === item.id ? { ...tripItem, status: "reimbursed" } : tripItem) }));
+    }
+  };
+
   const advanceClaim = (item: ExpenseClaim) => {
     if (item.status === "draft") {
       setStore((current) => ({ ...current, claims: current.claims.map((claimItem) => claimItem.id === item.id ? { ...claimItem, status: "submitted" } : claimItem) }));
@@ -188,7 +237,7 @@ export function LifelineSpend() {
       <article><span>Open purchase orders</span><strong>{store.purchaseOrders.filter((item) => !["billed","cancelled"].includes(item.status)).length}</strong></article>
       <article><span>Committed spend</span><strong>{money(committed)}</strong></article>
       <article><span>Claims awaiting action</span><strong>{store.claims.filter((item) => ["draft","submitted","approved"].includes(item.status)).length}</strong></article>
-      <article><span>Claim value outstanding</span><strong>{money(claimsOutstanding)}</strong></article>
+      <article><span>Claim value outstanding</span><strong>{money(claimsOutstanding)}</strong></article><article><span>Mileage claims outstanding</span><strong>{money(mileageValue)}</strong></article>
     </section>
 
     <div className="lifeline-report-grid">
@@ -223,6 +272,21 @@ export function LifelineSpend() {
       <section className="panel"><p className="eyebrow">CLAIMS</p><h3>Submit → approve → reimburse</h3><div className="item-list">
         {store.claims.map((item) => <article key={item.id}><div><strong>{item.person} · {item.merchant}</strong><span>{item.date} · {item.category} · {item.status}</span><small>{money(item.amount)}{item.receiptReference ? " · receipt " + item.receiptReference : ""}</small></div><div>{!["reimbursed","declined"].includes(item.status) && <button type="button" onClick={() => advanceClaim(item)}>{item.status === "draft" ? "Submit" : item.status === "submitted" ? "Approve to Books" : "Reimburse"}</button>}<button type="button" onClick={() => setStore((current) => ({ ...current, claims: current.claims.map((claimItem) => claimItem.id === item.id ? { ...claimItem, status: "declined" } : claimItem) }))}>Decline</button></div></article>)}
       </div>{approvedClaims.length > 0 && <small>{approvedClaims.length} approved claim(s) are waiting for reimbursement.</small>}</section>
+    </div>
+
+    <div className="lifeline-report-grid">
+      <form className="panel fields" onSubmit={addTrip}><p className="eyebrow">MILEAGE</p><h3>Record business travel</h3>
+        <label className="field"><span>Person</span><input value={trip.person} onChange={(e) => setTrip({ ...trip, person: e.target.value })} required /></label>
+        <label className="field"><span>Date</span><input type="date" value={trip.date} onChange={(e) => setTrip({ ...trip, date: e.target.value })} /></label>
+        <div className="two-cols"><label className="field"><span>From</span><input value={trip.from} onChange={(e) => setTrip({ ...trip, from: e.target.value })} /></label><label className="field"><span>To</span><input value={trip.to} onChange={(e) => setTrip({ ...trip, to: e.target.value })} /></label></div>
+        <label className="field"><span>Business purpose</span><input value={trip.purpose} onChange={(e) => setTrip({ ...trip, purpose: e.target.value })} /></label>
+        <div className="two-cols"><label className="field"><span>Kilometres</span><input type="number" min="0" step="0.1" value={trip.kilometres || ""} onChange={(e) => setTrip({ ...trip, kilometres: Number(e.target.value) || 0 })} /></label><label className="field"><span>Claim rate / km</span><input type="number" min="0" step="0.01" value={trip.ratePerKm || ""} onChange={(e) => setTrip({ ...trip, ratePerKm: Number(e.target.value) || 0 })} /></label></div>
+        <small>Enter the rate approved for the business/adviser. Lifeline does not assume a statutory rate.</small>
+        <button className="button primary">Save mileage</button>
+      </form>
+      <section className="panel"><p className="eyebrow">MILEAGE CLAIMS</p><h3>Submit → approve → reimburse</h3><div className="item-list">
+        {(store.mileage ?? []).map((item) => <article key={item.id}><div><strong>{item.person} · {item.kilometres} km</strong><span>{item.date} · {item.from || "start"} → {item.to || "destination"} · {item.status}</span><small>{item.purpose || "Business travel"} · {money(item.claimAmount)}</small></div>{item.status !== "reimbursed" && <button type="button" onClick={() => advanceTrip(item)}>{item.status === "draft" ? "Submit" : item.status === "submitted" ? "Approve to Books" : "Reimburse"}</button>}</article>)}
+      </div></section>
     </div>
   </section>;
 }
