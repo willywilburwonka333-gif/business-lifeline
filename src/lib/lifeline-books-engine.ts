@@ -433,12 +433,22 @@ export function gstSummary(store: BooksStore, start?: string, end?: string): Gst
     }
   }
   let purchasesIncludingGst = 0;
-  let gstCredits = 0;
   for (const bill of store.bills) {
     if (bill.status === "draft" || !inPeriod(bill.date, start, end)) continue;
     purchasesIncludingGst = round(purchasesIncludingGst + Number(bill.amount || 0));
-    gstCredits = round(gstCredits + Number(bill.gst || 0));
   }
+
+  let ledgerGstOnSales = 0;
+  let ledgerGstCredits = 0;
+  for (const journal of store.journals) {
+    if (!inPeriod(journal.date, start, end) || journal.source.startsWith("TAX:PAYMENT:")) continue;
+    for (const line of journal.lines) {
+      if (line.account === "GST Payable") ledgerGstOnSales = round(ledgerGstOnSales + (line.side === "credit" ? line.amount : -line.amount));
+      if (line.account === "GST Input Credit") ledgerGstCredits = round(ledgerGstCredits + (line.side === "debit" ? line.amount : -line.amount));
+    }
+  }
+  if (Math.abs(ledgerGstOnSales) > .005) gstOnSales = Math.max(0, ledgerGstOnSales);
+  const gstCredits = Math.max(0, ledgerGstCredits);
   return { taxableSales, gstOnSales, gstFreeSales, inputTaxedSales, purchasesIncludingGst, gstCredits, estimatedNetGst: round(gstOnSales - gstCredits) };
 }
 
