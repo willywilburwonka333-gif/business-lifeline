@@ -96,14 +96,16 @@ export function LifelineTax() {
     setStore((current) => ({ ...current, periods: current.periods.map((periodItem) => periodItem.id === item.id ? { ...periodItem, status } : periodItem) }));
 
   const payPeriod = (item: TaxPeriod) => {
-    const gstNet = Math.max(0, round(item.gstOnSales - item.gstCredits));
+    const gstNet = round(item.gstOnSales - item.gstCredits);
     const lines: LedgerJournal["lines"] = [];
-    if (gstNet > 0) lines.push({ account: "GST Payable", side: "debit", amount: gstNet });
+    if (item.gstOnSales > 0) lines.push({ account: "GST Payable", side: "debit", amount: item.gstOnSales });
+    if (item.gstCredits > 0) lines.push({ account: "GST Input Credit", side: "credit", amount: item.gstCredits });
     if (item.paygWithholding > 0) lines.push({ account: "PAYG Withholding Payable", side: "debit", amount: item.paygWithholding });
     if (item.instalmentOrIncomeTax > 0) lines.push({ account: "Tax Payable", side: "debit", amount: item.instalmentOrIncomeTax });
-    const total = round(lines.reduce((sum, line) => sum + line.amount, 0));
-    if (total <= 0) { setMessage("No payable amount is recorded for this period."); return; }
-    lines.push({ account: "Bank", side: "credit", amount: total });
+    const cashSettlement = round(gstNet + item.paygWithholding + item.instalmentOrIncomeTax);
+    if (cashSettlement > 0) lines.push({ account: "Bank", side: "credit", amount: cashSettlement });
+    if (cashSettlement < 0) lines.push({ account: "Bank", side: "debit", amount: Math.abs(cashSettlement) });
+    if (!lines.length) { setMessage("No tax settlement is recorded for this period."); return; }
     const journal: LedgerJournal = { id: "journal-" + Date.now(), date: today(), memo: "Tax payment " + item.label, source: "TAX:PAYMENT:" + item.id, lines };
     if (!postJournal(journal)) { setMessage("Tax payment could not be posted. Check the period lock or existing journal."); return; }
     updateStatus(item, "paid");
