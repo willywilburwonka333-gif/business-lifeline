@@ -16,6 +16,7 @@ type TaxPeriod = {
   id: string;
   start: string;
   end: string;
+  dueDate: string;
   label: string;
   status: "draft" | "reviewed" | "lodged" | "paid";
   gstOnSales: number;
@@ -60,7 +61,7 @@ function balanceFor(account: string) {
 export function LifelineTax() {
   const [store, setStore] = useState<TaxStore>(empty);
   const [ready, setReady] = useState(false);
-  const [period, setPeriod] = useState({ start: "", end: "", label: "", paygWithholding: 0, instalmentOrIncomeTax: 0, notes: "" });
+  const [period, setPeriod] = useState({ start: "", end: "", dueDate: "", label: "", paygWithholding: 0, instalmentOrIncomeTax: 0, notes: "" });
   const [revision, setRevision] = useState(0);
   const [message, setMessage] = useState("");
 
@@ -83,7 +84,7 @@ export function LifelineTax() {
     if (!period.start || !period.end) return;
     const summary = gstSummary(readBooksStore(), period.start, period.end);
     const next: TaxPeriod = {
-      id: id(), start: period.start, end: period.end, label: period.label.trim() || period.start + " to " + period.end,
+      id: id(), start: period.start, end: period.end, dueDate: period.dueDate, label: period.label.trim() || period.start + " to " + period.end,
       status: "draft", gstOnSales: summary.gstOnSales, gstCredits: summary.gstCredits,
       paygWithholding: Number(period.paygWithholding || 0), instalmentOrIncomeTax: Number(period.instalmentOrIncomeTax || 0),
       notes: period.notes, createdAt: new Date().toISOString(),
@@ -171,7 +172,7 @@ export function LifelineTax() {
       <section className="panel fields"><p className="eyebrow">PREPARE PERIOD</p><h3>Create a BAS/tax workpaper</h3>
         <label className="field"><span>Period label</span><input value={period.label} onChange={(e) => setPeriod({ ...period, label: e.target.value })} placeholder="Example: Jul–Sep 2026" /></label>
         <label className="field"><span>Start</span><input type="date" value={period.start} onChange={(e) => setPeriod({ ...period, start: e.target.value })} /></label>
-        <label className="field"><span>End</span><input type="date" value={period.end} onChange={(e) => setPeriod({ ...period, end: e.target.value })} /></label>
+        <label className="field"><span>End</span><input type="date" value={period.end} onChange={(e) => setPeriod({ ...period, end: e.target.value })} /></label><label className="field"><span>Payment / lodgement due date</span><input type="date" value={period.dueDate} onChange={(e) => setPeriod({ ...period, dueDate: e.target.value })} /></label>
         <label className="field"><span>PAYG withholding for period</span><input type="number" min="0" step="0.01" value={period.paygWithholding || ""} onChange={(e) => setPeriod({ ...period, paygWithholding: Number(e.target.value) || 0 })} /></label>
         <label className="field"><span>Income-tax / PAYG instalment</span><input type="number" min="0" step="0.01" value={period.instalmentOrIncomeTax || ""} onChange={(e) => setPeriod({ ...period, instalmentOrIncomeTax: Number(e.target.value) || 0 })} /></label>
         <label className="field"><span>Notes</span><textarea value={period.notes} onChange={(e) => setPeriod({ ...period, notes: e.target.value })} /></label>
@@ -182,7 +183,7 @@ export function LifelineTax() {
         {store.periods.map((item) => {
           const netGst = round(item.gstOnSales - item.gstCredits);
           const total = round(netGst + item.paygWithholding + item.instalmentOrIncomeTax);
-          return <article key={item.id}><div><strong>{item.label}</strong><span>{item.start} → {item.end} · {item.status}</span><small>GST {money(netGst)} · PAYG {money(item.paygWithholding)} · tax instalment {money(item.instalmentOrIncomeTax)} · total {money(total)}</small></div><div><button type="button" onClick={() => exportPeriod(item)}>Export workpaper</button>{item.status === "draft" && <button type="button" onClick={() => updateStatus(item, "reviewed")}>Mark reviewed</button>}{item.status === "reviewed" && <button type="button" onClick={() => updateStatus(item, "lodged")}>Mark lodged</button>}{item.status === "lodged" && <button type="button" onClick={() => payPeriod(item)}>Record payment</button>}</div></article>;
+          return <article key={item.id}><div><strong>{item.label}</strong><span>{item.start} → {item.end} · {item.status}{item.dueDate ? " · due " + item.dueDate : ""}</span><small>GST {money(netGst)} · PAYG {money(item.paygWithholding)} · tax instalment {money(item.instalmentOrIncomeTax)} · total {money(total)}</small></div><div><button type="button" onClick={() => exportPeriod(item)}>Export workpaper</button>{item.status === "draft" && <button type="button" onClick={() => updateStatus(item, "reviewed")}>Mark reviewed</button>}{item.status === "reviewed" && <button type="button" onClick={() => updateStatus(item, "lodged")}>Mark lodged</button>}{item.status === "lodged" && <button type="button" onClick={() => payPeriod(item)}>Record payment</button>}</div></article>;
         })}
       </div></section>
     </div>
