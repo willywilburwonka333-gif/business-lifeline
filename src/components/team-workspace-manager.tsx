@@ -31,6 +31,7 @@ const SOURCES = [
   ["tax", "business-lifeline-tax-v1"],
   ["spend", "business-lifeline-spend-v1"],
   ["assets", "business-lifeline-assets-v1"],
+  ["plan", "business-lifeline-plan-v1"],
   ["spend", "business-lifeline-spend-v1"],
   ["assets", "business-lifeline-assets-v1"],
   ["plan", "business-lifeline-plan-v1"],
