@@ -188,13 +188,16 @@ export function writeSmartImport(draft: SmartImportDraft) {
     (values as Record<string, unknown>)[String(field.key)] = field.value;
     return values;
   }, {});
-  let existing: { data?: Partial<BusinessData>; [key: string]: unknown } | null = null;
+  type StoredMriState = { data?: Partial<BusinessData>; [key: string]: unknown };
+  let existing: StoredMriState | null = null;
   try {
-    existing = JSON.parse(window.localStorage.getItem("business-lifeline-mri-v2") ?? "null") as typeof existing;
+    const parsed: unknown = JSON.parse(window.localStorage.getItem("business-lifeline-mri-v2") ?? "null");
+    existing = parsed && typeof parsed === "object" ? parsed as StoredMriState : null;
   } catch {
     existing = null;
   }
-  const mergedData = { ...emptyBusiness, ...(existing?.data ?? {}), ...importedData } as BusinessData;
+  const existingData: Partial<BusinessData> = existing?.data ?? {};
+  const mergedData = { ...emptyBusiness, ...existingData, ...importedData } as BusinessData;
   const refreshedReport = generateReport(mergedData);
   window.localStorage.setItem("business-lifeline-mri-v2", JSON.stringify({
     ...(existing ?? {}),
