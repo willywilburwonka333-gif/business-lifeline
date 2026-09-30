@@ -140,6 +140,7 @@ export const DEFAULT_CHART: LifelineAccount[] = [
   { code: "4000", name: "Sales Revenue", type: "income", cashflow: "operating", gstDefault: "gst", active: true, system: true },
   { code: "4010", name: "Service Revenue", type: "income", cashflow: "operating", gstDefault: "gst", active: true },
   { code: "4090", name: "Sales Returns", type: "income", cashflow: "operating", gstDefault: "gst", active: true, system: true },
+  { code: "4900", name: "Gain on Asset Disposal", type: "income", cashflow: "investing", active: true },
   { code: "5000", name: "Cost of Goods Sold", type: "cogs", cashflow: "operating", gstDefault: "gst", active: true },
   { code: "6000", name: "Operating Expense", type: "expense", cashflow: "operating", gstDefault: "gst", active: true, system: true },
   { code: "6010", name: "Expense", type: "expense", cashflow: "operating", gstDefault: "gst", active: true, system: true },
@@ -155,6 +156,7 @@ export const DEFAULT_CHART: LifelineAccount[] = [
   { code: "6270", name: "Bank & Merchant Fees", type: "expense", cashflow: "operating", active: true },
   { code: "6300", name: "Depreciation", type: "expense", cashflow: "investing", active: true },
   { code: "6400", name: "Interest Expense", type: "expense", cashflow: "financing", active: true },
+  { code: "6500", name: "Loss on Asset Disposal", type: "expense", cashflow: "investing", active: true },
 ];
 
 const EMPTY: BooksStore = { journals: [], docs: [], bills: [], refunds: [], nextQuote: 1, nextInvoice: 1, nextCredit: 1, lockDate: "" };
