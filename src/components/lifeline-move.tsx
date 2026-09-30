@@ -51,7 +51,7 @@ export function LifelineMove() {
 
       const rows = csvRows(text);
       if (kind === "journals") {
-        const journals: LedgerJournal[] = rows.map((row) => {
+        const journals = rows.map((row): LedgerJournal => {
           const amount = round(Number(String(row.amount || "0").replace(/[$,]/g, "")));
           return {
             id: id("move-journal"),
@@ -69,18 +69,18 @@ export function LifelineMove() {
       }
 
       if (kind === "invoices") {
-        const docs: SalesDocument[] = rows.map((row) => {
+        const docs = rows.map((row): SalesDocument => {
           const total = round(Number(String(row.total || row.amount || "0").replace(/[$,]/g, "")));
           const gst = round(Number(String(row.gst || "0").replace(/[$,]/g, "")));
           return {
             id: id("move-invoice"),
             number: String(row.number || row.invoice || id("INV")),
-            kind: "invoice",
+            kind: "invoice" as const,
             customer: String(row.customer || row.name || "Imported customer"),
             date: String(row.date || new Date().toISOString().slice(0, 10)),
             due: String(row.due || row.duedate || ""),
             status: (["draft","sent","part-paid","paid","void"].includes(String(row.status)) ? String(row.status) : "sent") as SalesDocument["status"],
-            items: [{ description: String(row.description || "Imported invoice"), qty: 1, rate: total, gst: gst > 0 ? "gst" : "free" }],
+            items: [{ description: String(row.description || "Imported invoice"), qty: 1, rate: total, gst: gst > 0 ? "gst" as const : "free" as const }],
             payments: round(Number(String(row.paid || row.payments || "0").replace(/[$,]/g, ""))),
             notes: "Imported through Lifeline Move",
           };
@@ -90,7 +90,7 @@ export function LifelineMove() {
       }
 
       if (kind === "bills") {
-        const bills: SupplierBill[] = rows.map((row) => ({
+        const bills = rows.map((row): SupplierBill => ({
           id: id("move-bill"),
           number: String(row.number || row.bill || id("BILL")),
           supplier: String(row.supplier || row.name || "Imported supplier"),
