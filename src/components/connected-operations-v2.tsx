@@ -121,7 +121,7 @@ export function ConnectedOperationsV2() {
   const [cashClose, setCashClose] = useState({ openingCash: 0, closingCash: 0 });
 
   useEffect(() => { setStore(readStore()); setReady(true); }, []);
-  useEffect(() => { if (ready) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }, [store, ready]);
+  useEffect(() => { if (ready) { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); window.dispatchEvent(new Event("business-lifeline-operating-updated")); } }, [store, ready]);
 
   const outstanding = useMemo(() => store.invoices.filter((invoice) => invoice.status !== "paid").reduce((sum, invoice) => sum + invoice.amount, 0), [store.invoices]);
   const lowStock = useMemo(() => store.products.filter((product) => product.quantity <= product.reorderAt), [store.products]);
