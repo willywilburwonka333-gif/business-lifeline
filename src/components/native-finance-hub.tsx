@@ -40,7 +40,8 @@ export function NativeFinanceHub({ country }: { country?: string }) {
     <OperatingLedgerStatus />
 
     {view === "books" && <LifelineBooks key={revision} country={country} />}
-    {(view === "bank" || view === "pay") && <CommercialFinanceControls />}
+    {view === "bank" && <CommercialFinanceControls key="bank" initialTab="banking" />}
+    {view === "pay" && <CommercialFinanceControls key="pay" initialTab="recurring" />}
     {view === "tax" && <LifelineTax />}
     {view === "people" && <LifelinePeople />}
     {view === "move" && <LifelineMove />}
