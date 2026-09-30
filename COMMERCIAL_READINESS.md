@@ -90,24 +90,22 @@ Updated: 30 September 2026
 - Run-data carry-forward into exit preparation
 - Downloadable buyer-readiness pack
 
-### Accounting connections
+### Native Business Lifeline suite
 
-QuickBooks code includes:
-- OAuth connection and encrypted token storage
-- token refresh/disconnect
-- company validation
-- previous complete-month Profit and Loss
-- current Balance Sheet
-- open overdue invoice/bill detection
-- MRI ingestion for revenue, cash, receivables, debt and overdue obligations
+- Lifeline Books: double-entry ledger, chart of accounts, locked periods, financial statements, Trial Balance, General Ledger, receivable/payable aging and integrity controls
+- Lifeline Bank: multiple accounts, CSV statement import, reconciliation, matching and direct coding to Books
+- Lifeline Pay: recurring billing, deposits/instalments, statements, collections and reminder queue
+- Lifeline People: employee register, timesheets and payroll preparation with PAYG/super/payroll accounting
+- Lifeline Spend: purchase orders, supplier bills, expense claims, mileage and reimbursements
+- Lifeline Tax: GST/BAS preparation, tax-period workflow and tax-liability visibility
+- Lifeline Assets: acquisition, depreciation and disposal accounting
+- Lifeline Plan: budget and actual-vs-budget reporting
+- Lifeline FX: foreign receivable/payable and settlement gain/loss accounting
+- Lifeline Sales / Jobs / Stock: CRM, quote-to-job-to-invoice, job margin, POS-style sales, inventory and stocktake accounting
+- Lifeline Vault: records and evidence
+- Lifeline Move: CSV/JSON migration plus optional legacy QuickBooks/Xero bridges
 
-Xero code includes:
-- OAuth connection and encrypted token storage
-- rotating refresh-token handling
-- organisation/tenant connection
-- previous complete-month Profit and Loss
-- current Balance Sheet
-- MRI ingestion for supported revenue, cash, receivables and debt facts
+QuickBooks/Xero are not required to operate Business Lifeline. Their existing OAuth code is retained only as an optional migration path.
 
 ### Paid-access foundation
 
@@ -126,11 +124,10 @@ Xero code includes:
 These cannot be completed in repository code:
 
 - Production Firebase credentials and publishing Firestore/Storage rules
-- QuickBooks production app credentials and redirect approval
-- Xero production app credentials, approved scopes and redirect approval
 - Stripe account, products/prices, webhook secret and final pricing decisions
 - Production AI API key
 - Production Vercel environment-variable configuration
+- optional external rails only when enabled: live bank feeds/CDR, payment acquiring/direct debit, email/SMS delivery, STP/BAS/SuperStream lodgement and live FX-rate feeds
 - Managed distributed rate-limit provider if required for public scale
 - Monitoring/alerting service selection
 - Independent security review and penetration test
@@ -149,10 +146,12 @@ Do not call the product fully production-ready until:
 1. The current Vercel deployment succeeds from `main`.
 2. GitHub Actions can actually allocate a runner and all quality/security/e2e checks pass.
 3. Firebase tenant-isolation and role tests are verified against the production project.
-4. QuickBooks and Xero are tested against real sandbox/test organisations.
-5. Stripe test-mode purchase, portal, cancellation and failed-payment flows are verified.
-6. Mobile and desktop smoke tests pass.
-7. Legal/privacy/security/professional reviews are complete.
+4. Lifeline Books is reconciled against accountant-reviewed sample businesses, including P&L, Balance Sheet, GST, AR/AP aging, payroll journals, inventory and fixed assets.
+5. Lifeline Bank CSV reconciliation, Lifeline Pay collections, Lifeline People payroll preparation and Lifeline Tax workpapers are tested end-to-end.
+6. Optional QuickBooks/Xero migration paths are tested only if they will be offered at launch.
+7. Stripe test-mode purchase, portal, cancellation and failed-payment flows are verified for Business Lifeline subscription billing.
+8. Mobile and desktop smoke tests pass.
+9. Legal/privacy/security/accounting/payroll/tax/professional reviews are complete.
 
 ## Product boundary
 
