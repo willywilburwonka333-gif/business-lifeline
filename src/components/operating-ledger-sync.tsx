@@ -20,10 +20,11 @@ type AccountingStore = {
 };
 
 type Sale = { id: string; total: number; payment?: string; channel?: string; createdAt?: string; soldAt?: string; productId?: string; productName?: string; quantity?: number };
-type Product = { id: string; name?: string; quantity?: number; costPrice?: number; sellPrice?: number };
+type Product = { id: string; name?: string; quantity?: number; costPrice?: number; sellPrice?: number; openingPosted?: boolean };
 type Expense = { id: string; supplier?: string; category?: string; amount: number; date?: string };
 type Invoice = { id: string; customerId?: string; customerName?: string; amount: number; status?: string; issuedAt?: string; dueAt?: string; paidAt?: string };
-type OperatingStore = { sales?: Sale[]; expenses?: Expense[]; invoices?: Invoice[]; products?: Product[] };
+type Stocktake = { id: string; createdAt?: string; totalVariance?: number; varianceValue?: number };
+type OperatingStore = { sales?: Sale[]; expenses?: Expense[]; invoices?: Invoice[]; products?: Product[]; stocktakes?: Stocktake[] };
 
 type SyncStatus = { lastRun: string; added: number; totalAutomatic: number; warnings: string[] };
 
@@ -135,6 +136,33 @@ export function OperatingLedgerSync() {
           if (journal) candidates.push(journal);
         });
         (operating.invoices || []).forEach((invoice) => candidates.push(...invoiceJournals(invoice)));
+        (operating.products || []).forEach((product) => {
+          const value = moneyRound(Number(product.quantity || 0) * Number(product.costPrice || 0));
+          if (!product.openingPosted || value <= 0) return;
+          const source = "OPS:INVENTORY-OPENING:" + product.id;
+          candidates.push({
+            id: journalId(source),
+            date: today(),
+            memo: "Opening inventory · " + (product.name || product.id),
+            source,
+            lines: [{ account: "Inventory", side: "debit", amount: value }, { account: "Owner Equity", side: "credit", amount: value }],
+          });
+        });
+        (operating.stocktakes || []).forEach((session) => {
+          const variance = moneyRound(Number(session.varianceValue || 0));
+          if (!variance) return;
+          const source = "OPS:STOCKTAKE:" + session.id;
+          const amount = Math.abs(variance);
+          candidates.push({
+            id: journalId(source),
+            date: validDate(session.createdAt),
+            memo: "Stocktake adjustment " + session.id,
+            source,
+            lines: variance < 0
+              ? [{ account: "Inventory Adjustments", side: "debit", amount }, { account: "Inventory", side: "credit", amount }]
+              : [{ account: "Inventory", side: "debit", amount }, { account: "Inventory Adjustments", side: "credit", amount }],
+          });
+        });
         const fresh = candidates.filter((journal) => !existingSources.has(journal.source));
         const lockDate = accounting.lockDate || "";
         const allowed = fresh.filter((journal) => {
