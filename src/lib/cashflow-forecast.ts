@@ -26,6 +26,7 @@ export type ForecastWeekResult = ForecastWeekInput & {
 export type CashflowForecast = {
   openingCash: number;
   weeks: ForecastWeekInput[];
+  warnings?: string[];
 };
 
 export type CashflowForecastResult = {
@@ -73,9 +74,15 @@ export function buildForecastFromMRI(data: BusinessData, profile?: MriAccuracyPr
     weeks[0].taxPayments = safe(profile.paygOutstanding);
   }
 
+  const warnings: string[] = [...(forecast.warnings ?? [])];
+  if (profile && (safe(profile.availableFacilities) > 0 || safe(profile.overdraftLimit) > 0)) {
+    warnings.push("Available facilities and overdraft limits are not counted as cash. Model any actual drawdown as one-off cash in when it becomes available.");
+  }
+
   return {
     openingCash: safe(data.cashAvailable),
     weeks,
+    warnings,
   };
 }
 
@@ -126,7 +133,6 @@ export function calculateCashflowForecast(forecast: CashflowForecast): CashflowF
   const weeksWithWages = weeks.filter((week) => week.wagesAndSuper > 0).length;
   if (weeksWithTax === 0) warnings.push("No tax payments are included. Add known BAS, PAYG, GST or other tax commitments.");
   if (weeksWithWages === 0) warnings.push("No wages or super are included. Confirm this is correct before relying on the forecast.");
-  if (profile && (safe(profile.availableFacilities) > 0 || safe(profile.overdraftLimit) > 0)) warnings.push("Available facilities and overdraft limits are not counted as cash. Model any actual drawdown as one-off cash in when it becomes available.");
 
   return {
     weeks,
