@@ -112,6 +112,21 @@ export function LifelineTax() {
     setMessage("Tax payment posted to Lifeline Books.");
   };
 
+  const payControlLiability = (account: string, label: string, amount: number) => {
+    const value = round(Math.max(0, amount));
+    if (value <= 0) { setMessage("No recorded " + label + " liability is available to pay."); return; }
+    const journal: LedgerJournal = {
+      id: "journal-" + Date.now(),
+      date: today(),
+      memo: label + " payment",
+      source: "TAX:CONTROL-PAYMENT:" + account + ":" + Date.now(),
+      lines: [{ account, side: "debit", amount: value }, { account: "Bank", side: "credit", amount: value }],
+    };
+    if (!postJournal(journal)) { setMessage(label + " payment could not be posted."); return; }
+    setRevision((value) => value + 1);
+    setMessage(label + " payment posted to Lifeline Books.");
+  };
+
   const exportPeriod = (item: TaxPeriod) => {
     const summary = gstSummary(readBooksStore(), item.start, item.end);
     const payload = {
@@ -145,9 +160,9 @@ export function LifelineTax() {
 
     <section className="metric-grid">
       <article><span>GST liability</span><strong>{money(liabilities.gst)}</strong></article>
-      <article><span>PAYG withholding</span><strong>{money(liabilities.payg)}</strong></article>
-      <article><span>Super payable</span><strong>{money(liabilities.super)}</strong></article>
-      <article><span>Other tax payable</span><strong>{money(liabilities.tax)}</strong></article>
+      <article><span>PAYG withholding</span><strong>{money(liabilities.payg)}</strong>{liabilities.payg > 0 && <button type="button" onClick={() => payControlLiability("PAYG Withholding Payable","PAYG withholding",liabilities.payg)}>Record payment</button>}</article>
+      <article><span>Super payable</span><strong>{money(liabilities.super)}</strong>{liabilities.super > 0 && <button type="button" onClick={() => payControlLiability("Superannuation Payable","superannuation",liabilities.super)}>Record payment</button>}</article>
+      <article><span>Other tax payable</span><strong>{money(liabilities.tax)}</strong>{liabilities.tax > 0 && <button type="button" onClick={() => payControlLiability("Tax Payable","tax",liabilities.tax)}>Record payment</button>}</article>
     </section>
 
     {message && <div className="os-notice"><span>{message}</span><button onClick={() => setMessage("")}>Dismiss</button></div>}
