@@ -9,12 +9,13 @@ type BankAccount = { id: string; name: string; openingBalance: number; statement
 type BankTransaction = { id: string; accountId: string; date: string; description: string; amount: number; direction: "in" | "out"; matchedSource: string; status: "unmatched" | "matched" | "ignored" };
 type Recurring = { id: string; customer: string; description: string; amount: number; frequency: "weekly" | "fortnightly" | "monthly" | "quarterly" | "yearly"; nextDate: string; active: boolean; generated: number };
 type Instalment = { id: string; customer: string; reference: string; total: number; deposit: number; paid: number; instalments: number; dueDate: string; status: "active" | "paid" };
-type Store = { accounts: BankAccount[]; transactions: BankTransaction[]; recurring: Recurring[]; instalments: Instalment[] };
+type Reminder = { id: string; invoiceNumber: string; customer: string; due: string; balance: number; status: "due" | "sent" | "resolved"; lastActionAt: string };
+type Store = { accounts: BankAccount[]; transactions: BankTransaction[]; recurring: Recurring[]; instalments: Instalment[]; reminders: Reminder[] };
 type JournalLine = { account: string; side: "debit" | "credit"; amount: number };
 type Journal = { id: string; date: string; memo: string; lines: JournalLine[]; source: string };
 type AccountingStore = { journals?: Journal[]; docs?: Array<Record<string, unknown>>; bills?: unknown[]; refunds?: unknown[]; nextQuote?: number; nextInvoice?: number; nextCredit?: number; lockDate?: string };
 
-const empty: Store = { accounts: [{ id: "bank-main", name: "Main business account", openingBalance: 0, statementBalance: 0 }], transactions: [], recurring: [], instalments: [] };
+const empty: Store = { accounts: [{ id: "bank-main", name: "Main business account", openingBalance: 0, statementBalance: 0 }], transactions: [], recurring: [], instalments: [], reminders: [] };
 const id = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const money = (value: number) => value.toLocaleString("en-AU", { style: "currency", currency: "AUD" });
 const round = (value: number) => Math.round((Number(value) || 0) * 100) / 100;
@@ -250,18 +251,61 @@ export function CommercialFinanceControls({ initialTab = "banking" }: { initialT
     setStore((current) => ({ ...current, instalments: current.instalments.map((planItem) => planItem.id === item.id ? { ...planItem, paid: round(planItem.paid + actual), status: planItem.paid + actual >= planItem.total ? "paid" : "active" } : planItem) }));
   };
 
+  const refreshReminders = () => {
+    const accounting = readAccounting();
+    const docs = Array.isArray(accounting.docs) ? accounting.docs as Array<Record<string, unknown>> : [];
+    const now = today();
+    const reminders: Reminder[] = docs.flatMap((doc) => {
+      if (doc.kind !== "invoice" || doc.status === "paid" || doc.status === "void" || doc.status === "draft") return [];
+      const items = Array.isArray(doc.items) ? doc.items as Array<Record<string, unknown>> : [];
+      const total = items.reduce((sum, item) => sum + Number(item.qty || 0) * Number(item.rate || 0), 0);
+      const balance = round(Math.max(0, total - Number(doc.payments || 0)));
+      const due = String(doc.due || doc.date || "");
+      if (balance <= 0 || !due || due >= now) return [];
+      const existing = store.reminders.find((item) => item.invoiceNumber === String(doc.number || doc.id || ""));
+      return [{
+        id: existing?.id || id("reminder"),
+        invoiceNumber: String(doc.number || doc.id || "Invoice"),
+        customer: String(doc.customer || "Customer"),
+        due,
+        balance,
+        status: existing?.status === "sent" ? "sent" as const : "due" as const,
+        lastActionAt: existing?.lastActionAt || "",
+      }];
+    });
+    setStore((current) => ({ ...current, reminders }));
+  };
+
+  const reminderText = (item: Reminder) =>
+    `Hi ${item.customer}, this is a friendly reminder that ${item.invoiceNumber} for ${money(item.balance)} was due on ${item.due}. Please let us know if payment has already been made or if you need to discuss the account. Thank you.`;
+
+  const copyReminder = async (item: Reminder) => {
+    await navigator.clipboard?.writeText(reminderText(item));
+    setStore((current) => ({ ...current, reminders: current.reminders.map((reminder) => reminder.id === item.id ? { ...reminder, status: "sent", lastActionAt: new Date().toISOString() } : reminder) }));
+  };
+
   const customerStatement = (customer: string) => {
     const plans = store.instalments.filter((item) => item.customer === customer);
     const recurringRules = store.recurring.filter((item) => item.customer === customer);
-    const total = plans.reduce((sum, item) => sum + item.total, 0);
-    const paid = plans.reduce((sum, item) => sum + item.paid, 0);
+    const accounting = readAccounting();
+    const docs = (Array.isArray(accounting.docs) ? accounting.docs : []) as Array<Record<string, unknown>>;
+    const invoices = docs.filter((doc) => doc.kind === "invoice" && String(doc.customer || "") === customer && doc.status !== "void");
+    const invoiceRows = invoices.map((doc) => {
+      const items = Array.isArray(doc.items) ? doc.items as Array<Record<string, unknown>> : [];
+      const total = round(items.reduce((sum, item) => sum + Number(item.qty || 0) * Number(item.rate || 0), 0));
+      const paid = round(Number(doc.payments || 0));
+      return { reference: String(doc.number || doc.id || "Invoice"), date: String(doc.date || ""), due: String(doc.due || ""), total, paid, balance: round(Math.max(0, total - paid)), status: String(doc.status || "") };
+    });
+    const planTotal = plans.reduce((sum, item) => sum + item.total - item.paid, 0);
+    const invoiceTotal = invoiceRows.reduce((sum, item) => sum + item.balance, 0);
     const win = window.open("", "_blank", "width=850,height=900");
     if (!win) return;
-    win.document.write(`<html><head><title>Statement - ${customer}</title><style>body{font-family:Arial;padding:48px;color:#173244}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #ccd8de;text-align:left}</style></head><body><h1>Customer statement</h1><h2>${customer}</h2><p>Date ${new Date().toLocaleDateString("en-AU")}</p><table><tr><th>Reference</th><th>Total</th><th>Paid</th><th>Balance</th></tr>${plans.map((item) => `<tr><td>${item.reference}</td><td>${money(item.total)}</td><td>${money(item.paid)}</td><td>${money(item.total-item.paid)}</td></tr>`).join("")}</table><h3>Total owing ${money(total-paid)}</h3><p>Recurring arrangements: ${recurringRules.length}</p><script>window.print()</script></body></html>`);
+    win.document.write(`<html><head><title>Statement - ${customer}</title><style>body{font-family:Arial;padding:48px;color:#173244}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #ccd8de;text-align:left}.right{text-align:right}</style></head><body><h1>Lifeline Pay · Customer statement</h1><h2>${customer}</h2><p>Date ${new Date().toLocaleDateString("en-AU")}</p><table><tr><th>Reference</th><th>Date</th><th>Due</th><th>Total</th><th>Paid</th><th>Balance</th></tr>${invoiceRows.map((item) => `<tr><td>${item.reference}</td><td>${item.date}</td><td>${item.due}</td><td>${money(item.total)}</td><td>${money(item.paid)}</td><td>${money(item.balance)}</td></tr>`).join("")}${plans.map((item) => `<tr><td>${item.reference}</td><td></td><td>${item.dueDate}</td><td>${money(item.total)}</td><td>${money(item.paid)}</td><td>${money(item.total-item.paid)}</td></tr>`).join("")}</table><h3 class="right">Total owing ${money(invoiceTotal+planTotal)}</h3><p>Recurring arrangements: ${recurringRules.length}</p><script>window.print()</script></body></html>`);
     win.document.close();
   };
 
-  const customers = [...new Set([...store.instalments.map((item) => item.customer), ...store.recurring.map((item) => item.customer)])];
+  const accountingCustomers = (() => { const accounting = readAccounting(); const docs = Array.isArray(accounting.docs) ? accounting.docs as Array<Record<string, unknown>> : []; return docs.filter((doc) => doc.kind === "invoice").map((doc) => String(doc.customer || "")).filter(Boolean); })();
+  const customers = [...new Set([...store.instalments.map((item) => item.customer), ...store.recurring.map((item) => item.customer), ...accountingCustomers])];
 
   return <section className="commercial-finance-controls">
     <header><small>LIFELINE BANK + LIFELINE PAY</small><h2>Bank reconciliation, customer payments and recurring cash flow</h2><p>Import statements, reconcile to Lifeline Books, post unmatched transactions, create recurring billing and manage instalment plans without another accounting app.</p></header>
@@ -281,6 +325,10 @@ export function CommercialFinanceControls({ initialTab = "banking" }: { initialT
 
     {tab === "instalments" && <main><form onSubmit={addPlan} className="cfc-form"><h3>Create deposit or instalment plan</h3><input placeholder="Customer" value={plan.customer} onChange={(event) => setPlan({ ...plan, customer: event.target.value })}/><input placeholder="Invoice/reference" value={plan.reference} onChange={(event) => setPlan({ ...plan, reference: event.target.value })}/><input type="number" step="0.01" placeholder="Contract total" value={plan.total || ""} onChange={(event) => setPlan({ ...plan, total: Number(event.target.value) })}/><input type="number" step="0.01" placeholder="Deposit received" value={plan.deposit || ""} onChange={(event) => setPlan({ ...plan, deposit: Number(event.target.value) })}/><input type="number" min="1" placeholder="Instalment count" value={plan.instalments} onChange={(event) => setPlan({ ...plan, instalments: Number(event.target.value) })}/><input type="date" value={plan.dueDate} onChange={(event) => setPlan({ ...plan, dueDate: event.target.value })}/><button>Create payment plan</button></form><div className="cfc-list">{store.instalments.map((item) => <article key={item.id}><div><strong>{item.customer} · {item.reference}</strong><span>Total {money(item.total)} · paid {money(item.paid)} · owing {money(item.total-item.paid)}</span><small>{item.instalments} instalments · due {item.dueDate || "not set"} · {item.status}</small></div>{item.status !== "paid" && <button onClick={() => recordInstalment(item)}>Record instalment</button>}</article>)}</div></main>}
 
-    {tab === "statements" && <main><div className="cfc-list">{customers.map((customer) => { const plans = store.instalments.filter((item) => item.customer === customer); const owing = plans.reduce((sum, item) => sum + item.total - item.paid, 0); return <article key={customer}><div><strong>{customer}</strong><span>{plans.length} payment plan{plans.length === 1 ? "" : "s"} · owing {money(owing)}</span><small>{store.recurring.filter((item) => item.customer === customer).length} recurring rule{store.recurring.filter((item) => item.customer === customer).length === 1 ? "" : "s"}</small></div><button onClick={() => customerStatement(customer)}>Print/PDF statement</button></article> })}</div></main>}
+    {tab === "statements" && <main>
+      <div className="section-heading"><div><p className="eyebrow">COLLECTIONS</p><h3>Statements and overdue reminders</h3></div><button type="button" className="button ghost" onClick={refreshReminders}>Refresh overdue invoices</button></div>
+      <div className="cfc-list">{store.reminders.map((item) => <article key={item.id}><div><strong>{item.customer} · {item.invoiceNumber}</strong><span>{money(item.balance)} · due {item.due} · {item.status}</span>{item.lastActionAt && <small>Last action {new Date(item.lastActionAt).toLocaleString("en-AU")}</small>}</div><div><button type="button" onClick={() => copyReminder(item)}>Copy reminder</button><button type="button" onClick={() => setStore((current) => ({ ...current, reminders: current.reminders.map((reminder) => reminder.id === item.id ? { ...reminder, status: "resolved" } : reminder) }))}>Resolve</button></div></article>)}</div>
+      <h3>Customer statements</h3><div className="cfc-list">{customers.map((customer) => { const plans = store.instalments.filter((item) => item.customer === customer); const invoiceReminders = store.reminders.filter((item) => item.customer === customer && item.status !== "resolved"); const owing = plans.reduce((sum, item) => sum + item.total - item.paid, 0) + invoiceReminders.reduce((sum, item) => sum + item.balance, 0); return <article key={customer}><div><strong>{customer}</strong><span>{plans.length} payment plan{plans.length === 1 ? "" : "s"} · visible overdue/plan balance {money(owing)}</span><small>{store.recurring.filter((item) => item.customer === customer).length} recurring rule{store.recurring.filter((item) => item.customer === customer).length === 1 ? "" : "s"}</small></div><button onClick={() => customerStatement(customer)}>Print/PDF statement</button></article> })}</div>
+    </main>}
   </section>;
 }
