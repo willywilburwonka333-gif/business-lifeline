@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 
 const BRIDGE_KEY = "business-lifeline-run-operating-core-v2";
-const SOURCES = ["business-lifeline-operating-platform-v1", "business-lifeline-live-control-v1", "business-lifeline-native-finance-v1", "business-lifeline-advanced-accounting-v1", "business-lifeline-books-settings-v1", "business-lifeline-commercial-finance-controls-v1", "business-lifeline-people-v1", "business-lifeline-tax-v1", "business-lifeline-spend-v1", "business-lifeline-assets-v1", "business-lifeline-plan-v1", "business-lifeline-document-vault-v1", "business-lifeline-growth-plan-v1", "business-lifeline-exit-plan-v1", "business-lifeline-professional-validation-v1"] as const;
+const SOURCES = ["business-lifeline-operating-platform-v1", "business-lifeline-live-control-v1", "business-lifeline-native-finance-v1", "business-lifeline-advanced-accounting-v1", "business-lifeline-books-settings-v1", "business-lifeline-commercial-finance-controls-v1", "business-lifeline-people-v1", "business-lifeline-tax-v1", "business-lifeline-spend-v1", "business-lifeline-assets-v1", "business-lifeline-plan-v1", "business-lifeline-fx-v1", "business-lifeline-document-vault-v1", "business-lifeline-growth-plan-v1", "business-lifeline-exit-plan-v1", "business-lifeline-professional-validation-v1"] as const;
 
 type BridgeEnvelope = { __businessLifelineCommercialBridge?: true; legacy?: unknown; commercial?: Record<string, string | null> };
 
