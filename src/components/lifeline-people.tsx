@@ -53,7 +53,9 @@ const id = (prefix: string) => prefix + "-" + Date.now() + "-" + Math.random().t
 function readPeople(): PeopleStore {
   try {
     const raw = localStorage.getItem(LIFELINE_PEOPLE_KEY);
-    return raw ? { ...empty, ...(JSON.parse(raw) as Partial<PeopleStore>) } : empty;
+    if (!raw) return empty;
+    const parsed = JSON.parse(raw) as Partial<PeopleStore>;
+    return { employees: Array.isArray(parsed.employees) ? parsed.employees : [], payRuns: Array.isArray(parsed.payRuns) ? parsed.payRuns : [] };
   } catch { return empty; }
 }
 
@@ -92,7 +94,7 @@ export function LifelinePeople() {
   const [ready, setReady] = useState(false);
   const [employee, setEmployee] = useState({
     name: "", email: "", employmentType: "full-time" as Employee["employmentType"], hourlyRate: 0,
-    ordinaryHoursPerWeek: 38, superRatePercent: 12, withholdingRatePercent: 20,
+    ordinaryHoursPerWeek: 38, superRatePercent: 0, withholdingRatePercent: 0,
   });
   const [period, setPeriod] = useState({ start: "", end: "", payDate: today() });
   const [message, setMessage] = useState("");
@@ -122,7 +124,7 @@ export function LifelinePeople() {
       annualLeaveHours: 0, personalLeaveHours: 0, active: true,
     };
     setStore((current) => ({ ...current, employees: [next, ...current.employees] }));
-    setEmployee({ name: "", email: "", employmentType: "full-time", hourlyRate: 0, ordinaryHoursPerWeek: 38, superRatePercent: 12, withholdingRatePercent: 20 });
+    setEmployee({ name: "", email: "", employmentType: "full-time", hourlyRate: 0, ordinaryHoursPerWeek: 38, superRatePercent: 0, withholdingRatePercent: 0 });
   };
 
   const createPayRun = () => {
@@ -134,7 +136,7 @@ export function LifelinePeople() {
         : round(person.ordinaryHoursPerWeek * Math.max(1, Math.round((new Date(period.end).getTime() - new Date(period.start).getTime()) / (7 * 86_400_000)) + 1));
       const gross = round(hours * person.hourlyRate);
       const payg = round(gross * person.withholdingRatePercent / 100);
-      const superAmount = person.employmentType === "contractor" ? 0 : round(gross * person.superRatePercent / 100);
+      const superAmount = round(gross * person.superRatePercent / 100);
       return { employeeId: person.id, employeeName: person.name, hours, gross, payg, super: superAmount, net: round(gross - payg) };
     });
     const run: PayRun = { id: id("payrun"), ...period, lines, status: "draft", createdAt: new Date().toISOString() };
