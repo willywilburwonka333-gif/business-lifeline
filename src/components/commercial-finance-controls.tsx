@@ -313,10 +313,10 @@ export function CommercialFinanceControls({ initialTab = "banking" }: { initialT
     const plans = store.instalments.filter((item) => item.customer === customer);
     const recurringRules = store.recurring.filter((item) => item.customer === customer);
     const accounting = readAccounting();
-    const docs = (Array.isArray(accounting.docs) ? accounting.docs : []) as Array<Record<string, unknown>>;
+    const docs = Array.isArray(accounting.docs) ? accounting.docs : [];
     const invoices = docs.filter((doc) => doc.kind === "invoice" && String(doc.customer || "") === customer && doc.status !== "void");
     const invoiceRows = invoices.map((doc) => {
-      const items = Array.isArray(doc.items) ? doc.items as Array<Record<string, unknown>> : [];
+      const items = Array.isArray(doc.items) ? doc.items : [];
       const total = round(items.reduce((sum, item) => sum + Number(item.qty || 0) * Number(item.rate || 0), 0));
       const paid = round(Number(doc.payments || 0));
       return { reference: String(doc.number || doc.id || "Invoice"), date: String(doc.date || ""), due: String(doc.due || ""), total, paid, balance: round(Math.max(0, total - paid)), status: String(doc.status || "") };
@@ -329,7 +329,7 @@ export function CommercialFinanceControls({ initialTab = "banking" }: { initialT
     win.document.close();
   };
 
-  const accountingCustomers = (() => { const accounting = readAccounting(); const docs = Array.isArray(accounting.docs) ? accounting.docs as Array<Record<string, unknown>> : []; return docs.filter((doc) => doc.kind === "invoice").map((doc) => String(doc.customer || "")).filter(Boolean); })();
+  const accountingCustomers = (() => { const accounting = readAccounting(); const docs = Array.isArray(accounting.docs) ? accounting.docs : []; return docs.filter((doc) => doc.kind === "invoice").map((doc) => doc.customer).filter(Boolean); })();
   const customers = [...new Set([...store.instalments.map((item) => item.customer), ...store.recurring.map((item) => item.customer), ...accountingCustomers])];
 
   return <section className="commercial-finance-controls">
