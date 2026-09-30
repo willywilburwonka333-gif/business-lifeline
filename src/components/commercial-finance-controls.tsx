@@ -67,7 +67,18 @@ export function CommercialFinanceControls({ initialTab = "banking" }: { initialT
   useEffect(() => {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) setStore({ ...empty, ...JSON.parse(raw) });
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<Store>;
+        setStore({
+          ...empty,
+          ...parsed,
+          accounts: Array.isArray(parsed.accounts) && parsed.accounts.length ? parsed.accounts : empty.accounts,
+          transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
+          recurring: Array.isArray(parsed.recurring) ? parsed.recurring : [],
+          instalments: Array.isArray(parsed.instalments) ? parsed.instalments : [],
+          reminders: Array.isArray(parsed.reminders) ? parsed.reminders : [],
+        });
+      }
     } catch {}
     setReady(true);
   }, []);
