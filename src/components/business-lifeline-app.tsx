@@ -6,7 +6,7 @@ import { BusinessRecords } from "@/components/business-records";
 import { JudgeLanding } from "@/components/judge-landing";
 import { ProductTutorial, tutorialStorageKey, type TutorialStep } from "@/components/product-tutorial";
 import { SavedScenarioPlanner } from "@/components/saved-scenario-planner";
-import { demoBusiness } from "@/lib/demo";
+import { demoBusinesses } from "@/lib/demo";
 import { generateReport } from "@/lib/planner";
 import { MRI_IMPORT_KEY } from "@/lib/mri-smart-import";
 import { readSavedReport, REPORT_STORAGE_KEY, writeSavedReport, type SavedReport } from "@/lib/saved-report";
@@ -39,10 +39,7 @@ const tutorialSteps: Record<TutorialId, TutorialStep[]> = {
   ],
 };
 
-function buildDemoReport(): BusinessReport {
-  const base = generateReport(demoBusiness);
-  return { ...base, aiStatus: "fallback" };
-}
+function buildDemoReport(data: (typeof demoBusinesses)[number]): BusinessReport { const base = generateReport(data); return { ...base, aiStatus: "fallback" }; }
 
 export function BusinessLifelineApp() {
   const [saved, setSaved] = useState<AppState>(undefined);
@@ -121,10 +118,11 @@ export function BusinessLifelineApp() {
     return () => { window.fetch = originalFetch; };
   }, [showQuestions, reportMode, aiConsent]);
 
-  const openDemo = () => {
+  const openDemo = (demoIndex = 0) => {
     if (demoLoading) return;
     setDemoLoading(true);
-    const next: SavedReport = { data: demoBusiness, report: buildDemoReport() };
+    const demo = demoBusinesses[demoIndex] ?? demoBusinesses[0];
+    const next: SavedReport = { data: demo, report: buildDemoReport(demo) };
     writeSavedReport(next);
     window.localStorage.setItem(DEMO_GUIDE_KEY, "1");
     window.localStorage.setItem(MRI_MODE_KEY, "private");

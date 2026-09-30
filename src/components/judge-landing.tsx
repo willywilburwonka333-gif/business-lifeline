@@ -1,9 +1,9 @@
 "use client";
 
-import { demoBusiness } from "@/lib/demo";
+import { demoBusinesses } from "@/lib/demo";
 import { generateReport } from "@/lib/planner";
 
-const demoReport = generateReport(demoBusiness);
+const demoReports = demoBusinesses.map((business) => generateReport(business));
 
 const money = (value: number) =>
   new Intl.NumberFormat("en-AU", {
@@ -18,7 +18,7 @@ export function JudgeLanding({
   demoLoading,
 }: {
   onStart: () => void;
-  onDemo: () => void;
+  onDemo: (demoIndex?: number) => void;
   demoLoading: boolean;
 }) {
   return (
@@ -37,9 +37,7 @@ export function JudgeLanding({
           </p>
           <div className="judge-actions">
             <button type="button" className="button primary large" onClick={onStart}>Run My Business MRI <span>→</span></button>
-            <button type="button" className="button outline large judge-demo-button" onClick={onDemo} disabled={demoLoading}>
-              {demoLoading ? "Preparing Riverbend Café…" : "Open Riverbend Café Demo"}
-            </button>
+            <button type="button" className="button outline large judge-demo-button" onClick={() => onDemo(0)} disabled={demoLoading}>{demoLoading ? "Preparing demo…" : "Open Business Demos"}</button>
           </div>
           <div className="judge-proof-row" aria-label="Product principles">
             <span><b>Deterministic figures</b><small>Scores and cashflow are calculated by tested rules.</small></span>
@@ -48,23 +46,7 @@ export function JudgeLanding({
           </div>
         </div>
 
-        <aside className="judge-demo-card" aria-label="Riverbend Café example">
-          <header><span>LIVE DEMO BUSINESS</span><b>Riverbend Café</b></header>
-          <div className="judge-demo-score">
-            <span>Business health</span>
-            <strong>{demoReport.metrics.overallScore}<small>/100</small></strong>
-            <p>Immediate recovery action recommended</p>
-          </div>
-          <div className="judge-demo-metrics">
-            <article><span>Monthly result</span><strong>{money(demoReport.metrics.monthlyOperatingResult)}</strong></article>
-            <article><span>Cash available</span><strong>{money(demoBusiness.cashAvailable)}</strong></article>
-            <article><span>Overdue invoices</span><strong>{money(demoBusiness.overdueInvoices)}</strong></article>
-            <article><span>Overdue obligations</span><strong>{money(demoBusiness.overdueTax + demoBusiness.overdueSuppliers)}</strong></article>
-          </div>
-          <button type="button" onClick={onDemo} disabled={demoLoading}>
-            <span><small>ONE-CLICK WALKTHROUGH</small>See diagnosis, simulation and recovery system</span><b>→</b>
-          </button>
-        </aside>
+        <div className="judge-demo-grid" aria-label="Business Lifeline demo businesses">{demoBusinesses.map((business, index) => { const report = demoReports[index]; const label = index === 0 ? "SMALL · DISTRESSED" : index === 1 ? "MEDIUM · COMPLEX" : "LARGE · SUCCESSFUL"; return <aside className="judge-demo-card" key={business.businessName}><header><span>{label}</span><b>{business.businessName}</b></header><div className="judge-demo-score"><span>Business health</span><strong>{report.metrics.overallScore}<small>/100</small></strong><p>{index === 0 ? "Recovery and distress test" : index === 1 ? "Working-capital complexity test" : "Profitable growth test"}</p></div><div className="judge-demo-metrics"><article><span>Monthly result</span><strong>{money(report.metrics.monthlyOperatingResult)}</strong></article><article><span>Cash available</span><strong>{money(business.cashAvailable)}</strong></article><article><span>Employees</span><strong>{business.employees}</strong></article><article><span>Monthly revenue</span><strong>{money(business.monthlyRevenue)}</strong></article></div><button type="button" onClick={() => onDemo(index)} disabled={demoLoading}><span><small>ONE-CLICK TEST BUSINESS</small>Open full workspace</span><b>→</b></button></aside>; })}</div>
       </section>
 
       <section className="judge-story" aria-label="How Business Lifeline works">
@@ -93,10 +75,8 @@ export function JudgeLanding({
 
       <section className="judge-final-cta">
         <p>See the complete product in under a minute.</p>
-        <h2>Open the recovery workspace with a realistic struggling business.</h2>
-        <button type="button" className="button primary large" onClick={onDemo} disabled={demoLoading}>
-          {demoLoading ? "Preparing demo…" : "Launch Riverbend Café Demo"} <span>→</span>
-        </button>
+        <h2>Open the workspace as a distressed small business, a complex medium business or a successful large business.</h2>
+        <div className="judge-actions">{demoBusinesses.map((business, index) => <button key={business.businessName} type="button" className={index === 0 ? "button primary large" : "button outline large"} onClick={() => onDemo(index)} disabled={demoLoading}>{business.businessName} <span>→</span></button>)}</div>
       </section>
 
       <footer className="judge-footer">
