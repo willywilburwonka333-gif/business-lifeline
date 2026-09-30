@@ -8,9 +8,10 @@ const STATUS_KEY = "business-lifeline-ledger-sync-status-v1";
 
 type Line = { account: string; side: "debit" | "credit"; amount: number };
 type Journal = { id: string; date: string; memo: string; lines: Line[]; source: string };
+type AccountingDoc = { id: string; number: string; kind: "quote" | "invoice" | "credit"; customer: string; date: string; due: string; status: "draft" | "sent" | "accepted" | "part-paid" | "paid" | "void"; items: Array<{ description: string; qty: number; rate: number; gst: "gst" | "free" | "input" }>; payments: number; notes: string };
 type AccountingStore = {
   journals?: Journal[];
-  docs?: unknown[];
+  docs?: AccountingDoc[];
   bills?: unknown[];
   refunds?: unknown[];
   nextQuote?: number;
@@ -180,14 +181,14 @@ export function OperatingLedgerSync() {
         });
         const needsDocSync = (operating.invoices || []).some((invoice) => invoice.status && invoice.status !== "draft");
         if (allowed.length || needsDocSync) {
-          const docs = Array.isArray(accounting.docs) ? accounting.docs as Array<Record<string, unknown>> : [];
-          const syncedDocs = [...docs];
+          const docs = Array.isArray(accounting.docs) ? accounting.docs : [];
+          const syncedDocs: AccountingDoc[] = [...docs];
           for (const invoice of operating.invoices || []) {
             if (!invoice.status || invoice.status === "draft") continue;
             const docId = "ops-" + invoice.id;
             const existingIndex = syncedDocs.findIndex((doc) => doc.id === docId);
-            const mappedStatus = invoice.status === "paid" ? "paid" : invoice.status === "overdue" ? "sent" : invoice.status;
-            const mapped = {
+            const mappedStatus: AccountingDoc["status"] = invoice.status === "paid" ? "paid" : invoice.status === "overdue" ? "sent" : invoice.status === "sent" ? "sent" : "draft";
+            const mapped: AccountingDoc = {
               id: docId,
               number: invoice.id,
               kind: "invoice",

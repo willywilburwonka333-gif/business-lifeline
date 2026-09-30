@@ -14,7 +14,8 @@ type Reminder = { id: string; invoiceNumber: string; customer: string; due: stri
 type Store = { accounts: BankAccount[]; transactions: BankTransaction[]; recurring: Recurring[]; instalments: Instalment[]; reminders: Reminder[] };
 type JournalLine = { account: string; side: "debit" | "credit"; amount: number };
 type Journal = { id: string; date: string; memo: string; lines: JournalLine[]; source: string };
-type AccountingStore = { journals?: Journal[]; docs?: Array<Record<string, unknown>>; bills?: unknown[]; refunds?: unknown[]; nextQuote?: number; nextInvoice?: number; nextCredit?: number; lockDate?: string };
+type AccountingDoc = { id: string; number: string; kind: "quote" | "invoice" | "credit"; customer: string; date: string; due: string; status: "draft" | "sent" | "accepted" | "part-paid" | "paid" | "void"; items: Array<{ description: string; qty: number; rate: number; gst: "gst" | "free" | "input" }>; payments: number; notes: string };
+type AccountingStore = { journals?: Journal[]; docs?: AccountingDoc[]; bills?: unknown[]; refunds?: unknown[]; nextQuote?: number; nextInvoice?: number; nextCredit?: number; lockDate?: string };
 
 const empty: Store = { accounts: [{ id: "bank-main", name: "Main business account", openingBalance: 0, statementBalance: 0 }], transactions: [], recurring: [], instalments: [], reminders: [] };
 const id = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -227,7 +228,7 @@ export function CommercialFinanceControls({ initialTab = "banking" }: { initialT
     const accounting = readAccounting();
     const docs = Array.isArray(accounting.docs) ? accounting.docs : [];
     const invoiceNumber = "INV-" + String(accounting.nextInvoice || 1).padStart(5, "0");
-    const invoice = {
+    const invoice: AccountingDoc = {
       id: id("doc"),
       number: invoiceNumber,
       kind: "invoice",
@@ -277,11 +278,11 @@ export function CommercialFinanceControls({ initialTab = "banking" }: { initialT
 
   const refreshReminders = () => {
     const accounting = readAccounting();
-    const docs = Array.isArray(accounting.docs) ? accounting.docs as Array<Record<string, unknown>> : [];
+    const docs = Array.isArray(accounting.docs) ? accounting.docs : [];
     const now = today();
     const reminders: Reminder[] = docs.flatMap((doc) => {
       if (doc.kind !== "invoice" || doc.status === "paid" || doc.status === "void" || doc.status === "draft") return [];
-      const items = Array.isArray(doc.items) ? doc.items as Array<Record<string, unknown>> : [];
+      const items = Array.isArray(doc.items) ? doc.items : [];
       const total = items.reduce((sum, item) => sum + Number(item.qty || 0) * Number(item.rate || 0), 0);
       const balance = round(Math.max(0, total - Number(doc.payments || 0)));
       const due = String(doc.due || doc.date || "");
