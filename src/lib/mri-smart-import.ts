@@ -116,6 +116,33 @@ export function mergeImportDraft(existing: SmartImportDraft | null, incoming: Im
   for (const field of incoming) {
     const current = map.get(field.key);
     if (!current) { map.set(field.key, field); continue; }
+
+    if (current.source === field.source) {
+      map.set(field.key, field);
+      const prior = conflictMap.get(field.key);
+      if (prior) {
+        const externalCandidates = [prior.selected, ...prior.alternatives]
+          .filter((candidate) => candidate.source !== field.source)
+          .filter((candidate, index, all) => all.findIndex((other) => other.source === candidate.source && comparable(other.value) === comparable(candidate.value)) === index);
+        const candidates = [field, ...externalCandidates];
+        const selected = candidates.reduce((preferred, candidate) => choosePreferred(preferred, candidate), field);
+        const alternatives = candidates.filter((candidate) => candidate !== selected && materiallyDifferent(selected, candidate));
+        if (alternatives.length) {
+          conflictMap.set(field.key, {
+            key: field.key,
+            selected,
+            alternatives,
+            reason: "Sources disagree materially. Confirm the correct value before relying on the MRI.",
+          });
+          map.set(field.key, selected);
+        } else {
+          conflictMap.delete(field.key);
+          map.set(field.key, selected);
+        }
+      }
+      continue;
+    }
+
     if (!materiallyDifferent(current, field)) {
       map.set(field.key, choosePreferred(current, field));
       continue;

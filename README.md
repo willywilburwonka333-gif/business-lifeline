@@ -23,6 +23,14 @@ Business Lifeline creates an ordered path:
 5. **Cashflow Simulator** — tests price, volume, costs, drawings, repayments, invoice collection, and additional cash.
 6. **Recovery outcome** — distinguishes recurring operating repair from one-off cash relief and produces a reviewable action summary.
 7. **Business Operating System** — converts advice into owned tasks, contacts, targets, controls, and weekly execution.
+   - **Lifeline Sales** — CRM, quotes, pipeline and sales.
+   - **Lifeline Jobs** — quote → job → invoice, job costs and margin.
+   - **Lifeline Stock** — inventory, stocktake, reordering and COGS.
+   - **Lifeline Books** — native double-entry accounting and financial reports.
+   - **Lifeline Bank / Pay** — reconciliation, collections, recurring billing and instalments.
+   - **Lifeline People / Spend / Tax** — payroll preparation, purchasing, claims, mileage and tax workpapers.
+   - **Lifeline Assets / Plan / FX** — fixed assets, budgets and multi-currency accounting.
+   - **Lifeline Vault / Move** — records and migration from old systems.
 8. **Growth Engine** — sets revenue/margin/cash targets, detects constraints, models hiring/pricing/marketing economics, segments customers and tracks measurable growth experiments.
 9. **Exit & Succession** — scores transferability, prepares a living due-diligence data room, tracks owner/customer/key-person risk, supports sale/succession paths and produces clearly labelled indicative earnings-multiple planning scenarios.
 
@@ -145,11 +153,12 @@ This runs the full automated test suite, ESLint, and a production Next.js build.
 - [`docs/SUBMISSION.md`](docs/SUBMISSION.md) — ready-to-paste project submission
 - [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) — two-to-three-minute demo script and shot list
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — technical architecture and AI boundaries
+- [`docs/NATIVE_SUITE.md`](docs/NATIVE_SUITE.md) — native Business Lifeline software suite and external-rail boundaries
 - [`docs/USER_TESTING.md`](docs/USER_TESTING.md) — honest tester questionnaire and evidence template
 - [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) — final deployment and submission checklist
 
 ## Current product status
 
-Business Lifeline is a submission-ready innovation prototype and public-beta candidate. It is not yet a production financial-advice platform. The current codebase includes Firebase authentication, Firestore workspace sync, document-assisted MRI intake and a read-only QuickBooks connector with financial-report ingestion. Commercial launch still requires production provider configuration, live tenant-isolation verification, monitoring, broader user validation, independent privacy/legal/security review, professional diagnostic validation and production testing with real accounting/billing accounts.
+Business Lifeline is a submission-ready innovation prototype and public-beta candidate. It is not yet a production financial-advice platform. The current codebase includes Firebase authentication, Firestore workspace sync, document-assisted MRI intake and a native Business Lifeline accounting/operations suite. QuickBooks and Xero are optional migration bridges rather than runtime dependencies. Commercial launch still requires live tenant-isolation verification, monitoring, broader user validation, independent privacy/legal/security/accounting review and production testing of the native Books/Bank/Pay/People/Tax flows.
 
 Built for OpenAI Build Week.

@@ -5,6 +5,7 @@ import { CommercialCloudBridge } from "@/components/commercial-cloud-bridge";
 import { ConnectionStatus } from "@/components/connection-status";
 import { OperatingLedgerSync } from "@/components/operating-ledger-sync";
 import { StructuredCoreRecordSync } from "@/components/structured-core-record-sync";
+import { NativeBooksMriSync } from "@/components/native-books-mri-sync";
 import { TeamWorkspaceManager } from "@/components/team-workspace-manager";
 import "./globals.css";
 import "./tools.css";
@@ -37,6 +38,7 @@ import "./structured-record-sync.css";
 import "./beta-safety.css";
 import "./product-architecture.css";
 import "./lifecycle.css";
+import "./lifeline-suite.css";
 import "./business-records.css";
 import "./stage7-reliability.css";
 import "./judge-onboarding.css";
@@ -66,5 +68,5 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#071b2d" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body><a className="skip-link" href="#main-content">Skip to main content</a><ConnectionStatus /><CommercialCloudBridge /><OperatingLedgerSync /><TeamWorkspaceManager /><StructuredCoreRecordSync /><BetaSafetyCentre /><BusinessOsScrollAssist />{children}</body></html>;
+  return <html lang="en"><body><a className="skip-link" href="#main-content">Skip to main content</a><ConnectionStatus /><CommercialCloudBridge /><OperatingLedgerSync /><NativeBooksMriSync /><TeamWorkspaceManager /><StructuredCoreRecordSync /><BetaSafetyCentre /><BusinessOsScrollAssist />{children}</body></html>;
 }

@@ -50,42 +50,52 @@ At least one provider is required for AI-enhanced analysis and document reading:
 
 The deterministic MRI still works without an AI provider.
 
-## 5. Shared accounting token vault
+## 5. Native Business Lifeline suite
 
-Generate one long random secret and add:
+No QuickBooks, Xero, MYOB or Sage account is required for normal operation.
+
+Before launch, configure and test the native suite:
+- Lifeline Books
+- Lifeline Bank
+- Lifeline Pay
+- Lifeline People
+- Lifeline Spend
+- Lifeline Tax
+- Lifeline Assets
+- Lifeline Plan
+- Lifeline FX
+- Lifeline Sales / Jobs / Stock
+- Lifeline Vault
+- Lifeline Move
+
+The existing accounting token encryption variable and QuickBooks/Xero credentials are only required if you choose to offer those legacy migration connectors:
 
 - `ACCOUNTING_TOKEN_ENCRYPTION_KEY`
-
-Changing this key after customers connect accounting software will make previously stored OAuth tokens unreadable, so back it up securely.
-
-## 6. QuickBooks Online
-
-Create/configure the Intuit application and add:
-
 - `QUICKBOOKS_CLIENT_ID`
 - `QUICKBOOKS_CLIENT_SECRET`
-- `QUICKBOOKS_REDIRECT_URI=https://business-lifeline.vercel.app/api/integrations/quickbooks/callback`
-
-Register that exact callback URI with Intuit.
-
-Current code supports authenticated read-only accounting OAuth, company verification, token refresh, the previous complete-month Profit and Loss, current Balance Sheet, and MRI fact ingestion.
-
-## 7. Xero
-
-Create/configure the Xero OAuth application and add:
-
+- `QUICKBOOKS_REDIRECT_URI`
 - `XERO_CLIENT_ID`
 - `XERO_CLIENT_SECRET`
-- `XERO_REDIRECT_URI=https://business-lifeline.vercel.app/api/integrations/xero/callback`
+- `XERO_REDIRECT_URI`
 - `XERO_SCOPES`
 
-Register the exact callback URI with Xero.
+They are optional for the target product architecture.
 
-Use the scopes approved for the Xero app that permit offline access, organisation/settings access and the financial reports used by Business Lifeline. Xero's scope model can change, so the repository deliberately allows the approved scope string to be supplied through `XERO_SCOPES` rather than permanently baking provider policy into the application.
+## 6. External rails only when you enable them
 
-Current code supports OAuth, rotating refresh tokens, tenant selection, organisation retrieval, previous complete-month Profit and Loss, current Balance Sheet and MRI fact ingestion.
+Business Lifeline owns the workflow and accounting. Some final network/regulatory actions still require an external rail:
+- live bank feeds / Open Banking / CDR
+- card acquiring or direct debit
+- email/SMS delivery
+- STP submission
+- BAS/ATO lodgement
+- SuperStream / super clearing
+- direct bank bill payment
+- automatic market FX rates
 
-## 8. Stripe
+Do not add these until you choose the provider/approval path. CSV/manual workflows keep the native suite usable without them.
+
+## 7. Stripe
 
 Create Stripe products/prices for the plans you decide to launch, then add:
 
@@ -107,7 +117,7 @@ Subscribe it to at least:
 
 The repository contains checkout, customer portal, entitlement status and webhook lifecycle code. The exact price amounts remain an owner decision.
 
-## 9. Production checks you must personally verify
+## 8. Production checks you must personally verify
 
 Before a paid public launch:
 
@@ -115,14 +125,15 @@ Before a paid public launch:
 2. Create two businesses and confirm switching does not leak records between them.
 3. Invite a manager, staff member and accountant; verify their permissions.
 4. Upload a document, restore it on another device, then delete it.
-5. Connect QuickBooks to a test company and compare imported figures against the source reports.
-6. Connect Xero to a test organisation and compare imported figures against the source reports.
-7. Complete Stripe test-mode checkout, cancellation, billing-portal and failed-payment flows.
-8. Run one healthy, one distressed, one overdue-tax and one payroll-risk MRI.
-9. Test the full app on iPhone-width and desktop layouts.
-10. Confirm the production Vercel deployment and all GitHub checks are green.
+5. Run a complete native business cycle: customer → quote → job → invoice → payment → bank reconciliation → Books.
+6. Test Lifeline Spend purchase orders/claims, Lifeline People pay run, Lifeline Tax workpaper, Lifeline Assets depreciation, Lifeline Plan variance and Lifeline FX settlement.
+7. Compare Lifeline Books P&L, Balance Sheet, Trial Balance, AR/AP aging and GST against an accountant-reviewed sample file.
+8. Complete Stripe test-mode checkout, cancellation, billing-portal and failed-payment flows for Business Lifeline subscription billing.
+9. Run one healthy, one distressed, one overdue-tax and one payroll-risk MRI.
+10. Test the full app on iPhone-width and desktop layouts.
+11. Confirm the production Vercel deployment and all GitHub checks are green.
 
-## 10. External assurance before relying on it commercially
+## 9. External assurance before relying on it commercially
 
 Code alone cannot complete these:
 
