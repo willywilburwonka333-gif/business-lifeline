@@ -19,10 +19,11 @@ type AccountingStore = {
   lockDate?: string;
 };
 
-type Sale = { id: string; total: number; payment?: string; channel?: string; createdAt?: string; soldAt?: string };
+type Sale = { id: string; total: number; payment?: string; channel?: string; createdAt?: string; soldAt?: string; productId?: string; productName?: string; quantity?: number };
+type Product = { id: string; name?: string; quantity?: number; costPrice?: number; sellPrice?: number };
 type Expense = { id: string; supplier?: string; category?: string; amount: number; date?: string };
-type Invoice = { id: string; customerId?: string; amount: number; status?: string };
-type OperatingStore = { sales?: Sale[]; expenses?: Expense[]; invoices?: Invoice[] };
+type Invoice = { id: string; customerId?: string; customerName?: string; amount: number; status?: string; issuedAt?: string; dueAt?: string; paidAt?: string };
+type OperatingStore = { sales?: Sale[]; expenses?: Expense[]; invoices?: Invoice[]; products?: Product[] };
 
 type SyncStatus = { lastRun: string; added: number; totalAutomatic: number; warnings: string[] };
 
@@ -31,7 +32,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 const journalId = (source: string) => `auto-${source.replace(/[^a-zA-Z0-9-]/g, "-")}`;
 const validDate = (value?: string) => value?.slice(0, 10) || today();
 
-function saleJournal(sale: Sale): Journal | null {
+function saleJournal(sale: Sale, product?: Product): Journal | null {
   const total = moneyRound(sale.total);
   if (total <= 0) return null;
   const gst = moneyRound(total / 11);
@@ -47,6 +48,10 @@ function saleJournal(sale: Sale): Journal | null {
       { account: paymentAccount, side: "debit", amount: total },
       { account: "Sales Revenue", side: "credit", amount: net },
       { account: "GST Payable", side: "credit", amount: gst },
+      ...((product?.costPrice ?? 0) > 0 && (sale.quantity ?? 0) > 0 ? [
+        { account: "Cost of Goods Sold", side: "debit" as const, amount: moneyRound(Number(product?.costPrice || 0) * Number(sale.quantity || 0)) },
+        { account: "Inventory", side: "credit" as const, amount: moneyRound(Number(product?.costPrice || 0) * Number(sale.quantity || 0)) },
+      ] : []),
     ],
   };
 }
@@ -78,7 +83,7 @@ function invoiceJournals(invoice: Invoice): Journal[] {
   const issuedSource = `OPS:INVOICE:${invoice.id}:ISSUED`;
   const journals: Journal[] = [{
     id: journalId(issuedSource),
-    date: today(),
+    date: validDate(invoice.issuedAt),
     memo: `Invoice ${invoice.id} issued`,
     source: issuedSource,
     lines: [
@@ -91,7 +96,7 @@ function invoiceJournals(invoice: Invoice): Journal[] {
     const paidSource = `OPS:INVOICE:${invoice.id}:PAID`;
     journals.push({
       id: journalId(paidSource),
-      date: today(),
+      date: validDate(invoice.paidAt || invoice.issuedAt),
       memo: `Invoice ${invoice.id} paid`,
       source: paidSource,
       lines: [
@@ -120,8 +125,9 @@ export function OperatingLedgerSync() {
         const journals = Array.isArray(accounting.journals) ? accounting.journals : [];
         const existingSources = new Set(journals.map((journal) => journal.source));
         const candidates: Journal[] = [];
+        const productById = new Map((operating.products || []).map((product) => [product.id, product]));
         (operating.sales || []).forEach((sale) => {
-          const journal = saleJournal(sale);
+          const journal = saleJournal(sale, sale.productId ? productById.get(sale.productId) : undefined);
           if (journal) candidates.push(journal);
         });
         (operating.expenses || []).forEach((expense) => {
@@ -144,10 +150,33 @@ export function OperatingLedgerSync() {
           }
           return true;
         });
-        if (allowed.length) {
+        const needsDocSync = (operating.invoices || []).some((invoice) => invoice.status && invoice.status !== "draft");
+        if (allowed.length || needsDocSync) {
+          const docs = Array.isArray(accounting.docs) ? accounting.docs as Array<Record<string, unknown>> : [];
+          const syncedDocs = [...docs];
+          for (const invoice of operating.invoices || []) {
+            if (!invoice.status || invoice.status === "draft") continue;
+            const docId = "ops-" + invoice.id;
+            const existingIndex = syncedDocs.findIndex((doc) => doc.id === docId);
+            const mappedStatus = invoice.status === "paid" ? "paid" : invoice.status === "overdue" ? "sent" : invoice.status;
+            const mapped = {
+              id: docId,
+              number: invoice.id,
+              kind: "invoice",
+              customer: invoice.customerName || invoice.customerId || "Customer",
+              date: validDate(invoice.issuedAt),
+              due: validDate(invoice.dueAt),
+              status: mappedStatus,
+              items: [{ description: "Lifeline Jobs invoice", qty: 1, rate: invoice.amount, gst: "gst" }],
+              payments: invoice.status === "paid" ? invoice.amount : 0,
+              notes: "Created from Lifeline Jobs",
+            };
+            if (existingIndex >= 0) syncedDocs[existingIndex] = mapped;
+            else syncedDocs.unshift(mapped);
+          }
           const next: AccountingStore = {
             journals: [...allowed, ...journals],
-            docs: accounting.docs || [],
+            docs: syncedDocs,
             bills: accounting.bills || [],
             refunds: accounting.refunds || [],
             nextQuote: accounting.nextQuote || 1,
