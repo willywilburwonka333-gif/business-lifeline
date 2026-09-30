@@ -65,7 +65,14 @@ const id = (prefix: string) => prefix + "-" + Date.now() + "-" + Math.random().t
 function readSpend(): SpendStore {
   try {
     const raw = localStorage.getItem(LIFELINE_SPEND_KEY);
-    return raw ? { ...empty, ...(JSON.parse(raw) as Partial<SpendStore>) } : empty;
+    if (!raw) return empty;
+    const parsed = JSON.parse(raw) as Partial<SpendStore>;
+    return {
+      purchaseOrders: Array.isArray(parsed.purchaseOrders) ? parsed.purchaseOrders : [],
+      claims: Array.isArray(parsed.claims) ? parsed.claims : [],
+      mileage: Array.isArray(parsed.mileage) ? parsed.mileage : [],
+      nextPo: Number(parsed.nextPo || 1),
+    };
   } catch { return empty; }
 }
 
