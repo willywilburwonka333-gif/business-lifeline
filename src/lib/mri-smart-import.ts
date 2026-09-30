@@ -69,7 +69,7 @@ const aliases: Array<{ key: keyof BusinessData; labels: string[] }> = [
   { key: "cashAvailable", labels: ["cash available", "cash at bank", "bank balance", "cash balance", "cash and cash equivalents"] },
   { key: "accountsReceivable", labels: ["accounts receivable", "trade debtors", "debtors", "amounts receivable"] },
   { key: "overdueInvoices", labels: ["overdue invoices", "overdue debtors", "past due receivables"] },
-  { key: "totalDebt", labels: ["total debt", "total liabilities", "borrowings", "loans payable"] },
+  { key: "totalDebt", labels: ["total debt", "total borrowings", "borrowings", "bank loans", "business loans", "loans payable", "finance lease liabilities"] },
   { key: "overdueTax", labels: ["overdue tax", "tax payable", "ato debt", "gst payable", "bas payable"] },
   { key: "overdueSuppliers", labels: ["overdue suppliers", "overdue creditors", "past due payables", "trade creditors"] },
   { key: "employees", labels: ["employees", "employee count", "headcount", "staff count"] },

@@ -38,6 +38,7 @@ export function xeroReportFacts(report: XeroReport) {
     cash: find("total bank", "cash and cash equivalents", "bank accounts", "cash"),
     accountsReceivable: find("accounts receivable", "trade debtors"),
     accountsPayable: find("accounts payable", "trade creditors"),
+    borrowings: find("total borrowings", "borrowings", "bank loans", "business loans", "loans payable", "finance lease liabilities", "lease liabilities"),
     totalLiabilities: find("total liabilities"),
   };
 }
@@ -51,6 +52,7 @@ export function combineXeroFacts(profitAndLoss: XeroReport, balanceSheet: XeroRe
     cash: balance.cash,
     accountsReceivable: balance.accountsReceivable,
     accountsPayable: balance.accountsPayable,
-    totalDebt: balance.totalLiabilities,
+    totalDebt: balance.borrowings,
+    totalLiabilities: balance.totalLiabilities,
   };
 }

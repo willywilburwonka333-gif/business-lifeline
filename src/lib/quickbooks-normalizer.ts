@@ -36,6 +36,7 @@ export function reportFacts(report: QuickBooksReport) {
     cash: find("total bank accounts", "cash and cash equivalents", "cash"),
     accountsReceivable: find("accounts receivable", "a r"),
     accountsPayable: find("accounts payable", "a p"),
+    borrowings: find("total borrowings", "borrowings", "bank loans", "business loans", "loans payable", "finance lease liabilities", "lease liabilities"),
     totalLiabilities: find("total liabilities"),
   };
 }
@@ -49,6 +50,7 @@ export function combineQuickBooksFacts(profitAndLoss: QuickBooksReport, balanceS
     cash: balance.cash,
     accountsReceivable: balance.accountsReceivable,
     accountsPayable: balance.accountsPayable,
-    totalDebt: balance.totalLiabilities,
+    totalDebt: balance.borrowings,
+    totalLiabilities: balance.totalLiabilities,
   };
 }
