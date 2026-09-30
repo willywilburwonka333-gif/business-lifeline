@@ -17,6 +17,8 @@ type Employee = {
   withholdingRatePercent: number;
   annualLeaveHours: number;
   personalLeaveHours: number;
+  annualLeaveAccrualPerHour: number;
+  personalLeaveAccrualPerHour: number;
   active: boolean;
 };
 
@@ -28,6 +30,9 @@ type PayLine = {
   payg: number;
   super: number;
   net: number;
+  annualLeaveAccrued: number;
+  personalLeaveAccrued: number;
+  hourlyRate: number;
 };
 
 type PayRun = {
@@ -94,7 +99,7 @@ export function LifelinePeople() {
   const [ready, setReady] = useState(false);
   const [employee, setEmployee] = useState({
     name: "", email: "", employmentType: "full-time" as Employee["employmentType"], hourlyRate: 0,
-    ordinaryHoursPerWeek: 38, superRatePercent: 0, withholdingRatePercent: 0,
+    ordinaryHoursPerWeek: 38, superRatePercent: 0, withholdingRatePercent: 0, annualLeaveAccrualPerHour: 0, personalLeaveAccrualPerHour: 0,
   });
   const [period, setPeriod] = useState({ start: "", end: "", payDate: today() });
   const [message, setMessage] = useState("");
@@ -121,10 +126,10 @@ export function LifelinePeople() {
     if (!employee.name.trim()) return;
     const next: Employee = {
       id: id("employee"), ...employee, name: employee.name.trim(),
-      annualLeaveHours: 0, personalLeaveHours: 0, active: true,
+      annualLeaveHours: 0, personalLeaveHours: 0, annualLeaveAccrualPerHour: employee.annualLeaveAccrualPerHour, personalLeaveAccrualPerHour: employee.personalLeaveAccrualPerHour, active: true,
     };
     setStore((current) => ({ ...current, employees: [next, ...current.employees] }));
-    setEmployee({ name: "", email: "", employmentType: "full-time", hourlyRate: 0, ordinaryHoursPerWeek: 38, superRatePercent: 0, withholdingRatePercent: 0 });
+    setEmployee({ name: "", email: "", employmentType: "full-time", hourlyRate: 0, ordinaryHoursPerWeek: 38, superRatePercent: 0, withholdingRatePercent: 0, annualLeaveAccrualPerHour: 0, personalLeaveAccrualPerHour: 0 });
   };
 
   const createPayRun = () => {
@@ -137,7 +142,7 @@ export function LifelinePeople() {
       const gross = round(hours * person.hourlyRate);
       const payg = round(gross * person.withholdingRatePercent / 100);
       const superAmount = round(gross * person.superRatePercent / 100);
-      return { employeeId: person.id, employeeName: person.name, hours, gross, payg, super: superAmount, net: round(gross - payg) };
+      return { employeeId: person.id, employeeName: person.name, hours, gross, payg, super: superAmount, net: round(gross - payg), annualLeaveAccrued: round(hours * Number(person.annualLeaveAccrualPerHour || 0)), personalLeaveAccrued: round(hours * Number(person.personalLeaveAccrualPerHour || 0)), hourlyRate: person.hourlyRate };
     });
     const run: PayRun = { id: id("payrun"), ...period, lines, status: "draft", createdAt: new Date().toISOString() };
     setStore((current) => ({ ...current, payRuns: [run, ...current.payRuns] }));
@@ -160,7 +165,14 @@ export function LifelinePeople() {
       ],
     };
     if (!postJournal(journal)) { setMessage("Pay run could not be posted. Check the period lock or existing journal."); return; }
-    setStore((current) => ({ ...current, payRuns: current.payRuns.map((item) => item.id === run.id ? { ...item, status: "finalised" } : item) }));
+    setStore((current) => ({
+      ...current,
+      payRuns: current.payRuns.map((item) => item.id === run.id ? { ...item, status: "finalised" } : item),
+      employees: current.employees.map((person) => {
+        const line = run.lines.find((payLine) => payLine.employeeId === person.id);
+        return line ? { ...person, annualLeaveHours: round(Number(person.annualLeaveHours || 0) + line.annualLeaveAccrued), personalLeaveHours: round(Number(person.personalLeaveHours || 0) + line.personalLeaveAccrued) } : person;
+      }),
+    }));
     setMessage("Pay run finalised into Lifeline Books.");
   };
 
@@ -173,6 +185,14 @@ export function LifelinePeople() {
     if (!postJournal(journal)) { setMessage("Payroll payment could not be posted."); return; }
     setStore((current) => ({ ...current, payRuns: current.payRuns.map((item) => item.id === run.id ? { ...item, status: "paid" } : item) }));
     setMessage("Payroll payment posted to Lifeline Books.");
+  };
+
+  const printPayslip = (run: PayRun, line: PayLine) => {
+    const person = store.employees.find((item) => item.id === line.employeeId);
+    const win = window.open("", "_blank", "width=760,height=900");
+    if (!win) return;
+    win.document.write(`<html><head><title>Payslip - ${line.employeeName}</title><style>body{font-family:Arial;padding:44px;color:#173244}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.box{border:1px solid #ccd8de;padding:14px;border-radius:10px}h1{margin-bottom:4px}.total{font-size:22px;font-weight:700}</style></head><body><h1>Lifeline People · Payslip</h1><p>${line.employeeName}<br>Period ${run.periodStart} to ${run.periodEnd}<br>Pay date ${run.payDate}</p><div class="grid"><div class="box"><strong>Hours</strong><br>${line.hours}</div><div class="box"><strong>Hourly rate</strong><br>${money(line.hourlyRate)}</div><div class="box"><strong>Gross</strong><br>${money(line.gross)}</div><div class="box"><strong>PAYG withheld</strong><br>${money(line.payg)}</div><div class="box"><strong>Super</strong><br>${money(line.super)}</div><div class="box"><strong>Net pay</strong><br><span class="total">${money(line.net)}</span></div><div class="box"><strong>Annual leave balance</strong><br>${person?.annualLeaveHours ?? 0} hrs</div><div class="box"><strong>Personal leave balance</strong><br>${person?.personalLeaveHours ?? 0} hrs</div></div><p>Prepared by Business Lifeline. Confirm payroll, award, tax and super settings before relying on this document for statutory payroll.</p><script>window.print()</script></body></html>`);
+    win.document.close();
   };
 
   const totals = latestRun ? {
@@ -201,7 +221,7 @@ export function LifelinePeople() {
         <label className="field"><span>Hourly rate</span><input type="number" min="0" step="0.01" value={employee.hourlyRate || ""} onChange={(e) => setEmployee({ ...employee, hourlyRate: Number(e.target.value) || 0 })} /></label>
         <label className="field"><span>Ordinary hours / week</span><input type="number" min="0" step="0.1" value={employee.ordinaryHoursPerWeek} onChange={(e) => setEmployee({ ...employee, ordinaryHoursPerWeek: Number(e.target.value) || 0 })} /></label>
         <label className="field"><span>Super rate %</span><input type="number" min="0" step="0.1" value={employee.superRatePercent} onChange={(e) => setEmployee({ ...employee, superRatePercent: Number(e.target.value) || 0 })} /></label>
-        <label className="field"><span>PAYG withholding estimate %</span><input type="number" min="0" max="100" step="0.1" value={employee.withholdingRatePercent} onChange={(e) => setEmployee({ ...employee, withholdingRatePercent: Number(e.target.value) || 0 })} /></label>
+        <label className="field"><span>PAYG withholding estimate %</span><input type="number" min="0" max="100" step="0.1" value={employee.withholdingRatePercent} onChange={(e) => setEmployee({ ...employee, withholdingRatePercent: Number(e.target.value) || 0 })} /></label><label className="field"><span>Annual leave accrued per ordinary hour</span><input type="number" min="0" step="0.0001" value={employee.annualLeaveAccrualPerHour} onChange={(e) => setEmployee({ ...employee, annualLeaveAccrualPerHour: Number(e.target.value) || 0 })} /></label><label className="field"><span>Personal leave accrued per ordinary hour</span><input type="number" min="0" step="0.0001" value={employee.personalLeaveAccrualPerHour} onChange={(e) => setEmployee({ ...employee, personalLeaveAccrualPerHour: Number(e.target.value) || 0 })} /></label>
         <button className="button primary">Add employee</button><small>Confirm award, PAYG withholding, super eligibility/rate and entitlements before using a pay run for payroll.</small>
       </form>
 
@@ -216,7 +236,7 @@ export function LifelinePeople() {
     </section>
 
     <section className="panel"><div className="section-heading"><span>PAY HISTORY</span><h3>Pay runs and accounting status</h3></div><div className="item-list">
-      {store.payRuns.map((run) => <article key={run.id}><div><strong>{run.periodStart} → {run.periodEnd}</strong><span>Pay {run.payDate} · {run.lines.length} people · {run.status}</span><small>Gross {money(run.lines.reduce((sum, line) => sum + line.gross, 0))} · PAYG {money(run.lines.reduce((sum, line) => sum + line.payg, 0))} · Super {money(run.lines.reduce((sum, line) => sum + line.super, 0))} · Net {money(run.lines.reduce((sum, line) => sum + line.net, 0))}</small></div><div>{run.status === "draft" && <button type="button" onClick={() => finalise(run)}>Finalise to Books</button>}{run.status === "finalised" && <button type="button" onClick={() => markPaid(run)}>Mark paid</button>}</div></article>)}
+      {store.payRuns.map((run) => <article key={run.id}><div><strong>{run.periodStart} → {run.periodEnd}</strong><span>Pay {run.payDate} · {run.lines.length} people · {run.status}</span><small>Gross {money(run.lines.reduce((sum, line) => sum + line.gross, 0))} · PAYG {money(run.lines.reduce((sum, line) => sum + line.payg, 0))} · Super {money(run.lines.reduce((sum, line) => sum + line.super, 0))} · Net {money(run.lines.reduce((sum, line) => sum + line.net, 0))}</small>{run.status !== "draft" && <div>{run.lines.map((line) => <button key={line.employeeId} type="button" className="button ghost" onClick={() => printPayslip(run, line)}>Payslip · {line.employeeName}</button>)}</div>}</div><div>{run.status === "draft" && <button type="button" onClick={() => finalise(run)}>Finalise to Books</button>}{run.status === "finalised" && <button type="button" onClick={() => markPaid(run)}>Mark paid</button>}</div></article>)}
     </div></section>
 
     <aside className="urgent"><b>Payroll boundary</b><p>Lifeline People prepares payroll and accounting liabilities. Direct STP submission, award interpretation and statutory tax calculations require validated rules/approved lodgement rails before production use.</p></aside>
