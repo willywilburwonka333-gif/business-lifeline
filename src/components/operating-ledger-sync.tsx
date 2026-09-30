@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-const OPS_KEY = "business-lifeline-operating-platform-v1";
+const OPS_KEY = "business-lifeline-connected-operations-v2";
 const ACCOUNTING_KEY = "business-lifeline-advanced-accounting-v1";
 const STATUS_KEY = "business-lifeline-ledger-sync-status-v1";
 
@@ -19,7 +19,7 @@ type AccountingStore = {
   lockDate?: string;
 };
 
-type Sale = { id: string; total: number; payment?: string; channel?: string; createdAt?: string };
+type Sale = { id: string; total: number; payment?: string; channel?: string; createdAt?: string; soldAt?: string };
 type Expense = { id: string; supplier?: string; category?: string; amount: number; date?: string };
 type Invoice = { id: string; customerId?: string; amount: number; status?: string };
 type OperatingStore = { sales?: Sale[]; expenses?: Expense[]; invoices?: Invoice[] };
@@ -40,7 +40,7 @@ function saleJournal(sale: Sale): Journal | null {
   const source = `OPS:SALE:${sale.id}`;
   return {
     id: journalId(source),
-    date: validDate(sale.createdAt),
+    date: validDate(sale.soldAt || sale.createdAt),
     memo: `${sale.channel === "market" ? "Market" : "Counter"} sale ${sale.id}`,
     source,
     lines: [
