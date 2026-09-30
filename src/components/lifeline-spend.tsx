@@ -340,7 +340,7 @@ export function LifelineSpend() {
       </form>
 
       <section className="panel"><p className="eyebrow">PURCHASE ORDERS</p><h3>Draft → approved → ordered → received → billed</h3><div className="item-list">
-        {store.purchaseOrders.map((item) => <article key={item.id}><div><strong>{item.number} · {item.supplier}</strong><span>{item.description}</span><small>{money(item.amount)} · {item.status} · {item.category}</small></div><div>{!["billed","cancelled"].includes(item.status) && <button type="button" onClick={() => advancePo(item)}>{item.status === "received" ? "Create supplier bill" : "Advance"}</button>}<button type="button" onClick={() => setStore((current) => ({ ...current, purchaseOrders: current.purchaseOrders.map((poItem) => poItem.id === item.id ? { ...poItem, status: "cancelled" } : poItem) }))}>Cancel</button></div></article>)}
+        {store.purchaseOrders.map((item) => <article key={item.id}><div><strong>{item.number} · {item.supplier}</strong><span>{item.description}</span><small>{money(item.amount)} · {item.status} · {item.category}</small></div><div>{!["billed","cancelled"].includes(item.status) && <button type="button" onClick={() => advancePo(item)}>{item.status === "received" ? "Create supplier bill" : "Advance"}</button>}<button type="button" onClick={() => setStore((current) => ({ ...current, purchaseOrders: current.purchaseOrders.map((poItem) => poItem.id === item.id ? { ...poItem, status: "cancelled" as const } : poItem) }))}>Cancel</button></div></article>)}
       </div></section>
     </div>
 
