@@ -144,7 +144,7 @@ export function LifelinePeople() {
       const superAmount = round(gross * person.superRatePercent / 100);
       return { employeeId: person.id, employeeName: person.name, hours, gross, payg, super: superAmount, net: round(gross - payg), annualLeaveAccrued: round(hours * Number(person.annualLeaveAccrualPerHour || 0)), personalLeaveAccrued: round(hours * Number(person.personalLeaveAccrualPerHour || 0)), hourlyRate: person.hourlyRate };
     });
-    const run: PayRun = { id: id("payrun"), ...period, lines, status: "draft", createdAt: new Date().toISOString() };
+    const run: PayRun = { id: id("payrun"), periodStart: period.start, periodEnd: period.end, payDate: period.payDate, lines, status: "draft", createdAt: new Date().toISOString() };
     setStore((current) => ({ ...current, payRuns: [run, ...current.payRuns] }));
     setMessage("Draft pay run created. Review hours and withholding before finalising.");
   };
