@@ -54,10 +54,14 @@ function postJournal(journal: LedgerJournal) {
   return true;
 }
 
+function bookCost(asset: Asset) {
+  return round(asset.gstIncluded ? asset.cost - asset.cost / 11 : asset.cost);
+}
 function depreciationForMonth(asset: Asset) {
-  const carrying = Math.max(asset.residualValue, asset.cost - asset.accumulatedDepreciation);
+  const base = bookCost(asset);
+  const carrying = Math.max(asset.residualValue, base - asset.accumulatedDepreciation);
   if (asset.method === "straight-line") {
-    return round(Math.max(0, asset.cost - asset.residualValue) / Math.max(1, asset.usefulLifeYears * 12));
+    return round(Math.max(0, base - asset.residualValue) / Math.max(1, asset.usefulLifeYears * 12));
   }
   return round(Math.max(0, carrying - asset.residualValue) * (asset.diminishingRatePercent / 100) / 12);
 }
@@ -77,7 +81,7 @@ export function LifelineAssets() {
 
   const activeAssets = store.assets.filter((item) => item.status === "active");
   const totals = useMemo(() => {
-    const cost = activeAssets.reduce((sum, item) => sum + item.cost, 0);
+    const cost = activeAssets.reduce((sum, item) => sum + bookCost(item), 0);
     const depreciation = activeAssets.reduce((sum, item) => sum + item.accumulatedDepreciation, 0);
     return { cost, depreciation, carrying: round(cost - depreciation) };
   }, [store.assets]);
@@ -110,7 +114,7 @@ export function LifelineAssets() {
   };
 
   const postDepreciation = (item: Asset) => {
-    const amount = Math.min(depreciationForMonth(item), Math.max(0, item.cost - item.residualValue - item.accumulatedDepreciation));
+    const amount = Math.min(depreciationForMonth(item), Math.max(0, bookCost(item) - item.residualValue - item.accumulatedDepreciation));
     if (amount <= 0) { setMessage("No further depreciation remains under the current settings."); return; }
     const journal: LedgerJournal = {
       id: id("journal"), date: today(), memo: "Monthly depreciation · " + item.name, source: "ASSET:DEPR:" + item.id + ":" + (item.accumulatedDepreciation + amount),
@@ -125,7 +129,7 @@ export function LifelineAssets() {
     const input = prompt("Sale/disposal proceeds", "0");
     if (input === null) return;
     const proceeds = round(Number(input) || 0);
-    const baseCost = item.gstIncluded ? round(item.cost - item.cost / 11) : item.cost;
+    const baseCost = bookCost(item);
     const accumulated = round(item.accumulatedDepreciation);
     const carrying = round(Math.max(0, baseCost - accumulated));
     const gainLoss = round(proceeds - carrying);
@@ -168,8 +172,8 @@ export function LifelineAssets() {
       <section className="panel"><p className="eyebrow">FIXED ASSETS</p><h3>Accounting register</h3><div className="item-list">
         {store.assets.map((item) => {
           const monthly = depreciationForMonth(item);
-          const carrying = Math.max(0, item.cost - item.accumulatedDepreciation);
-          return <article key={item.id}><div><strong>{item.name}</strong><span>{item.status} · purchased {item.purchaseDate} · {item.method}</span><small>Cost {money(item.cost)} · accumulated depreciation {money(item.accumulatedDepreciation)} · carrying {money(carrying)} · next month {money(monthly)}</small></div><div>{item.status === "active" && !item.acquisitionPosted && <><button type="button" onClick={() => postAcquisition(item, "Bank")}>Post paid acquisition</button><button type="button" onClick={() => postAcquisition(item, "Accounts Payable")}>Post supplier-financed acquisition</button></>}{item.status === "active" && item.acquisitionPosted && <button type="button" onClick={() => postDepreciation(item)}>Post month depreciation</button>}{item.status === "active" && item.acquisitionPosted && <button type="button" onClick={() => dispose(item)}>Dispose asset</button>}</div></article>;
+          const carrying = Math.max(0, bookCost(item) - item.accumulatedDepreciation);
+          return <article key={item.id}><div><strong>{item.name}</strong><span>{item.status} · purchased {item.purchaseDate} · {item.method}</span><small>Book cost {money(bookCost(item))} · accumulated depreciation {money(item.accumulatedDepreciation)} · carrying {money(carrying)} · next month {money(monthly)}</small></div><div>{item.status === "active" && !item.acquisitionPosted && <><button type="button" onClick={() => postAcquisition(item, "Bank")}>Post paid acquisition</button><button type="button" onClick={() => postAcquisition(item, "Accounts Payable")}>Post supplier-financed acquisition</button></>}{item.status === "active" && item.acquisitionPosted && <button type="button" onClick={() => postDepreciation(item)}>Post month depreciation</button>}{item.status === "active" && item.acquisitionPosted && <button type="button" onClick={() => dispose(item)}>Dispose asset</button>}</div></article>;
         })}
       </div></section>
     </div>
