@@ -5,11 +5,13 @@ import { CommercialFinanceControls } from "@/components/commercial-finance-contr
 import { LifelineBooks } from "@/components/lifeline-books";
 import { LifelineMove } from "@/components/lifeline-move";
 import { LifelinePeople } from "@/components/lifeline-people";
+import { LifelineSpend } from "@/components/lifeline-spend";
+import { LifelineAssets } from "@/components/lifeline-assets";
 import { LifelineTax } from "@/components/lifeline-tax";
 import { OperatingLedgerStatus } from "@/components/operating-ledger-status";
 import { lifelineSuite, type LifelineSuiteId } from "@/lib/lifeline-suite";
 
-type FinanceView = "books" | "bank" | "pay" | "tax" | "people" | "move";
+type FinanceView = "books" | "bank" | "pay" | "tax" | "people" | "spend" | "assets" | "move";
 
 export function NativeFinanceHub({ country }: { country?: string }) {
   const [revision, setRevision] = useState(0);
@@ -24,7 +26,7 @@ export function NativeFinanceHub({ country }: { country?: string }) {
     return () => window.removeEventListener("business-lifeline-ledger-sync", refresh);
   }, []);
 
-  const cards = (["books", "bank", "pay", "tax", "people", "move"] as FinanceView[]).map((id) => lifelineSuite.find((item) => item.id === id as LifelineSuiteId)!);
+  const cards = (["books", "bank", "pay", "tax", "people", "spend", "assets", "move"] as FinanceView[]).map((id) => lifelineSuite.find((item) => item.id === id as LifelineSuiteId)!);
 
   return <section className="native-finance-connected workspace-section-stack">
     <header className="panel lifeline-suite-hero">
@@ -44,6 +46,8 @@ export function NativeFinanceHub({ country }: { country?: string }) {
     {view === "pay" && <CommercialFinanceControls key="pay" initialTab="recurring" />}
     {view === "tax" && <LifelineTax />}
     {view === "people" && <LifelinePeople />}
+    {view === "spend" && <LifelineSpend />}
+    {view === "assets" && <LifelineAssets />}
     {view === "move" && <LifelineMove />}
   </section>;
 }
