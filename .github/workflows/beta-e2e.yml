@@ -1,6 +1,8 @@
 name: Beta safety end-to-end tests
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:

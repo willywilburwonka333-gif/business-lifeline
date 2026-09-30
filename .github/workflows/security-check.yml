@@ -3,6 +3,7 @@ name: Security hardening checks
 on:
   push:
     branches:
+      - main
       - agent/commercial-security-hardening
   pull_request:
     branches:
