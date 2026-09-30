@@ -96,11 +96,21 @@ export function LifelinePeople() {
   });
   const [period, setPeriod] = useState({ start: "", end: "", payDate: today() });
   const [message, setMessage] = useState("");
+  const [timesheetRevision, setTimesheetRevision] = useState(0);
 
   useEffect(() => { setStore(readPeople()); setReady(true); }, []);
   useEffect(() => { if (ready) localStorage.setItem(LIFELINE_PEOPLE_KEY, JSON.stringify(store)); }, [store, ready]);
+  useEffect(() => {
+    const refresh = () => setTimesheetRevision((value) => value + 1);
+    window.addEventListener("business-lifeline-operating-updated", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("business-lifeline-operating-updated", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
 
-  const timesheets = useMemo(() => readTimesheets(), [store.payRuns.length, ready]);
+  const timesheets = useMemo(() => readTimesheets(), [store.payRuns.length, ready, timesheetRevision]);
   const activeEmployees = store.employees.filter((item) => item.active);
   const latestRun = store.payRuns[0];
 
