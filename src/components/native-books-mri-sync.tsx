@@ -71,6 +71,26 @@ export function NativeBooksMriSync() {
       const overdueInvoices = moneyRound(ar.filter((row) => row.daysOverdue > 0).reduce((sum, row) => sum + row.outstanding, 0));
       const overdueSuppliers = moneyRound(ap.filter((row) => row.daysOverdue > 0).reduce((sum, row) => sum + row.outstanding, 0));
 
+      let employeeCount = 0;
+      try {
+        const rawPeople = localStorage.getItem("business-lifeline-people-v1");
+        const people = rawPeople ? JSON.parse(rawPeople) as { employees?: Array<{ active?: boolean }> } : {};
+        employeeCount = (people.employees ?? []).filter((person) => person.active !== false).length;
+      } catch {}
+
+      let overdueTax = 0;
+      try {
+        const rawTax = localStorage.getItem("business-lifeline-tax-v1");
+        const tax = rawTax ? JSON.parse(rawTax) as { periods?: Array<{ dueDate?: string; status?: string; gstOnSales?: number; gstCredits?: number; paygWithholding?: number; instalmentOrIncomeTax?: number }> } : {};
+        overdueTax = moneyRound((tax.periods ?? [])
+          .filter((periodItem) => periodItem.status !== "paid" && Boolean(periodItem.dueDate) && String(periodItem.dueDate) < today())
+          .reduce((sum, periodItem) => sum + Math.max(0,
+            Number(periodItem.gstOnSales || 0) - Number(periodItem.gstCredits || 0)
+            + Number(periodItem.paygWithholding || 0)
+            + Number(periodItem.instalmentOrIncomeTax || 0)
+          ), 0));
+      } catch {}
+
       const fields: ImportedField[] = [
         { key: "monthlyRevenue", value: moneyRound(pnl.totalIncome), source: "Lifeline Books", confidence: "high", evidence: "Lifeline Books Profit & Loss — previous complete month", reportingPeriod: period.start + " to " + period.end },
         { key: "cashAvailable", value: cashAvailable, source: "Lifeline Books", confidence: "high", evidence: "Lifeline Books cash/bank accounts", reportingPeriod: today() },
@@ -78,6 +98,8 @@ export function NativeBooksMriSync() {
         { key: "overdueInvoices", value: overdueInvoices, source: "Lifeline Books", confidence: "high", evidence: "Lifeline Books Aged Receivables — overdue balance", reportingPeriod: today() },
         { key: "totalDebt", value: totalDebt, source: "Lifeline Books", confidence: "high", evidence: "Lifeline Books debt/finance liability accounts", reportingPeriod: today() },
         { key: "overdueSuppliers", value: overdueSuppliers, source: "Lifeline Books", confidence: "high", evidence: "Lifeline Books Aged Payables — overdue balance", reportingPeriod: today() },
+        { key: "overdueTax", value: overdueTax, source: "Lifeline Tax", confidence: "high", evidence: "Lifeline Tax periods past their recorded due date and not marked paid", reportingPeriod: today() },
+        { key: "employees", value: employeeCount, source: "Lifeline People", confidence: "high", evidence: "Active people in Lifeline People", reportingPeriod: today() },
       ];
 
       const hash = JSON.stringify(fields.map((field) => [field.key, field.value, field.reportingPeriod]));
@@ -93,11 +115,13 @@ export function NativeBooksMriSync() {
     window.addEventListener("business-lifeline-ledger-sync", sync);
     window.addEventListener("business-lifeline-operating-updated", sync);
     window.addEventListener("business-lifeline-business-switched", sync);
+    window.addEventListener("storage", sync);
     return () => {
       window.clearInterval(timer);
       window.removeEventListener("business-lifeline-ledger-sync", sync);
       window.removeEventListener("business-lifeline-operating-updated", sync);
       window.removeEventListener("business-lifeline-business-switched", sync);
+      window.removeEventListener("storage", sync);
     };
   }, []);
 
