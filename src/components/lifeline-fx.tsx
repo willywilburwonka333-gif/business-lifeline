@@ -33,7 +33,9 @@ const today = () => new Date().toISOString().slice(0, 10);
 function readFx(): FxStore {
   try {
     const raw = localStorage.getItem(LIFELINE_FX_KEY);
-    return raw ? { ...empty, ...(JSON.parse(raw) as Partial<FxStore>) } : empty;
+    if (!raw) return empty;
+    const parsed = JSON.parse(raw) as Partial<FxStore>;
+    return { baseCurrency: parsed.baseCurrency || "AUD", transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [] };
   } catch { return empty; }
 }
 function postJournal(journal: LedgerJournal) {
