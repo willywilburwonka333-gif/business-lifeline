@@ -145,7 +145,7 @@ export function readExitPlan(storage?: Storage): ExitPlan {
 }
 
 export function buildExitAnalysis(saved: SavedReport, plan: ExitPlan, operating?: OperatingSnapshot) {
-  const readinessValues = Object.values(plan.readiness);
+  const readinessValues: number[] = Object.values(plan.readiness).map(Number);
   const readinessScore = Math.round(readinessValues.reduce((sum, value) => sum + value, 0) / Math.max(1, readinessValues.length * 2) * 100);
   const dataRoomValues = Object.values(plan.dataRoom);
   const dataRoomScore = Math.round(dataRoomValues.filter(Boolean).length / Math.max(1, dataRoomValues.length) * 100);
