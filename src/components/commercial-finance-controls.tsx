@@ -52,10 +52,10 @@ function writeJournal(journal: Journal) {
   return true;
 }
 
-export function CommercialFinanceControls() {
+export function CommercialFinanceControls({ initialTab = "banking" }: { initialTab?: "banking" | "recurring" | "instalments" | "statements" }) {
   const [store, setStore] = useState<Store>(empty);
   const [ready, setReady] = useState(false);
-  const [tab, setTab] = useState<"banking" | "recurring" | "instalments" | "statements">("banking");
+  const [tab, setTab] = useState<"banking" | "recurring" | "instalments" | "statements">(initialTab);
   const [bankTx, setBankTx] = useState({ accountId: "bank-main", date: "", description: "", amount: 0, direction: "in" as BankTransaction["direction"] });
   const [recurring, setRecurring] = useState({ customer: "", description: "", amount: 0, frequency: "monthly" as Recurring["frequency"], nextDate: "" });
   const [plan, setPlan] = useState({ customer: "", reference: "", total: 0, deposit: 0, instalments: 4, dueDate: "" });
