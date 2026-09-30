@@ -125,6 +125,7 @@ export const DEFAULT_CHART: LifelineAccount[] = [
   { code: "1500", name: "Plant & Equipment", type: "asset", cashflow: "investing", active: true },
   { code: "1590", name: "Accumulated Depreciation", type: "asset", cashflow: "investing", active: true },
   { code: "2000", name: "Accounts Payable", type: "liability", cashflow: "operating", active: true, system: true },
+  { code: "2050", name: "Customer Deposits", type: "liability", cashflow: "operating", active: true, system: true },
   { code: "2100", name: "GST Payable", type: "liability", cashflow: "operating", active: true, system: true },
   { code: "2110", name: "GST Input Credit", type: "asset", cashflow: "operating", active: true, system: true },
   { code: "2200", name: "PAYG Withholding Payable", type: "liability", cashflow: "operating", active: true, system: true },
