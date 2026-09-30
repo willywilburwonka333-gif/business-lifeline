@@ -2,6 +2,7 @@
 
 import { demoBusinesses } from "@/lib/demo";
 import { generateReport } from "@/lib/planner";
+import { useState } from "react";
 
 const demoReports = demoBusinesses.map((business) => generateReport(business));
 
@@ -21,8 +22,16 @@ export function JudgeLanding({
   onDemo: (demoIndex?: number) => void;
   demoLoading: boolean;
 }) {
+  const [demoChooserOpen, setDemoChooserOpen] = useState(false);
+  const chooseDemo = (index: number) => { setDemoChooserOpen(false); onDemo(index); };
   return (
     <main id="main-content" className="judge-landing">
+      {demoChooserOpen && <div className="demo-chooser-backdrop" role="presentation" onClick={() => setDemoChooserOpen(false)}>
+        <section className="demo-chooser" role="dialog" aria-modal="true" aria-labelledby="demo-chooser-title" onClick={(event) => event.stopPropagation()}>
+          <header><div><p className="eyebrow">DEMO MRI TEST LAB</p><h2 id="demo-chooser-title">Choose the business you want to test</h2><p>Each option loads a different financial position through the full Business Lifeline workspace.</p></div><button type="button" className="demo-chooser-close" aria-label="Close demo chooser" onClick={() => setDemoChooserOpen(false)}>×</button></header>
+          <div className="demo-chooser-options">{demoBusinesses.map((business, index) => <button type="button" key={business.businessName} onClick={() => chooseDemo(index)}><small>{index === 0 ? "SMALL · DISTRESSED" : index === 1 ? "MEDIUM · COMPLEX" : "LARGE · SUCCESSFUL"}</small><strong>{business.businessName}</strong><span>{index === 0 ? "Test recovery, arrears and cash crisis" : index === 1 ? "Test projects, payroll and working capital" : "Test profitable growth and scale"}</span><b>{money(business.monthlyRevenue)}/month · {business.employees} staff</b><em>Open this Demo MRI →</em></button>)}</div>
+        </section>
+      </div>}
       <nav className="judge-nav" aria-label="Business Lifeline">
         <a className="brand light" href="#main-content"><span>BL</span> Business Lifeline</a>
         <button type="button" className="judge-nav-action" onClick={onStart}>Run the MRI <span>→</span></button>
@@ -37,7 +46,7 @@ export function JudgeLanding({
           </p>
           <div className="judge-actions">
             <button type="button" className="button primary large" onClick={onStart}>Run My Business MRI <span>→</span></button>
-            <button type="button" className="button outline large judge-demo-button" onClick={() => onDemo(0)} disabled={demoLoading}>{demoLoading ? "Preparing demo…" : "Open Business Demos"}</button>
+            <button type="button" className="button outline large judge-demo-button" onClick={() => setDemoChooserOpen(true)} disabled={demoLoading}>{demoLoading ? "Preparing demo…" : "Choose a Demo MRI"}</button>
           </div>
           <div className="judge-proof-row" aria-label="Product principles">
             <span><b>Deterministic figures</b><small>Scores and cashflow are calculated by tested rules.</small></span>
@@ -46,7 +55,7 @@ export function JudgeLanding({
           </div>
         </div>
 
-        <div className="judge-demo-grid" aria-label="Business Lifeline demo businesses">{demoBusinesses.map((business, index) => { const report = demoReports[index]; const label = index === 0 ? "SMALL · DISTRESSED" : index === 1 ? "MEDIUM · COMPLEX" : "LARGE · SUCCESSFUL"; return <aside className="judge-demo-card" key={business.businessName}><header><span>{label}</span><b>{business.businessName}</b></header><div className="judge-demo-score"><span>Business health</span><strong>{report.metrics.overallScore}<small>/100</small></strong><p>{index === 0 ? "Recovery and distress test" : index === 1 ? "Working-capital complexity test" : "Profitable growth test"}</p></div><div className="judge-demo-metrics"><article><span>Monthly result</span><strong>{money(report.metrics.monthlyOperatingResult)}</strong></article><article><span>Cash available</span><strong>{money(business.cashAvailable)}</strong></article><article><span>Employees</span><strong>{business.employees}</strong></article><article><span>Monthly revenue</span><strong>{money(business.monthlyRevenue)}</strong></article></div><button type="button" onClick={() => onDemo(index)} disabled={demoLoading}><span><small>ONE-CLICK TEST BUSINESS</small>Open full workspace</span><b>→</b></button></aside>; })}</div>
+        <div className="judge-demo-grid" aria-label="Business Lifeline demo businesses">{demoBusinesses.map((business, index) => { const report = demoReports[index]; const label = index === 0 ? "SMALL · DISTRESSED" : index === 1 ? "MEDIUM · COMPLEX" : "LARGE · SUCCESSFUL"; return <aside className="judge-demo-card" key={business.businessName}><header><span>{label}</span><b>{business.businessName}</b></header><div className="judge-demo-score"><span>Business health</span><strong>{report.metrics.overallScore}<small>/100</small></strong><p>{index === 0 ? "Recovery and distress test" : index === 1 ? "Working-capital complexity test" : "Profitable growth test"}</p></div><div className="judge-demo-metrics"><article><span>Monthly result</span><strong>{money(report.metrics.monthlyOperatingResult)}</strong></article><article><span>Cash available</span><strong>{money(business.cashAvailable)}</strong></article><article><span>Employees</span><strong>{business.employees}</strong></article><article><span>Monthly revenue</span><strong>{money(business.monthlyRevenue)}</strong></article></div><button type="button" onClick={() => chooseDemo(index)} disabled={demoLoading}><span><small>ONE-CLICK TEST BUSINESS</small>Open full workspace</span><b>→</b></button></aside>; })}</div>
       </section>
 
       <section className="judge-story" aria-label="How Business Lifeline works">
@@ -76,7 +85,7 @@ export function JudgeLanding({
       <section className="judge-final-cta">
         <p>See the complete product in under a minute.</p>
         <h2>Open the workspace as a distressed small business, a complex medium business or a successful large business.</h2>
-        <div className="judge-actions">{demoBusinesses.map((business, index) => <button key={business.businessName} type="button" className={index === 0 ? "button primary large" : "button outline large"} onClick={() => onDemo(index)} disabled={demoLoading}>{business.businessName} <span>→</span></button>)}</div>
+        <div className="judge-actions">{demoBusinesses.map((business, index) => <button key={business.businessName} type="button" className={index === 0 ? "button primary large" : "button outline large"} onClick={() => chooseDemo(index)} disabled={demoLoading}>{business.businessName} <span>→</span></button>)}</div>
       </section>
 
       <footer className="judge-footer">
