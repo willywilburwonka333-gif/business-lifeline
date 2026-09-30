@@ -33,6 +33,16 @@ Business Lifeline is organised around five connected product areas:
    - Expense capture
    - Staff roster
    - Operating automation activity feed
+   - **Lifeline Books**: native double-entry accounting, P&L, Balance Sheet, cash flow, Trial Balance, General Ledger and aging
+   - **Lifeline Bank**: accounts, CSV statement import, matching and reconciliation
+   - **Lifeline Pay**: recurring billing, instalments, statements and overdue collections
+   - **Lifeline People**: employees, timesheets and payroll preparation with accounting journals
+   - **Lifeline Spend**: purchase orders, expense claims, mileage and reimbursements
+   - **Lifeline Tax**: GST/BAS workpapers and tax-liability workflow
+   - **Lifeline Assets**: fixed assets, depreciation and disposals
+   - **Lifeline Plan**: monthly budgets and actual-vs-budget variance
+   - **Lifeline FX**: foreign receivables/payables and exchange gain/loss
+   - **Lifeline Vault** and **Lifeline Move** for records and migration
 
 4. **Growth Engine — Grow**
    - Revenue, margin, owner-income and cash-buffer targets
@@ -74,12 +84,13 @@ Implemented on `lifeline-completion-pass` / PR #40:
 - QuickBooks sync now reads the previous complete-month Profit and Loss and current Balance Sheet, normalises supported facts and feeds revenue, cash, receivables and debt into MRI evidence.
 - Automated tests cover conflict handling and QuickBooks report normalisation.
 
-Still externally blocked or intentionally incomplete:
-- Xero production credential/scope validation and MYOB/Sage direct connections.
-- Stripe production account, price IDs, webhook secret, test purchases and final entitlement/pricing approval.
-- Production credential/configuration verification for Firebase, QuickBooks and AI providers.
-- Independent legal/privacy/security review, penetration testing and professional validation of diagnostic accuracy.
-- Full transaction-level provider normalisation and automated bank-feed reconciliation beyond the current native finance controls.
+Native-first strategy supersedes the old provider roadmap:
+- QuickBooks/Xero connectors are retained only as optional migration bridges under Lifeline Move.
+- MYOB/Sage direct connectors are not required; exports can migrate through Lifeline Move.
+- Native Books/Bank/Pay/People/Spend/Tax/Assets/Plan/FX are the target operating system.
+- External rails are still needed for live bank feeds, payment acquiring/direct debit, email/SMS delivery, STP/BAS/SuperStream lodgement and live market FX rates when those features are enabled.
+- Stripe production account, price IDs, webhook secret, test purchases and final SaaS pricing approval are still required for Business Lifeline's own subscription billing.
+- Production Firebase/AI configuration, legal/privacy/security review, accounting/payroll/tax review and professional diagnostic validation remain launch gates.
 
 ## Lifecycle expansion — September 2026
 
@@ -99,9 +110,9 @@ Implemented on `lifecycle-expansion-v1`:
 
 - Repository: `willywilburwonka333-gif/business-lifeline`
 - Production branch: `main`
-- Lifecycle development branch: `lifecycle-expansion-v1`
+- Native-suite development branch: `native-business-suite`
 - Product architecture: **Diagnose → Recover → Run → Grow → Sell**
-- Product direction: keep the initial MRI extremely easy, then progressively deepen accuracy, recovery execution, operations, growth and exit preparation as the business needs them.
+- Product direction: **native-first**. Business Lifeline owns the canonical business record; external business software is optional migration infrastructure, while unavoidable regulated/network rails remain separable.
 
 ## Accuracy system completed so far
 
@@ -182,3 +193,23 @@ Still requires real-world evidence:
 ## Product promise
 
 **Diagnose → Recover → Run → Grow → Sell.**
+
+
+## Native suite expansion — September 2026
+
+Implemented on `native-business-suite` / PR #43:
+- Lifeline Books native double-entry reporting engine: P&L, Balance Sheet, cash flow, Trial Balance, General Ledger, aged receivables/payables and ledger integrity.
+- Lifeline Bank: multiple accounts, CSV statement import, auto-match/manual match and direct coding into Books.
+- Lifeline Pay: recurring invoices, instalments, statements, overdue reminder queue and collections.
+- Lifeline People: employee register, timesheet-driven pay-run preparation, PAYG/super/payroll clearing journals.
+- Lifeline Spend: purchase orders, supplier-bill conversion, expense claims, reimbursements and mileage.
+- Lifeline Tax: GST/BAS workpapers, PAYG/super/tax visibility and payment accounting.
+- Lifeline Assets: fixed-asset register, depreciation and disposal journals.
+- Lifeline Plan: financial-year budgets and actual-vs-budget variance.
+- Lifeline FX: base-currency accounting for foreign receivables/payables and settlement gain/loss.
+- Lifeline Sales / Jobs / Stock promoted to the primary connected Run platform.
+- Job profitability uses linked expenses and timesheet labour cost.
+- Inventory accounting includes opening inventory, COGS on sale and stocktake variance.
+- Lifeline Vault for permanent records and Lifeline Move for CSV/JSON/legacy-software migration.
+- QuickBooks/Xero moved out of the core operating path and into optional migration bridges.
+- Native-suite data participates in cloud sync and per-business isolation.
