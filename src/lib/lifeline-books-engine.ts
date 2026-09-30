@@ -143,6 +143,7 @@ export const DEFAULT_CHART: LifelineAccount[] = [
   { code: "4900", name: "Gain on Asset Disposal", type: "income", cashflow: "investing", active: true },
   { code: "4910", name: "Foreign Exchange Gain", type: "income", cashflow: "operating", active: true },
   { code: "5000", name: "Cost of Goods Sold", type: "cogs", cashflow: "operating", gstDefault: "gst", active: true },
+  { code: "5010", name: "Inventory Adjustments", type: "expense", cashflow: "operating", active: true },
   { code: "6000", name: "Operating Expense", type: "expense", cashflow: "operating", gstDefault: "gst", active: true, system: true },
   { code: "6010", name: "Expense", type: "expense", cashflow: "operating", gstDefault: "gst", active: true, system: true },
   { code: "6100", name: "Wages & Salaries", type: "expense", cashflow: "operating", active: true, system: true },
