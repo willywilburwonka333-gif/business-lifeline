@@ -4,6 +4,7 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 
 const KEY = "business-lifeline-commercial-finance-controls-v1";
 const ACCOUNTING_KEY = "business-lifeline-advanced-accounting-v1";
+const BOOKS_SETTINGS_KEY = "business-lifeline-books-settings-v1";
 
 type BankAccount = { id: string; name: string; openingBalance: number; statementBalance: number };
 type BankTransaction = { id: string; accountId: string; date: string; description: string; amount: number; direction: "in" | "out"; matchedSource: string; status: "unmatched" | "matched" | "ignored" };
@@ -102,6 +103,14 @@ export function CommercialFinanceControls({ initialTab = "banking" }: { initialT
     if (!accountForm.name.trim()) return;
     const account: BankAccount = { id: id("bank"), name: accountForm.name.trim(), openingBalance: accountForm.openingBalance, statementBalance: accountForm.statementBalance };
     setStore((current) => ({ ...current, accounts: [account, ...current.accounts] }));
+    try {
+      const raw = localStorage.getItem(BOOKS_SETTINGS_KEY);
+      const settings = raw ? JSON.parse(raw) as { customAccounts?: Array<Record<string, unknown>> } : {};
+      const customAccounts = Array.isArray(settings.customAccounts) ? settings.customAccounts : [];
+      const bankAccount = { code: "10" + String(customAccounts.length + 30).padStart(2, "0"), name: account.name, type: "asset", cashflow: "transfer", active: true };
+      localStorage.setItem(BOOKS_SETTINGS_KEY, JSON.stringify({ ...settings, customAccounts: [bankAccount, ...customAccounts.filter((item) => item.name !== account.name)] }));
+      window.dispatchEvent(new CustomEvent("business-lifeline-ledger-sync", { detail: { changed: true } }));
+    } catch {}
     setBankTx((current) => ({ ...current, accountId: account.id }));
     setAccountForm({ name: "", openingBalance: 0, statementBalance: 0 });
   };
