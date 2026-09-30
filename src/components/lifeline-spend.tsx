@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import {
   LIFELINE_BOOKS_KEY,
   readBooksStore,
@@ -108,6 +108,9 @@ export function LifelineSpend() {
   const [po, setPo] = useState({ supplier: "", description: "", category: "Operating Expense", amount: 0, gstIncluded: true, dueDate: "" });
   const [claim, setClaim] = useState({ person: "", merchant: "", date: today(), category: "Operating Expense", amount: 0, gstIncluded: true, receiptReference: "", notes: "" });
   const [trip, setTrip] = useState({ person: "", date: today(), from: "", to: "", purpose: "", kilometres: 0, ratePerKm: 0 });
+  const [captureConsent, setCaptureConsent] = useState(false);
+  const [captureBusy, setCaptureBusy] = useState(false);
+  const [captured, setCaptured] = useState({ supplier: "", invoiceNumber: "", date: today(), dueDate: "", total: 0, gst: 0, description: "", suggestedAccount: "Operating Expense", confidence: "review", source: "", warnings: [] as string[] });
 
   useEffect(() => { setStore(readSpend()); setReady(true); }, []);
   useEffect(() => { if (ready) localStorage.setItem(LIFELINE_SPEND_KEY, JSON.stringify(store)); }, [store, ready]);
@@ -116,6 +119,66 @@ export function LifelineSpend() {
   const claimsOutstanding = useMemo(() => store.claims.filter((item) => ["submitted", "approved"].includes(item.status)).reduce((sum, item) => sum + item.amount, 0), [store.claims]);
   const approvedClaims = store.claims.filter((item) => item.status === "approved");
   const mileageValue = (store.mileage ?? []).filter((item) => item.status !== "reimbursed").reduce((sum, item) => sum + item.claimAmount, 0);
+
+  const captureSpendDocument = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!captureConsent) { setMessage("Confirm AI document-reading consent before uploading a spend document."); event.target.value = ""; return; }
+    setCaptureBusy(true);
+    setMessage("");
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const response = await fetch("/api/read-spend-record", { method: "POST", headers: { "X-Business-Lifeline-AI-Consent": "true" }, body });
+      const payload = await response.json() as { extraction?: { supplier?: string; invoiceNumber?: string; date?: string; dueDate?: string; total?: number; gst?: number; description?: string; suggestedAccount?: string; confidence?: string; warnings?: string[] }; source?: string; error?: string };
+      if (!response.ok || !payload.extraction) throw new Error(payload.error || "Document capture failed.");
+      const value = payload.extraction;
+      setCaptured({
+        supplier: value.supplier || "",
+        invoiceNumber: value.invoiceNumber || "",
+        date: value.date || today(),
+        dueDate: value.dueDate || "",
+        total: Number(value.total || 0),
+        gst: Number(value.gst || 0),
+        description: value.description || "",
+        suggestedAccount: value.suggestedAccount || "Operating Expense",
+        confidence: value.confidence || "review",
+        source: payload.source || file.name,
+        warnings: Array.isArray(value.warnings) ? value.warnings : [],
+      });
+      setMessage("Document captured. Confirm every field before posting it to Lifeline Books.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Document capture failed.");
+    } finally {
+      setCaptureBusy(false);
+      event.target.value = "";
+    }
+  };
+
+  const postCapturedBill = () => {
+    if (!captured.supplier.trim() || captured.total <= 0) return;
+    const books = readBooksStore();
+    const number = captured.invoiceNumber.trim() || "CAPTURE-" + Date.now();
+    const source = "CAPTURE:BILL:" + number + ":" + captured.source;
+    if (books.journals.some((journal) => journal.source === source)) { setMessage("This captured bill appears to have already been posted."); return; }
+    const gst = Math.max(0, Math.min(captured.total, round(captured.gst)));
+    const net = round(captured.total - gst);
+    const bill: SupplierBill = { id: id("bill"), number, supplier: captured.supplier.trim(), date: captured.date || today(), due: captured.dueDate, amount: captured.total, gst, status: "approved", paid: 0 };
+    const journal: LedgerJournal = {
+      id: id("journal"), date: bill.date, memo: "Captured bill · " + bill.supplier + " · " + number, source,
+      lines: [
+        { account: captured.suggestedAccount || "Operating Expense", side: "debit", amount: net },
+        ...(gst > 0 ? [{ account: "GST Input Credit", side: "debit" as const, amount: gst }] : []),
+        { account: "Accounts Payable", side: "credit", amount: captured.total },
+      ],
+    };
+    const debit = round(journal.lines.filter((line) => line.side === "debit").reduce((sum, line) => sum + line.amount, 0));
+    const credit = round(journal.lines.filter((line) => line.side === "credit").reduce((sum, line) => sum + line.amount, 0));
+    if (debit !== credit || (books.lockDate && bill.date <= books.lockDate)) { setMessage("Captured bill could not be posted. Review the values or period lock."); return; }
+    saveBooks({ ...books, bills: [bill, ...books.bills], journals: [journal, ...books.journals] });
+    setCaptured({ supplier: "", invoiceNumber: "", date: today(), dueDate: "", total: 0, gst: 0, description: "", suggestedAccount: "Operating Expense", confidence: "review", source: "", warnings: [] });
+    setMessage("Captured supplier bill posted to Lifeline Books.");
+  };
 
   const addPo = (event: FormEvent) => {
     event.preventDefault();
@@ -239,6 +302,24 @@ export function LifelineSpend() {
     <header className="lifeline-product-hero"><div><p className="eyebrow">LIFELINE SPEND</p><h2>Control spend before it becomes a surprise.</h2><p>Purchase orders, supplier commitments and employee expense claims feed Lifeline Books only when the accounting event actually occurs.</p></div><div className="lifeline-integrity good"><strong>{money(committed)}</strong><span>Open purchasing commitments</span></div></header>
 
     {message && <div className="os-notice"><span>{message}</span><button onClick={() => setMessage("")}>Dismiss</button></div>}
+
+    <section className="panel">
+      <div className="section-heading"><span>LIFELINE CAPTURE</span><h3>Read a receipt or supplier invoice into a draft</h3></div>
+      <label><input type="checkbox" checked={captureConsent} onChange={(e) => setCaptureConsent(e.target.checked)} /> I consent to sending this selected document to the configured AI provider for extraction.</label>
+      <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.csv,application/pdf,image/*" onChange={captureSpendDocument} disabled={captureBusy} />
+      {captureBusy && <p>Reading document…</p>}
+      {(captured.source || captured.total > 0) && <div className="fields">
+        <p><strong>{captured.source || "Captured document"}</strong> · confidence {captured.confidence}</p>
+        <label className="field"><span>Supplier</span><input value={captured.supplier} onChange={(e) => setCaptured({ ...captured, supplier: e.target.value })} /></label>
+        <div className="two-cols"><label className="field"><span>Invoice / receipt number</span><input value={captured.invoiceNumber} onChange={(e) => setCaptured({ ...captured, invoiceNumber: e.target.value })} /></label><label className="field"><span>Date</span><input type="date" value={captured.date} onChange={(e) => setCaptured({ ...captured, date: e.target.value })} /></label></div>
+        <label className="field"><span>Due date</span><input type="date" value={captured.dueDate} onChange={(e) => setCaptured({ ...captured, dueDate: e.target.value })} /></label>
+        <div className="two-cols"><label className="field"><span>Total</span><input type="number" min="0" step="0.01" value={captured.total || ""} onChange={(e) => setCaptured({ ...captured, total: Number(e.target.value) || 0 })} /></label><label className="field"><span>GST shown</span><input type="number" min="0" step="0.01" value={captured.gst || ""} onChange={(e) => setCaptured({ ...captured, gst: Number(e.target.value) || 0 })} /></label></div>
+        <label className="field"><span>Description</span><textarea value={captured.description} onChange={(e) => setCaptured({ ...captured, description: e.target.value })} /></label>
+        <label className="field"><span>Books account</span><input value={captured.suggestedAccount} onChange={(e) => setCaptured({ ...captured, suggestedAccount: e.target.value })} /></label>
+        {captured.warnings.length > 0 && <aside className="urgent"><b>Review before posting</b><ul>{captured.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></aside>}
+        <button type="button" className="button primary" onClick={postCapturedBill}>Confirm and post supplier bill</button>
+      </div>}
+    </section>
 
     <section className="metric-grid">
       <article><span>Open purchase orders</span><strong>{store.purchaseOrders.filter((item) => !["billed","cancelled"].includes(item.status)).length}</strong></article>
