@@ -59,8 +59,8 @@ export function LifelineMove() {
             memo: String(row.memo || row.description || "Imported journal"),
             source: "MOVE:" + String(row.source || id("source")),
             lines: [
-              { account: String(row.debitaccount || row.debit || "Operating Expense"), side: "debit", amount },
-              { account: String(row.creditaccount || row.credit || "Bank"), side: "credit", amount },
+              { account: String(row.debitaccount || row.debit || "Operating Expense"), side: "debit" as const, amount },
+              { account: String(row.creditaccount || row.credit || "Bank"), side: "credit" as const, amount },
             ],
           };
         }).filter((journal) => journal.lines[0].amount > 0);
