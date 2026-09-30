@@ -1,3 +1,32 @@
+
+## Native Business Suite completion — 30 September 2026
+
+Business Lifeline no longer treats Xero, QuickBooks, MYOB or similar accounting software as required operating dependencies.
+
+Native products now present in the application:
+- **Lifeline Books** — double-entry ledger, chart of accounts, invoices/credits/bills, P&L, Balance Sheet, cash flow, Trial Balance, General Ledger, aged receivables/payables, GST controls and ledger integrity.
+- **Lifeline Bank** — multiple bank accounts, CSV statement import, reconciliation, exact-match assistance and direct ledger posting.
+- **Lifeline Pay** — customer payments, recurring billing, instalment plans and statements.
+- **Lifeline Tax** — GST/BAS workpapers, PAYG/super/tax liability visibility, due dates and payment posting.
+- **Lifeline People** — employees, timesheets, payroll preparation, PAYG/super liabilities and payroll journals.
+- **Lifeline Spend** — purchase orders, supplier-bill creation, expense claims and reimbursements.
+- **Lifeline Assets** — fixed-asset register, acquisitions, straight-line/diminishing book depreciation and disposal accounting.
+- **Lifeline Plan** — account-level annual/monthly budgets with actual-vs-budget variance from Lifeline Books.
+- **Lifeline FX** — foreign receivables/payables, settlement rates and realised exchange gains/losses.
+- **Lifeline Sales / Jobs / Stock / Vault** — connected CRM, quote→job→invoice workflow, inventory/stocktake, operating evidence and documents.
+- **Lifeline Move** — CSV/JSON migration plus optional legacy QuickBooks/Xero bridges.
+
+Native accounting evidence now feeds the MRI so Diagnose/Recover can update from the business's own books rather than depending on a third-party accounting provider.
+
+External boundaries that remain external by design:
+- bank-feed connectivity to financial institutions;
+- card/merchant payment processing;
+- ATO/STP/BAS or other government submission rails;
+- market FX-rate feeds;
+- regulated tax-agent/accounting/legal advice and independent assurance.
+
+These are rails or regulated services, not missing internal accounting/operations modules. The app can prepare, record, reconcile and export the underlying business data without requiring a third-party accounting application.
+
 # Business Lifeline — Current Product Status
 
 Updated: 30 September 2026
