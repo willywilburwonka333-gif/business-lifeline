@@ -74,7 +74,7 @@ export function buildForecastFromMRI(data: BusinessData, profile?: MriAccuracyPr
     weeks[0].taxPayments = safe(profile.paygOutstanding);
   }
 
-  const warnings: string[] = [...(forecast.warnings ?? [])];
+  const warnings: string[] = [];
   if (profile && (safe(profile.availableFacilities) > 0 || safe(profile.overdraftLimit) > 0)) {
     warnings.push("Available facilities and overdraft limits are not counted as cash. Model any actual drawdown as one-off cash in when it becomes available.");
   }
@@ -126,7 +126,7 @@ export function calculateCashflowForecast(forecast: CashflowForecast): CashflowF
     };
   });
 
-  const warnings: string[] = [];
+  const warnings: string[] = [...(forecast.warnings ?? [])];
   if (firstShortfallWeek !== null) warnings.push(`Cash is forecast to fall below zero in week ${firstShortfallWeek}.`);
   if (lowest < 0) warnings.push(`The current plan requires at least ${round(Math.abs(lowest))} of additional cash or payment relief.`);
   const weeksWithTax = weeks.filter((week) => week.taxPayments > 0).length;
