@@ -38,7 +38,9 @@ const id = (prefix: string) => prefix + "-" + Date.now() + "-" + Math.random().t
 function readAssets(): AssetStore {
   try {
     const raw = localStorage.getItem(LIFELINE_ASSETS_KEY);
-    return raw ? { ...empty, ...(JSON.parse(raw) as Partial<AssetStore>) } : empty;
+    if (!raw) return empty;
+    const parsed = JSON.parse(raw) as Partial<AssetStore>;
+    return { assets: Array.isArray(parsed.assets) ? parsed.assets : [] };
   } catch { return empty; }
 }
 
