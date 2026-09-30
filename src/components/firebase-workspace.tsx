@@ -134,6 +134,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
     if (!firebaseDb) return;
     const businessId = businessIdFor(activeUser.uid);
     await setDoc(doc(firebaseDb, "businesses", businessId), {
+      id: businessId,
       name: "My Business Lifeline Workspace",
       ownerId: activeUser.uid,
       status: "active",

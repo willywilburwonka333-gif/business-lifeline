@@ -99,7 +99,7 @@ export function LifelinePeople() {
   const [ready, setReady] = useState(false);
   const [employee, setEmployee] = useState({
     name: "", email: "", employmentType: "full-time" as Employee["employmentType"], hourlyRate: 0,
-    ordinaryHoursPerWeek: 38, superRatePercent: 0, withholdingRatePercent: 0, annualLeaveAccrualPerHour: 0, personalLeaveAccrualPerHour: 0,
+    ordinaryHoursPerWeek: 38, superRatePercent: 12, withholdingRatePercent: 0, annualLeaveAccrualPerHour: 0, personalLeaveAccrualPerHour: 0,
   });
   const [period, setPeriod] = useState({ start: "", end: "", payDate: today() });
   const [message, setMessage] = useState("");
@@ -129,7 +129,7 @@ export function LifelinePeople() {
       annualLeaveHours: 0, personalLeaveHours: 0, annualLeaveAccrualPerHour: employee.annualLeaveAccrualPerHour, personalLeaveAccrualPerHour: employee.personalLeaveAccrualPerHour, active: true,
     };
     setStore((current) => ({ ...current, employees: [next, ...current.employees] }));
-    setEmployee({ name: "", email: "", employmentType: "full-time", hourlyRate: 0, ordinaryHoursPerWeek: 38, superRatePercent: 0, withholdingRatePercent: 0, annualLeaveAccrualPerHour: 0, personalLeaveAccrualPerHour: 0 });
+    setEmployee({ name: "", email: "", employmentType: "full-time", hourlyRate: 0, ordinaryHoursPerWeek: 38, superRatePercent: 12, withholdingRatePercent: 0, annualLeaveAccrualPerHour: 0, personalLeaveAccrualPerHour: 0 });
   };
 
   const createPayRun = () => {
@@ -222,7 +222,7 @@ export function LifelinePeople() {
         <label className="field"><span>Ordinary hours / week</span><input type="number" min="0" step="0.1" value={employee.ordinaryHoursPerWeek} onChange={(e) => setEmployee({ ...employee, ordinaryHoursPerWeek: Number(e.target.value) || 0 })} /></label>
         <label className="field"><span>Super rate %</span><input type="number" min="0" step="0.1" value={employee.superRatePercent} onChange={(e) => setEmployee({ ...employee, superRatePercent: Number(e.target.value) || 0 })} /></label>
         <label className="field"><span>PAYG withholding estimate %</span><input type="number" min="0" max="100" step="0.1" value={employee.withholdingRatePercent} onChange={(e) => setEmployee({ ...employee, withholdingRatePercent: Number(e.target.value) || 0 })} /></label><label className="field"><span>Annual leave accrued per ordinary hour</span><input type="number" min="0" step="0.0001" value={employee.annualLeaveAccrualPerHour} onChange={(e) => setEmployee({ ...employee, annualLeaveAccrualPerHour: Number(e.target.value) || 0 })} /></label><label className="field"><span>Personal leave accrued per ordinary hour</span><input type="number" min="0" step="0.0001" value={employee.personalLeaveAccrualPerHour} onChange={(e) => setEmployee({ ...employee, personalLeaveAccrualPerHour: Number(e.target.value) || 0 })} /></label>
-        <button className="button primary">Add employee</button><small>Confirm award, PAYG withholding, super eligibility/rate and entitlements before using a pay run for payroll.</small>
+        <button className="button primary">Add employee</button><small>Default super is 12% for the current Australian SG rate. From 1 July 2026 Payday Super generally requires SG to be paid on payday and received by the fund within 7 business days. Confirm qualifying earnings, exceptions, award, PAYG and entitlements before relying on a pay run.</small>
       </form>
 
       <section className="panel"><p className="eyebrow">PEOPLE REGISTER</p><h3>Employees and leave balances</h3><div className="item-list">
