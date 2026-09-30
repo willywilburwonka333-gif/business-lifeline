@@ -1,6 +1,6 @@
 .lifeline-suite-hero{background:linear-gradient(145deg,#0a2638,#123f50);color:#fff;border:1px solid #1e4d5f}
 .lifeline-suite-hero .eyebrow{color:#ff9b70}.lifeline-suite-hero h2{margin:.25rem 0 .5rem;font-size:clamp(1.6rem,3vw,2.4rem)}.lifeline-suite-hero p:last-child{color:#d6e7ee;max-width:80ch}
-.lifeline-suite-nav{display:grid;grid-template-columns:repeat(6,minmax(150px,1fr));gap:10px;overflow-x:auto}
+.lifeline-suite-nav{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(170px,1fr);gap:10px;overflow-x:auto;overscroll-behavior-inline:contain;padding-bottom:4px}
 .lifeline-suite-nav button{min-height:102px;text-align:left;border:1px solid #cad8de;background:#fff;color:#173047;border-radius:16px;padding:14px;display:grid;gap:5px;align-content:start}
 .lifeline-suite-nav button strong{font-size:.96rem}.lifeline-suite-nav button small{color:#70818b;line-height:1.35}.lifeline-suite-nav button.active{background:#173047;color:#fff;border-color:#173047}.lifeline-suite-nav button.active small{color:#d8e8ee}
 .lifeline-product{display:grid;gap:18px}
@@ -14,8 +14,8 @@
 .lifeline-table{display:grid;gap:0;overflow-x:auto}.lifeline-table>div{display:grid;grid-template-columns:minmax(220px,1.5fr) repeat(3,minmax(110px,.7fr));gap:12px;align-items:center;padding:10px 8px;border-bottom:1px solid #e4ecef;min-width:680px}.lifeline-table-head{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:#75858e;font-weight:800;background:#f7fafb}.lifeline-table span{display:grid;gap:2px}.lifeline-table small{color:#7a8991}
 .native-finance-connected .commercial-finance-controls>header{background:linear-gradient(145deg,#102d40,#174d5c);color:#fff}.native-finance-connected .commercial-finance-controls>header small{color:#ff9a72}
 .native-finance-connected .advanced-accounting>header{background:linear-gradient(145deg,#102d40,#174d5c);color:#fff}.native-finance-connected .advanced-accounting>header small{color:#ff9a72}
-@media(max-width:1100px){.lifeline-suite-nav{grid-template-columns:repeat(6,minmax(180px,1fr))}.lifeline-report-grid{grid-template-columns:1fr}}
-@media(max-width:760px){.lifeline-product-hero{display:grid}.lifeline-integrity{min-width:0}.lifeline-suite-nav{grid-template-columns:repeat(6,minmax(155px,1fr))}.lifeline-table>div{grid-template-columns:minmax(190px,1.5fr) repeat(3,minmax(100px,.7fr));}.lifeline-period{display:grid;grid-template-columns:1fr 1fr}.lifeline-period label,.lifeline-period input{width:100%}}
+@media(max-width:1100px){.lifeline-suite-nav{grid-auto-columns:minmax(180px,42vw)}.lifeline-report-grid{grid-template-columns:1fr}}
+@media(max-width:760px){.lifeline-product-hero{display:grid}.lifeline-integrity{min-width:0}.lifeline-suite-nav{grid-auto-columns:minmax(155px,72vw)}.lifeline-table>div{grid-template-columns:minmax(190px,1.5fr) repeat(3,minmax(100px,.7fr));}.lifeline-period{display:grid;grid-template-columns:1fr 1fr}.lifeline-period label,.lifeline-period input{width:100%}}
 @media(max-width:440px){.lifeline-period{grid-template-columns:1fr}}
 
 .lifeline-budget-table{overflow-x:auto;border:1px solid #dce5e9;border-radius:14px;background:#fff}
@@ -24,3 +24,5 @@
 .lifeline-budget-row{border-top:1px solid #e5ecef}.lifeline-budget-row label{display:grid;gap:3px}.lifeline-budget-row input{width:100%;min-height:38px;border:1px solid #ccd9df;border-radius:8px;padding:7px}.lifeline-budget-row small{font-size:.68rem;color:#778891}
 .lifeline-suite-nav{scroll-snap-type:x proximity}.lifeline-suite-nav button{scroll-snap-align:start}
 @media(max-width:760px){.lifeline-suite-nav{grid-template-columns:repeat(10,minmax(160px,1fr));padding-bottom:6px}}
+
+.lifeline-budget-table{overflow-x:auto}.lifeline-budget-head,.lifeline-budget-row{display:grid;grid-template-columns:minmax(180px,1.3fr) repeat(12,minmax(110px,.8fr)) minmax(120px,.9fr);gap:8px;align-items:center;min-width:1700px;padding:8px 0;border-bottom:1px solid #e5ecef}.lifeline-budget-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:#71838d;font-weight:800}.lifeline-budget-row label{display:grid;gap:3px}.lifeline-budget-row input{width:100%;min-height:38px;border:1px solid #cbd8de;border-radius:9px;padding:6px}.lifeline-budget-row small{color:#788991;font-size:.7rem}
