@@ -4,7 +4,7 @@
   html,
   body {
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   .workspace-shell,
@@ -33,7 +33,11 @@
   }
 
   .main-area-nav,
-  .area-tool-list {
+  .area-tool-list,
+  .lifeline-suite-nav,
+  .lifeline-product-nav,
+  .lifeline-table,
+  .lifeline-budget-table {
     display: flex !important;
     overflow-x: auto;
     overscroll-behavior-inline: contain;
@@ -44,7 +48,11 @@
   }
 
   .main-area-nav::-webkit-scrollbar,
-  .area-tool-list::-webkit-scrollbar {
+  .area-tool-list::-webkit-scrollbar,
+  .lifeline-suite-nav::-webkit-scrollbar,
+  .lifeline-product-nav::-webkit-scrollbar,
+  .lifeline-table::-webkit-scrollbar,
+  .lifeline-budget-table::-webkit-scrollbar {
     display: none;
   }
 

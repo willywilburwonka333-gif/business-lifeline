@@ -37,6 +37,13 @@ export async function POST(request: Request) {
     const object = event.data?.object || {};
     const { db } = getFirebaseAdmin();
     const now = new Date().toISOString();
+    const eventId = event.id || "";
+    if (eventId) {
+      const eventRef = db.collection("stripeWebhookEvents").doc(eventId);
+      const seen = await eventRef.get();
+      if (seen.exists) return NextResponse.json({ received: true, duplicate: true }, { headers: privateResponseHeaders() });
+      await eventRef.create({ type: event.type || "unknown", receivedAt: now });
+    }
 
     if (event.type === "checkout.session.completed") {
       const uid = object.metadata?.uid || object.client_reference_id;
