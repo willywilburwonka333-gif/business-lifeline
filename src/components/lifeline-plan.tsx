@@ -30,7 +30,12 @@ function defaultYearStart() {
 function readPlan(): PlanStore {
   try {
     const raw = localStorage.getItem(LIFELINE_PLAN_KEY);
-    return raw ? { ...empty, ...(JSON.parse(raw) as Partial<PlanStore>) } : { ...empty, financialYearStart: defaultYearStart() };
+    if (!raw) return { ...empty, financialYearStart: defaultYearStart() };
+    const parsed = JSON.parse(raw) as Partial<PlanStore>;
+    return {
+      financialYearStart: parsed.financialYearStart || defaultYearStart(),
+      lines: Array.isArray(parsed.lines) ? parsed.lines.map((line) => ({ ...line, monthly: Array.isArray(line.monthly) ? [...line.monthly, ...Array(12).fill(0)].slice(0, 12) : Array(12).fill(0) })) : [],
+    };
   } catch { return { ...empty, financialYearStart: defaultYearStart() }; }
 }
 function addMonths(date: string, count: number) {
