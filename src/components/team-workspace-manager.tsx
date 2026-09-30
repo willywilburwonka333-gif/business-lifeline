@@ -31,6 +31,7 @@ const SOURCES = [
   ["tax", "business-lifeline-tax-v1"],
   ["spend", "business-lifeline-spend-v1"],
   ["assets", "business-lifeline-assets-v1"],
+  ["plan", "business-lifeline-plan-v1"],
   ["documents", "business-lifeline-document-vault-v1"],
   ["growth", "business-lifeline-growth-plan-v1"],
   ["exit", "business-lifeline-exit-plan-v1"],
@@ -46,6 +47,7 @@ const LIFECYCLE_KEYS = [
   "business-lifeline-tax-v1",
   "business-lifeline-spend-v1",
   "business-lifeline-assets-v1",
+  "business-lifeline-plan-v1",
 ] as const;
 
 const token = () => crypto.randomUUID().replaceAll("-", "").slice(0, 16).toUpperCase();
