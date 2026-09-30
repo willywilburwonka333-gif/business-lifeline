@@ -6,6 +6,7 @@ import { LifelineBooks } from "@/components/lifeline-books";
 import { LifelineMove } from "@/components/lifeline-move";
 import { LifelineSpend } from "@/components/lifeline-spend";
 import { LifelineAssets } from "@/components/lifeline-assets";
+import { LifelinePlan } from "@/components/lifeline-plan";
 import { LifelinePeople } from "@/components/lifeline-people";
 import { LifelineSpend } from "@/components/lifeline-spend";
 import { LifelineAssets } from "@/components/lifeline-assets";
