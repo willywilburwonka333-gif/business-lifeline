@@ -1,4 +1,4 @@
-name: Beta safety end-to-end tests
+name: Stage 1 automated safety tests
 
 on:
   pull_request:
@@ -6,9 +6,40 @@ on:
   workflow_dispatch:
 
 jobs:
-  beta-smoke:
+  quality:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm install --no-audit --no-fund
+      - run: npm run test
+      - run: npm run lint
+      - run: npm run build
+
+  firebase-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - run: npm install --no-audit --no-fund
+      - run: npm install --no-save --no-audit --no-fund firebase-tools@14 @firebase/rules-unit-testing@4
+      - run: npx firebase emulators:exec --project business-lifeline-rules-test --only firestore,storage "node --test tests/security/firestore.rules.test.mjs tests/security/storage.rules.test.mjs"
+
+  browser-journeys:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
     env:
       NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
       NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
@@ -30,6 +61,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: beta-playwright-report
+          name: stage-1-playwright-report
           path: playwright-report/
           retention-days: 14
