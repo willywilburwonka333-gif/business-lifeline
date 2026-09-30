@@ -202,7 +202,7 @@ export function BusinessRecords({ compact = false, aiEnabled = false }: { compac
           <button type="button" className="button outline" disabled={processing} onClick={() => inputRef.current?.click()}>{processing ? processingLabel || "Reading files…" : "Upload business records"}</button>
           <span><strong>{importedCount}</strong> MRI field{importedCount === 1 ? "" : "s"} pre-filled</span>
           <span><strong>{signalCount}</strong> diagnostic signal{signalCount === 1 ? "" : "s"} found</span>
-          {conflictCount > 0 && <span><strong>{conflictCount}</strong> conflicting fact{conflictCount === 1 ? "" : "s"} to confirm</span>
+          {conflictCount > 0 && <span><strong>{conflictCount}</strong> conflicting fact{conflictCount === 1 ? "" : "s"} to confirm</span>}
           <span><strong>{summary.total}</strong> file{summary.total === 1 ? "" : "s"} ready</span>
         </div>
       </section>
