@@ -2,8 +2,8 @@ import { agedPayables, agedReceivables, profitAndLoss, readBooksStore, trialBala
 import type { BusinessData, RevenueTrend } from "./types.ts";
 const round=(n:number)=>Math.round((Number(n)||0)*100)/100;
 export type FinanceEvidence={asAt:string;periodStart:string;periodEnd:string;revenue:number;costOfSales:number;expenses:number;cash:number;receivables:number;overdueReceivables:number;payables:number;overduePayables:number;taxLiabilities:number;confidence:"ledger-derived";notes:string[]};
-export function financeEvidence(periodStart?:string,periodEnd?:string):FinanceEvidence{
- const store=readBooksStore(),end=periodEnd||new Date().toISOString().slice(0,10),start=periodStart||(()=>{const d=new Date(end+"T00:00:00Z");d.setUTCMonth(d.getUTCMonth()-1);return d.toISOString().slice(0,10)})();
+export function financeEvidence(periodStart?:string,periodEnd?:string,storage?:Storage):FinanceEvidence{
+ const store=readBooksStore(storage),end=periodEnd||new Date().toISOString().slice(0,10),start=periodStart||(()=>{const d=new Date(end+"T00:00:00Z");d.setUTCMonth(d.getUTCMonth()-1);return d.toISOString().slice(0,10)})();
  const pnl=profitAndLoss(store,undefined,start,end),tb=trialBalance(store,undefined,undefined,end),ar=agedReceivables(store,end),ap=agedPayables(store,end);
  const bal=(name:string)=>tb.find(x=>x.account.toLowerCase()===name.toLowerCase())?.balance||0;
  const cash=Math.max(0,bal("Bank")+bal("Cash on Hand")+bal("Card Clearing")),receivables=Math.max(0,ar.reduce((n,x)=>n+x.outstanding,0)),payables=Math.max(0,ap.reduce((n,x)=>n+x.outstanding,0));
