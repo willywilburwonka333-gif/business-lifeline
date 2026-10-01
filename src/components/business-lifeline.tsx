@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { demoBusiness, emptyBusiness } from "@/lib/demo";
 import { generateReport } from "@/lib/planner";
+import { applyFinanceEvidence, financeEvidence } from "@/lib/finance-evidence";
 import { evidenceStatus, readSmartImport, type SmartImportDraft } from "@/lib/mri-smart-import";
 import type { AiAnalysis, BusinessData, BusinessReport, PlanAction } from "@/lib/types";
 
@@ -48,6 +49,7 @@ export function BusinessLifeline() {
   const [view, setView] = useState<"landing" | "form" | "report">("landing"); const [step, setStep] = useState(0); const [data, setData] = useState<BusinessData>(emptyBusiness); const [report, setReport] = useState<BusinessReport | null>(null); const [error, setError] = useState(""); const [loaded, setLoaded] = useState(false); const [analysing, setAnalysing] = useState(false); const [importDraft, setImportDraft] = useState<SmartImportDraft | null>(null); const demoReport = generateReport(demoBusiness);
   useEffect(() => { const timer = window.setTimeout(() => { setImportDraft(readSmartImport()); const saved = localStorage.getItem(STORAGE_KEY); if (saved) { try { const value = JSON.parse(saved); setData({ ...emptyBusiness, ...value.data, pressureFactors: value.data.pressureFactors ?? [] }); setReport(value.report); setView("report"); } catch { localStorage.removeItem(STORAGE_KEY); } } setLoaded(true); }, 0); return () => window.clearTimeout(timer); }, []);
   const update = (key: keyof BusinessData, value: string | number | string[]) => setData(d => ({ ...d, [key]: value }));
+  const useBooksEvidence = () => { try { const evidence=financeEvidence(); const next=applyFinanceEvidence(data,evidence); setData(next); setError(""); } catch { setError("Lifeline Books evidence could not be loaded."); } };
   const saveAndShow = (nextData: BusinessData, nextReport: BusinessReport) => { setData(nextData); setReport(nextReport); localStorage.setItem(STORAGE_KEY, JSON.stringify({ data: nextData, report: nextReport })); setView("report"); window.scrollTo(0, 0); };
   const useDemo = async () => { setError(""); setAnalysing(true); const next = await buildCompleteReport(demoBusiness); saveAndShow(demoBusiness, next); setAnalysing(false); };
   const reset = () => { localStorage.removeItem(STORAGE_KEY); setData(emptyBusiness); setReport(null); setStep(0); setView("landing"); window.scrollTo(0, 0); };
