@@ -164,7 +164,7 @@ export function BusinessLifelineApp() {
 
   if (saved === undefined) return <main className="loading app-loading" aria-label="Loading Business Lifeline"><span>Loading Business Lifeline…</span></main>;
   if (saved) return <SavedScenarioPlanner saved={saved} onReset={reset} />;
-  if (showAssessment && showQuestions) return <><BusinessLifeline />{helpButton}{tutorialLayer}</>;
+  if (showAssessment && showQuestions) return <><BusinessLifeline aiEnabled={reportMode === "ai" && aiConsent} />{helpButton}{tutorialLayer}</>;
   if (showAssessment) return (
     <>
       <main id="main-content" className="mri-mode-shell">
