@@ -9,6 +9,11 @@ import {
   profitAndLoss,
   trialBalance,
   validateJournal,
+  postInvoice,
+  postCreditNote,
+  postSupplierBill,
+  postCustomerPayment,
+  postSupplierPayment,
   type BooksStore,
 } from "./lifeline-books-engine";
 
@@ -68,3 +73,7 @@ if (gst.gstOnSales!==100 || gst.gstCredits!==50 || gst.estimatedNetGst!==50) thr
 
 const integrity=booksIntegrity(store);
 if (!integrity.balanced || integrity.unbalanced.length) throw new Error("Books integrity failed.");
+
+const invoice=store.docs[0];let flow=postInvoice({...store,journals:[]},invoice);if(!flow.added)throw new Error("Invoice posting failed.");if(!booksIntegrity(flow.store).balanced)throw new Error("Invoice journal unbalanced.");const duplicate=postInvoice(flow.store,invoice);if(duplicate.added)throw new Error("Duplicate invoice source was accepted.");flow=postCustomerPayment(flow.store,invoice,1100,"2026-07-05","pay-1");if(!flow.added||!booksIntegrity(flow.store).balanced)throw new Error("Customer payment failed.");
+const credit={...invoice,id:"c1",number:"CR-1",kind:"credit" as const,date:"2026-07-06"};const credited=postCreditNote(flow.store,credit);if(!credited.added||!booksIntegrity(credited.store).balanced)throw new Error("Credit note failed.");
+let apflow=postSupplierBill({...store,journals:[]},store.bills[0]);if(!apflow.added||!booksIntegrity(apflow.store).balanced)throw new Error("Supplier bill failed.");apflow=postSupplierPayment(apflow.store,store.bills[0],550,"2026-07-07","billpay-1");if(!apflow.added||!booksIntegrity(apflow.store).balanced)throw new Error("Supplier payment failed.");
