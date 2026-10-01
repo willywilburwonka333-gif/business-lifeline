@@ -10,7 +10,7 @@ const OPS_KEY = "business-lifeline-operating-platform-v1";
 const CRM_KEY = "business-lifeline-crm-v1";
 const OPERATIONS_KEY = "business-lifeline-operations-v1";
 const META_KEY = "business-lifeline-record-sync-meta-v1";
-const RECORD_TYPES = ["customers","products","sales","quotes","crm-accounts","crm-contacts","crm-opportunities","crm-activities","projects","project-tasks","purchase-orders","inventory","stock-movements","service-orders","production-orders"] as const;
+const RECORD_TYPES = ["customers","products","sales","quotes","crm-accounts","crm-contacts","crm-opportunities","crm-activities","projects","project-tasks","purchase-orders","inventory","stock-movements","service-orders","production-orders","boms","routings","work-centres","people","pay-runs","books-journals","pos-sales"] as const;
 
 type RecordType = (typeof RECORD_TYPES)[number];
 type BusinessRecord = { id: string; name?: string; customerName?: string; [key: string]: unknown };
@@ -42,7 +42,10 @@ function readStore(): Store | null {
 function saveStore(store: Store) {
   const core=JSON.parse(localStorage.getItem(OPS_KEY)||"{}");Object.assign(core,{customers:store.customers,products:store.products,sales:store.sales,quotes:store.quotes});localStorage.setItem(OPS_KEY,JSON.stringify(core));
   const crm=JSON.parse(localStorage.getItem(CRM_KEY)||"{}");Object.assign(crm,{accounts:store["crm-accounts"],contacts:store["crm-contacts"],opportunities:store["crm-opportunities"],activities:store["crm-activities"]});localStorage.setItem(CRM_KEY,JSON.stringify(crm));
-  const ops=JSON.parse(localStorage.getItem(OPERATIONS_KEY)||"{}");Object.assign(ops,{projects:store.projects,projectTasks:store["project-tasks"],purchaseOrders:store["purchase-orders"],inventory:store.inventory,movements:store["stock-movements"],serviceOrders:store["service-orders"],productionOrders:store["production-orders"]});localStorage.setItem(OPERATIONS_KEY,JSON.stringify(ops));
+  const ops=JSON.parse(localStorage.getItem(OPERATIONS_KEY)||"{}");Object.assign(ops,{projects:store.projects,projectTasks:store["project-tasks"],purchaseOrders:store["purchase-orders"],inventory:store.inventory,movements:store["stock-movements"],serviceOrders:store["service-orders"],productionOrders:store["production-orders"],boms:store.boms,routings:store.routings,workCentres:store["work-centres"]});localStorage.setItem(OPERATIONS_KEY,JSON.stringify(ops));
+  const people=JSON.parse(localStorage.getItem("business-lifeline-people-v1")||"{}");Object.assign(people,{employees:store.people,payRuns:store["pay-runs"]});localStorage.setItem("business-lifeline-people-v1",JSON.stringify(people));
+  const books=JSON.parse(localStorage.getItem("business-lifeline-books-v1")||"{}");books.journals=store["books-journals"];localStorage.setItem("business-lifeline-books-v1",JSON.stringify(books));
+  const pos=JSON.parse(localStorage.getItem("business-lifeline-pos-v1")||"{}");pos.sales=store["pos-sales"];localStorage.setItem("business-lifeline-pos-v1",JSON.stringify(pos));
   window.dispatchEvent(new Event("business-lifeline-operating-updated"));
 }
 
