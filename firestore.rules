@@ -85,6 +85,9 @@ service cloud.firestore {
             && (resource.data.email == '' || resource.data.email == authEmail())
             && request.resource.data.businessId == resource.data.businessId
             && request.resource.data.role == resource.data.role
+            && request.resource.data.token == resource.data.token
+            && request.resource.data.email == resource.data.email
+            && request.resource.data.createdBy == resource.data.createdBy
           )
         );
 
@@ -98,8 +101,9 @@ service cloud.firestore {
         && request.resource.data.ownerId == request.auth.uid;
       allow read: if hasMembership(businessId)
         || (signedIn() && resource.data.ownerId == request.auth.uid);
-      allow update: if hasRole(businessId, ['owner', 'manager'])
-        && request.resource.data.ownerId == resource.data.ownerId;
+      allow update: if hasRole(businessId, ['owner'])
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.id == resource.data.id;
       allow delete: if signedIn()
         && resource.data.ownerId == request.auth.uid;
 
@@ -165,10 +169,28 @@ service cloud.firestore {
         allow update, delete: if false;
       }
 
-      match /{document=**} {
+      match /crm/{documentId} {
         allow read: if hasMembership(businessId);
         allow create, update: if hasRole(businessId, ['owner', 'manager', 'staff']);
         allow delete: if hasRole(businessId, ['owner', 'manager']);
+      }
+      match /operations/{documentId} {
+        allow read: if hasMembership(businessId);
+        allow create, update: if hasRole(businessId, ['owner', 'manager', 'staff']);
+        allow delete: if hasRole(businessId, ['owner', 'manager']);
+      }
+      match /finance/{documentId} {
+        allow read: if hasRole(businessId, ['owner', 'manager', 'accountant']);
+        allow create, update: if hasRole(businessId, ['owner', 'manager', 'accountant']);
+        allow delete: if hasRole(businessId, ['owner']);
+      }
+      match /payroll/{documentId} {
+        allow read, create, update: if hasRole(businessId, ['owner', 'manager']);
+        allow delete: if hasRole(businessId, ['owner']);
+      }
+      match /{document=**} {
+        allow read: if hasMembership(businessId);
+        allow write: if false;
       }
     }
 
