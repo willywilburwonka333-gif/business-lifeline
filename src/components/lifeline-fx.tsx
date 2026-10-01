@@ -1,9 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { LIFELINE_BOOKS_KEY, appendJournal,
-  readBooksStore,
-  saveBooksStore, type BooksStore, type LedgerJournal } from "@/lib/lifeline-books-engine";
+import { appendJournal, readBooksStore, saveBooksStore, type LedgerJournal } from "@/lib/lifeline-books-engine";
 
 export const LIFELINE_FX_KEY = "business-lifeline-fx-v1";
 
