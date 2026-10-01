@@ -195,6 +195,9 @@ export function saveBooksStore(store: BooksStore, storage?: Storage) {
 }
 
 export function appendJournal(store: BooksStore, journal: LedgerJournal) {
+  if (!journal.source.trim()) return { store, added: false, reason: "missing-source" as const };
+  if (!journal.date || !/^\d{4}-\d{2}-\d{2}$/.test(journal.date)) return { store, added: false, reason: "invalid-date" as const };
+  if (!journal.lines.length || journal.lines.some((line) => !line.account.trim() || !Number.isFinite(line.amount) || line.amount <= 0)) return { store, added: false, reason: "invalid-line" as const };
   if (store.journals.some((item) => item.source === journal.source)) return { store, added: false, reason: "duplicate-source" as const };
   if (store.lockDate && journal.date <= store.lockDate) return { store, added: false, reason: "locked-period" as const };
   if (!validateJournal(journal).balanced) return { store, added: false, reason: "unbalanced" as const };
