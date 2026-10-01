@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { LIFELINE_BOOKS_KEY, readBooksStore, type BooksStore, type LedgerJournal } from "@/lib/lifeline-books-engine";
+import { calculatePayroll, payrollJournalLines, validatePayroll, type PayComponent } from "@/lib/lifeline-payroll-engine";
 
 export const LIFELINE_PEOPLE_KEY = "business-lifeline-people-v1";
 const OPERATIONS_KEY = "business-lifeline-connected-operations-v2";
@@ -13,6 +14,11 @@ type Employee = {
   employmentType: "full-time" | "part-time" | "casual" | "contractor";
   hourlyRate: number;
   ordinaryHoursPerWeek: number;
+  employerName: string;
+  employerAbn: string;
+  superFundName: string;
+  awardOrAgreement: string;
+  classification: string;
   superRatePercent: number;
   withholdingRatePercent: number;
   annualLeaveHours: number;
@@ -33,6 +39,13 @@ type PayLine = {
   annualLeaveAccrued: number;
   personalLeaveAccrued: number;
   hourlyRate: number;
+  ordinaryGross: number;
+  overtime: number;
+  paidLeave: number;
+  allowances: number;
+  bonuses: number;
+  deductions: number;
+  qualifyingEarnings: number;
 };
 
 type PayRun = {
@@ -99,7 +112,7 @@ export function LifelinePeople() {
   const [ready, setReady] = useState(false);
   const [employee, setEmployee] = useState({
     name: "", email: "", employmentType: "full-time" as Employee["employmentType"], hourlyRate: 0,
-    ordinaryHoursPerWeek: 38, superRatePercent: 12, withholdingRatePercent: 0, annualLeaveAccrualPerHour: 0, personalLeaveAccrualPerHour: 0,
+    ordinaryHoursPerWeek: 38, employerName: "", employerAbn: "", superFundName: "", awardOrAgreement: "", classification: "", superRatePercent: 12, withholdingRatePercent: 0, annualLeaveAccrualPerHour: 0, personalLeaveAccrualPerHour: 0,
   });
   const [period, setPeriod] = useState({ start: "", end: "", payDate: today() });
   const [message, setMessage] = useState("");
@@ -129,7 +142,7 @@ export function LifelinePeople() {
       annualLeaveHours: 0, personalLeaveHours: 0, annualLeaveAccrualPerHour: employee.annualLeaveAccrualPerHour, personalLeaveAccrualPerHour: employee.personalLeaveAccrualPerHour, active: true,
     };
     setStore((current) => ({ ...current, employees: [next, ...current.employees] }));
-    setEmployee({ name: "", email: "", employmentType: "full-time", hourlyRate: 0, ordinaryHoursPerWeek: 38, superRatePercent: 12, withholdingRatePercent: 0, annualLeaveAccrualPerHour: 0, personalLeaveAccrualPerHour: 0 });
+    setEmployee({ name: "", email: "", employmentType: "full-time", hourlyRate: 0, ordinaryHoursPerWeek: 38, employerName: "", employerAbn: "", superFundName: "", awardOrAgreement: "", classification: "", superRatePercent: 12, withholdingRatePercent: 0, annualLeaveAccrualPerHour: 0, personalLeaveAccrualPerHour: 0 });
   };
 
   const createPayRun = () => {
@@ -139,10 +152,9 @@ export function LifelinePeople() {
       const hours = matching.length
         ? round(matching.reduce((sum, sheet) => sum + hoursBetween(sheet.start, sheet.end, sheet.breakMinutes), 0))
         : round(person.ordinaryHoursPerWeek * Math.max(1, Math.round((new Date(period.end).getTime() - new Date(period.start).getTime()) / (7 * 86_400_000)) + 1));
-      const gross = round(hours * person.hourlyRate);
-      const payg = round(gross * person.withholdingRatePercent / 100);
-      const superAmount = round(gross * person.superRatePercent / 100);
-      return { employeeId: person.id, employeeName: person.name, hours, gross, payg, super: superAmount, net: round(gross - payg), annualLeaveAccrued: round(hours * Number(person.annualLeaveAccrualPerHour || 0)), personalLeaveAccrued: round(hours * Number(person.personalLeaveAccrualPerHour || 0)), hourlyRate: person.hourlyRate };
+      const components: PayComponent[] = [{ kind: "ordinary", description: "Ordinary hours", hours, rate: person.hourlyRate, qualifyingEarnings: true }];
+      const payroll = calculatePayroll(person, components);
+      return { employeeId: person.id, employeeName: person.name, hours, gross: payroll.gross, payg: payroll.payg, super: payroll.super, net: payroll.net, annualLeaveAccrued: round(hours * Number(person.annualLeaveAccrualPerHour || 0)), personalLeaveAccrued: round(hours * Number(person.personalLeaveAccrualPerHour || 0)), hourlyRate: person.hourlyRate, ordinaryGross: payroll.ordinaryGross, overtime: payroll.overtime, paidLeave: payroll.paidLeave, allowances: payroll.allowances, bonuses: payroll.bonuses, deductions: payroll.deductions, qualifyingEarnings: payroll.qualifyingEarnings };
     });
     const run: PayRun = { id: id("payrun"), periodStart: period.start, periodEnd: period.end, payDate: period.payDate, lines, status: "draft", createdAt: new Date().toISOString() };
     setStore((current) => ({ ...current, payRuns: [run, ...current.payRuns] }));
@@ -156,13 +168,7 @@ export function LifelinePeople() {
     const net = round(run.lines.reduce((sum, line) => sum + line.net, 0));
     const journal: LedgerJournal = {
       id: id("journal"), date: run.payDate, memo: "Payroll " + run.periodStart + " to " + run.periodEnd, source: "PEOPLE:PAYRUN:" + run.id,
-      lines: [
-        { account: "Wages & Salaries", side: "debit", amount: gross },
-        ...(superAmount > 0 ? [{ account: "Superannuation Expense", side: "debit" as const, amount: superAmount }] : []),
-        ...(payg > 0 ? [{ account: "PAYG Withholding Payable", side: "credit" as const, amount: payg }] : []),
-        ...(superAmount > 0 ? [{ account: "Superannuation Payable", side: "credit" as const, amount: superAmount }] : []),
-        { account: "Payroll Clearing", side: "credit", amount: net },
-      ],
+      lines: payrollJournalLines({components:[],ordinaryGross:gross,overtime:0,paidLeave:0,allowances:0,bonuses:0,deductions:0,gross,payg,qualifyingEarnings:gross,super:superAmount,net,stp:{gross,overtime:0,paidLeave:0,allowances:0,bonuses:0,payg,super:superAmount}}),
     };
     if (!postJournal(journal)) { setMessage("Pay run could not be posted. Check the period lock or existing journal."); return; }
     setStore((current) => ({
@@ -191,7 +197,7 @@ export function LifelinePeople() {
     const person = store.employees.find((item) => item.id === line.employeeId);
     const win = window.open("", "_blank", "width=760,height=900");
     if (!win) return;
-    win.document.write(`<html><head><title>Draft payroll statement - ${line.employeeName}</title><style>body{font-family:Arial;padding:44px;color:#173244}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.box{border:1px solid #ccd8de;padding:14px;border-radius:10px}h1{margin-bottom:4px}.total{font-size:22px;font-weight:700}</style></head><body><h1>Lifeline People · Draft payroll statement</h1><p>${line.employeeName}<br>Period ${run.periodStart} to ${run.periodEnd}<br>Pay date ${run.payDate}</p><div class="grid"><div class="box"><strong>Hours</strong><br>${line.hours}</div><div class="box"><strong>Hourly rate</strong><br>${money(line.hourlyRate)}</div><div class="box"><strong>Gross</strong><br>${money(line.gross)}</div><div class="box"><strong>PAYG withheld</strong><br>${money(line.payg)}</div><div class="box"><strong>Super</strong><br>${money(line.super)}</div><div class="box"><strong>Net pay</strong><br><span class="total">${money(line.net)}</span></div><div class="box"><strong>Annual leave balance</strong><br>${person?.annualLeaveHours ?? 0} hrs</div><div class="box"><strong>Personal leave balance</strong><br>${person?.personalLeaveHours ?? 0} hrs</div></div><p>Prepared by Business Lifeline for payroll review only. This is not represented as a Fair Work-complete statutory pay slip until employer ABN, required allowances/loadings/penalties/deductions, super fund details and all applicable award/tax rules have been validated.</p><script>window.print()</script></body></html>`);
+    win.document.write(`<html><head><title>Draft payroll statement - ${line.employeeName}</title><style>body{font-family:Arial;padding:44px;color:#173244}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.box{border:1px solid #ccd8de;padding:14px;border-radius:10px}h1{margin-bottom:4px}.total{font-size:22px;font-weight:700}</style></head><body><h1>Lifeline People · Draft payroll statement</h1><p>${line.employeeName}<br>Period ${run.periodStart} to ${run.periodEnd}<br>Pay date ${run.payDate}</p><div class="grid"><div class="box"><strong>Hours</strong><br>${line.hours}</div><div class="box"><strong>Hourly rate</strong><br>${money(line.hourlyRate)}</div><div class="box"><strong>Gross</strong><br>${money(line.gross)}</div><div class="box"><strong>PAYG withheld</strong><br>${money(line.payg)}</div><div class="box"><strong>Super</strong><br>${money(line.super)}</div><div class="box"><strong>Net pay</strong><br><span class="total">${money(line.net)}</span></div><div class="box"><strong>Annual leave balance</strong><br>${person?.annualLeaveHours ?? 0} hrs</div><div class="box"><strong>Personal leave balance</strong><br>${person?.personalLeaveHours ?? 0} hrs</div></div><p>${person?.employerName || "Employer"} · ABN ${person?.employerAbn || "not recorded"} · ${person?.awardOrAgreement || "Award/agreement not recorded"} · ${person?.classification || "Classification not recorded"}<br>Super fund: ${person?.superFundName || "not recorded"}</p><p>Prepared by Business Lifeline for payroll review only. This is not represented as a Fair Work-complete statutory pay slip until employer ABN, required allowances/loadings/penalties/deductions, super fund details and all applicable award/tax rules have been validated.</p><script>window.print()</script></body></html>`);
     win.document.close();
   };
 
@@ -220,7 +226,7 @@ export function LifelinePeople() {
         <label className="field"><span>Employment type</span><select value={employee.employmentType} onChange={(e) => setEmployee({ ...employee, employmentType: e.target.value as Employee["employmentType"] })}><option value="full-time">Full-time</option><option value="part-time">Part-time</option><option value="casual">Casual</option><option value="contractor">Contractor</option></select></label>
         <label className="field"><span>Hourly rate</span><input type="number" min="0" step="0.01" value={employee.hourlyRate || ""} onChange={(e) => setEmployee({ ...employee, hourlyRate: Number(e.target.value) || 0 })} /></label>
         <label className="field"><span>Ordinary hours / week</span><input type="number" min="0" step="0.1" value={employee.ordinaryHoursPerWeek} onChange={(e) => setEmployee({ ...employee, ordinaryHoursPerWeek: Number(e.target.value) || 0 })} /></label>
-        <label className="field"><span>Super rate %</span><input type="number" min="0" step="0.1" value={employee.superRatePercent} onChange={(e) => setEmployee({ ...employee, superRatePercent: Number(e.target.value) || 0 })} /></label>
+        <label className="field"><span>Employer name</span><input value={employee.employerName} onChange={(e) => setEmployee({ ...employee, employerName: e.target.value })} /></label><label className="field"><span>Employer ABN</span><input value={employee.employerAbn} onChange={(e) => setEmployee({ ...employee, employerAbn: e.target.value })} /></label><label className="field"><span>Super fund</span><input value={employee.superFundName} onChange={(e) => setEmployee({ ...employee, superFundName: e.target.value })} /></label><label className="field"><span>Award / agreement</span><input value={employee.awardOrAgreement} onChange={(e) => setEmployee({ ...employee, awardOrAgreement: e.target.value })} /></label><label className="field"><span>Classification</span><input value={employee.classification} onChange={(e) => setEmployee({ ...employee, classification: e.target.value })} /></label><label className="field"><span>Super rate %</span><input type="number" min="0" step="0.1" value={employee.superRatePercent} onChange={(e) => setEmployee({ ...employee, superRatePercent: Number(e.target.value) || 0 })} /></label>
         <label className="field"><span>PAYG withholding estimate %</span><input type="number" min="0" max="100" step="0.1" value={employee.withholdingRatePercent} onChange={(e) => setEmployee({ ...employee, withholdingRatePercent: Number(e.target.value) || 0 })} /></label><label className="field"><span>Annual leave accrued per ordinary hour</span><input type="number" min="0" step="0.0001" value={employee.annualLeaveAccrualPerHour} onChange={(e) => setEmployee({ ...employee, annualLeaveAccrualPerHour: Number(e.target.value) || 0 })} /></label><label className="field"><span>Personal leave accrued per ordinary hour</span><input type="number" min="0" step="0.0001" value={employee.personalLeaveAccrualPerHour} onChange={(e) => setEmployee({ ...employee, personalLeaveAccrualPerHour: Number(e.target.value) || 0 })} /></label>
         <button className="button primary">Add employee</button><small>Default super is 12% for the current Australian SG rate. From 1 July 2026 Payday Super generally requires SG to be paid on payday and received by the fund within 7 business days. Confirm qualifying earnings, exceptions, award, PAYG and entitlements before relying on a pay run.</small>
       </form>
