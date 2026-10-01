@@ -3,6 +3,7 @@
 import { demoBusinesses } from "@/lib/demo";
 import { generateReport } from "@/lib/planner";
 import { useState } from "react";
+import { CustomerInvoice } from "@/components/customer-invoice";
 
 const demoReports = demoBusinesses.map((business) => generateReport(business));
 
@@ -23,9 +24,11 @@ export function JudgeLanding({
   demoLoading: boolean;
 }) {
   const [demoChooserOpen, setDemoChooserOpen] = useState(false);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
   const chooseDemo = (index: number) => { setDemoChooserOpen(false); onDemo(index); };
   return (
     <main id="main-content" className="judge-landing">
+      {invoiceOpen && <CustomerInvoice onClose={() => setInvoiceOpen(false)} />}
       {demoChooserOpen && <div className="demo-chooser-backdrop" role="presentation" onClick={() => setDemoChooserOpen(false)}>
         <section className="demo-chooser" role="dialog" aria-modal="true" aria-labelledby="demo-chooser-title" onClick={(event) => event.stopPropagation()}>
           <header><div><p className="eyebrow">DEMO MRI TEST LAB</p><h2 id="demo-chooser-title">Choose the business you want to test</h2><p>Each option loads a different financial position through the full Business Lifeline workspace.</p></div><button type="button" className="demo-chooser-close" aria-label="Close demo chooser" onClick={() => setDemoChooserOpen(false)}>×</button></header>
@@ -34,7 +37,7 @@ export function JudgeLanding({
       </div>}
       <nav className="judge-nav" aria-label="Business Lifeline">
         <a className="brand light" href="#main-content"><span>BL</span> Business Lifeline</a>
-        <button type="button" className="judge-nav-action" onClick={onStart}>Run the MRI <span>→</span></button>
+        <div className="judge-nav-tools"><button type="button" className="judge-nav-invoice" onClick={() => setInvoiceOpen(true)}>Customer invoice</button><button type="button" className="judge-nav-action" onClick={onStart}>Run the MRI <span>→</span></button></div>
       </nav>
 
       <section className="judge-hero">
@@ -78,7 +81,7 @@ export function JudgeLanding({
           <li>Core financial calculations remain available if AI is unavailable.</li>
           <li>GPT output is constrained to a strict structured schema.</li>
           <li>The system does not make legal insolvency or tax conclusions.</li>
-          <li>Reports stay in the user&apos;s browser in this prototype.</li>
+          <li>MRI records are stored locally by default; signed-in owners can also sync supported workspace records to their private cloud workspace.</li>
         </ul>
       </section>
 

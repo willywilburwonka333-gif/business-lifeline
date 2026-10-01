@@ -178,7 +178,7 @@ export function BusinessLifelineApp() {
             <label className={`mri-mode-card ${reportMode === "private" ? "selected" : ""}`}>
               <input type="radio" name="report-mode" checked={reportMode === "private"} onChange={() => { setReportMode("private"); setAiConsent(false); }} />
               <span className="mri-mode-check" aria-hidden="true">{reportMode === "private" ? "✓" : ""}</span>
-              <span><strong>Private calculation-only report</strong><small>Recommended default</small><p>Your figures stay in this browser. CSV and text can be read locally. Other files are registered but are not sent to an AI model.</p></span>
+              <span><strong>Private calculation-only report</strong><small>Recommended default</small><p>Your figures are processed without an AI model. They are stored locally on this device by default; if you are signed into your owner account, supported workspace records can also sync to your private Business Lifeline cloud workspace. CSV and text can be read locally.</p></span>
             </label>
             <label className={`mri-mode-card ${reportMode === "ai" ? "selected" : ""}`}>
               <input type="radio" name="report-mode" checked={reportMode === "ai"} onChange={() => setReportMode("ai")} />
