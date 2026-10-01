@@ -462,7 +462,7 @@ export function gstSummary(store: BooksStore, start?: string, end?: string): Gst
       if (line.account === "GST Input Credit") ledgerGstCredits = round(ledgerGstCredits + (line.side === "debit" ? line.amount : -line.amount));
     }
   }
-  if (Math.abs(ledgerGstOnSales) > .005) gstOnSales = Math.max(0, ledgerGstOnSales);
+  if (Math.abs(ledgerGstOnSales) > .005) {\n    gstOnSales = Math.max(0, ledgerGstOnSales);\n    taxableSales = Math.max(documentTaxableSales, round(gstOnSales * 11));\n  }
   const gstCredits = Math.max(0, ledgerGstCredits);
   return { taxableSales, gstOnSales, gstFreeSales, inputTaxedSales, purchasesIncludingGst, gstCredits, estimatedNetGst: round(gstOnSales - gstCredits) };
 }
