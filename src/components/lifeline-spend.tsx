@@ -2,9 +2,9 @@
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import {
-  LIFELINE_BOOKS_KEY,
+  appendJournal,
   readBooksStore,
-  type BooksStore,
+  saveBooksStore,
   type LedgerJournal,
   type SupplierBill,
 } from "@/lib/lifeline-books-engine";
@@ -76,18 +76,10 @@ function readSpend(): SpendStore {
   } catch { return empty; }
 }
 
-function saveBooks(store: BooksStore) {
-  localStorage.setItem(LIFELINE_BOOKS_KEY, JSON.stringify(store));
-  window.dispatchEvent(new CustomEvent("business-lifeline-ledger-sync", { detail: { changed: true } }));
-}
-
 function postJournal(journal: LedgerJournal) {
-  const books = readBooksStore();
-  if (books.journals.some((item) => item.source === journal.source)) return false;
-  const debit = round(journal.lines.filter((line) => line.side === "debit").reduce((sum, line) => sum + line.amount, 0));
-  const credit = round(journal.lines.filter((line) => line.side === "credit").reduce((sum, line) => sum + line.amount, 0));
-  if (debit !== credit || debit <= 0 || (books.lockDate && journal.date <= books.lockDate)) return false;
-  saveBooks({ ...books, journals: [journal, ...books.journals] });
+  const result = appendJournal(readBooksStore(), journal);
+  if (!result.added) return false;
+  saveBooksStore(result.store);
   return true;
 }
 
@@ -175,7 +167,9 @@ export function LifelineSpend() {
     const debit = round(journal.lines.filter((line) => line.side === "debit").reduce((sum, line) => sum + line.amount, 0));
     const credit = round(journal.lines.filter((line) => line.side === "credit").reduce((sum, line) => sum + line.amount, 0));
     if (debit !== credit || (books.lockDate && bill.date <= books.lockDate)) { setMessage("Captured bill could not be posted. Review the values or period lock."); return; }
-    saveBooks({ ...books, bills: [bill, ...books.bills], journals: [journal, ...books.journals] });
+    const posted = appendJournal({ ...books, bills: [bill, ...books.bills] }, journal);
+    if (!posted.added) { setMessage("Captured bill could not be posted. Review the values or period lock."); return; }
+    saveBooksStore(posted.store);
     setCaptured({ supplier: "", invoiceNumber: "", date: today(), dueDate: "", total: 0, gst: 0, description: "", suggestedAccount: "Operating Expense", confidence: "review", source: "", warnings: [] });
     setMessage("Captured supplier bill posted to Lifeline Books.");
   };
@@ -220,7 +214,9 @@ export function LifelineSpend() {
         const debit = round(journal.lines.filter((line) => line.side === "debit").reduce((sum, line) => sum + line.amount, 0));
         const credit = round(journal.lines.filter((line) => line.side === "credit").reduce((sum, line) => sum + line.amount, 0));
         if (debit !== credit || (books.lockDate && journal.date <= books.lockDate)) { setMessage("The received PO could not be posted because the ledger is locked or unbalanced."); return; }
-        saveBooks({ ...books, bills: [bill, ...books.bills], journals: [journal, ...books.journals] });
+        const posted = appendJournal({ ...books, bills: [bill, ...books.bills] }, journal);
+    if (!posted.added) { setMessage("Captured bill could not be posted. Review the values or period lock."); return; }
+    saveBooksStore(posted.store);
         setMessage(order.number + " became a supplier bill in Lifeline Books.");
       }
     }
