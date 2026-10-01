@@ -190,20 +190,18 @@ export function salesDocumentTotal(doc: SalesDocument) {
   return round(doc.items.reduce((sum, item) => sum + Math.max(0, Number(item.qty)||0) * Math.max(0, Number(item.rate)||0), 0));
 }
 export function postInvoice(store: BooksStore, doc: SalesDocument) {
-  const total=salesDocumentTotal(doc), gst=round(doc.items.filter(i=>i.gst==="gst").reduce((n,i)=>n+(i.qty*i.rate)/11,0)), net=round(total-gst);
-  if(doc.kind!=="invoice"||total<=0) return {store,added:false,reason:"invalid-document" as const};
-  return appendJournal(store,{id:"journal-"+doc.id,date:doc.date,memo:"Invoice "+doc.number+" · "+doc.customer,source:"AR:INVOICE:"+doc.id,lines:[{account:"Accounts Receivable",side:"debit",amount:total},{account:"Sales Revenue",side:"credit",amount:net},...(gst>0?[{account:"GST Payable",side:"credit" as const,amount:gst}]:[])]});
+  if(doc.kind!=="invoice") return {store,added:false,reason:"invalid-document" as const};
+  const journal=invoiceJournal(doc); if(!journal)return {store,added:false,reason:"invalid-document" as const}; return appendJournal(store,journal);
 }
 export function postCustomerPayment(store: BooksStore, doc: SalesDocument, amount:number, date:string, paymentId:string) {
   const value=round(Math.max(0,amount)); if(value<=0) return {store,added:false,reason:"invalid-payment" as const};
   return appendJournal(store,{id:"journal-"+paymentId,date,memo:"Payment "+doc.number+" · "+doc.customer,source:"AR:PAYMENT:"+paymentId,lines:[{account:"Bank",side:"debit",amount:value},{account:"Accounts Receivable",side:"credit",amount:value}]});
 }
 export function postCreditNote(store: BooksStore, doc: SalesDocument) {
-  const total=salesDocumentTotal(doc), gst=round(doc.items.filter(i=>i.gst==="gst").reduce((n,i)=>n+(i.qty*i.rate)/11,0)), net=round(total-gst);
-  if(doc.kind!=="credit"||total<=0) return {store,added:false,reason:"invalid-document" as const};
-  return appendJournal(store,{id:"journal-"+doc.id,date:doc.date,memo:"Credit "+doc.number+" · "+doc.customer,source:"AR:CREDIT:"+doc.id,lines:[{account:"Sales Returns",side:"debit",amount:net},...(gst>0?[{account:"GST Payable",side:"debit" as const,amount:gst}]:[]),{account:"Accounts Receivable",side:"credit",amount:total}]});
+  if(doc.kind!=="credit") return {store,added:false,reason:"invalid-document" as const};
+  const journal=invoiceJournal(doc); if(!journal)return {store,added:false,reason:"invalid-document" as const}; return appendJournal(store,journal);
 }
-export function postSupplierBill(store: BooksStore,bill:SupplierBill){const total=round(Math.max(0,bill.amount)),gst=round(Math.max(0,Math.min(total,bill.gst))),net=round(total-gst);if(total<=0)return{store,added:false,reason:"invalid-bill" as const};return appendJournal(store,{id:"journal-"+bill.id,date:bill.date,memo:"Bill "+bill.number+" · "+bill.supplier,source:"AP:BILL:"+bill.id,lines:[{account:"Operating Expense",side:"debit",amount:net},...(gst>0?[{account:"GST Input Credit",side:"debit" as const,amount:gst}]:[]),{account:"Accounts Payable",side:"credit",amount:total}]})}
+export function postSupplierBill(store: BooksStore,bill:SupplierBill){const journal=supplierBillJournal(bill);if(!journal)return{store,added:false,reason:"invalid-bill" as const};return appendJournal(store,journal)}
 export function postSupplierPayment(store:BooksStore,bill:SupplierBill,amount:number,date:string,paymentId:string){const value=round(Math.max(0,amount));if(value<=0)return{store,added:false,reason:"invalid-payment" as const};return appendJournal(store,{id:"journal-"+paymentId,date,memo:"Bill payment "+bill.number+" · "+bill.supplier,source:"AP:PAYMENT:"+paymentId,lines:[{account:"Accounts Payable",side:"debit",amount:value},{account:"Bank",side:"credit",amount:value}]})}
 
 export function saveBooksStore(store: BooksStore, storage?: Storage) {
