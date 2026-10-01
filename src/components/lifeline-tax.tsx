@@ -18,7 +18,7 @@ type TaxPeriod = {
   end: string;
   dueDate: string;
   label: string;
-  status: "draft" | "reviewed" | "lodged" | "paid";
+  status: "draft" | "reviewed" | "externally-lodged" | "paid";
   gstOnSales: number;
   gstCredits: number;
   paygWithholding: number;
@@ -179,7 +179,7 @@ export function LifelineTax() {
         {store.periods.map((item) => {
           const netGst = round(item.gstOnSales - item.gstCredits);
           const total = round(netGst + item.paygWithholding + item.instalmentOrIncomeTax);
-          return <article key={item.id}><div><strong>{item.label}</strong><span>{item.start} → {item.end} · {item.status}{item.dueDate ? " · due " + item.dueDate : ""}</span><small>GST {money(netGst)} · PAYG {money(item.paygWithholding)} · tax instalment {money(item.instalmentOrIncomeTax)} · total {money(total)}</small></div><div><button type="button" onClick={() => exportPeriod(item)}>Export workpaper</button>{item.status === "draft" && <button type="button" onClick={() => updateStatus(item, "reviewed")}>Mark reviewed</button>}{item.status === "reviewed" && <button type="button" onClick={() => updateStatus(item, "lodged")}>Mark lodged</button>}{item.status === "lodged" && <button type="button" onClick={() => payPeriod(item)}>Record payment</button>}</div></article>;
+          return <article key={item.id}><div><strong>{item.label}</strong><span>{item.start} → {item.end} · {item.status}{item.dueDate ? " · due " + item.dueDate : ""}</span><small>GST {money(netGst)} · PAYG {money(item.paygWithholding)} · tax instalment {money(item.instalmentOrIncomeTax)} · total {money(total)}</small></div><div><button type="button" onClick={() => exportPeriod(item)}>Export workpaper</button>{item.status === "draft" && <button type="button" onClick={() => updateStatus(item, "reviewed")}>Mark reviewed</button>}{item.status === "reviewed" && <button type="button" onClick={() => updateStatus(item, "externally-lodged")}>Record externally lodged</button>}{item.status === "externally-lodged" && <button type="button" onClick={() => payPeriod(item)}>Record payment</button>}</div></article>;
         })}
       </div></section>
     </div>
