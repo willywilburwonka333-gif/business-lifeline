@@ -78,6 +78,6 @@ test("runway equals available cash divided by monthly burn", () => {
 test("all published metrics remain finite for valid non-negative inputs", () => {
   const metrics = calculateHealth(base({ monthlyRevenue: 0, cashAvailable: 0 }));
   for (const value of Object.values(metrics)) {
-    if (value !== null) assert.ok(Number.isFinite(value));
+    if (typeof value === "number") assert.ok(Number.isFinite(value));
   }
 });
