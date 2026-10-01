@@ -186,6 +186,21 @@ export function readBooksStore(storage?: Storage): BooksStore {
   }
 }
 
+export function saveBooksStore(store: BooksStore, storage?: Storage) {
+  const target = storage ?? (typeof window !== "undefined" ? window.localStorage : null);
+  if (!target) return false;
+  target.setItem(LIFELINE_BOOKS_KEY, JSON.stringify(store));
+  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("business-lifeline-ledger-sync", { detail: { changed: true } }));
+  return true;
+}
+
+export function appendJournal(store: BooksStore, journal: LedgerJournal) {
+  if (store.journals.some((item) => item.source === journal.source)) return { store, added: false, reason: "duplicate-source" as const };
+  if (store.lockDate && journal.date <= store.lockDate) return { store, added: false, reason: "locked-period" as const };
+  if (!validateJournal(journal).balanced) return { store, added: false, reason: "unbalanced" as const };
+  return { store: { ...store, journals: [journal, ...store.journals] }, added: true, reason: "added" as const };
+}
+
 export function readChart(storage?: Storage): LifelineAccount[] {
   try {
     const target = storage ?? (typeof window !== "undefined" ? window.localStorage : null);
