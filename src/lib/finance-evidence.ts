@@ -1,4 +1,4 @@
-import { agedPayables, agedReceivables, balanceSheet, profitAndLoss, readBooksStore, trialBalance } from "./lifeline-books-engine";
+import { agedPayables, agedReceivables, profitAndLoss, readBooksStore, trialBalance } from "./lifeline-books-engine";
 import type { BusinessData, RevenueTrend } from "./types";
 const round=(n:number)=>Math.round((Number(n)||0)*100)/100;
 export type FinanceEvidence={asAt:string;periodStart:string;periodEnd:string;revenue:number;costOfSales:number;expenses:number;cash:number;receivables:number;overdueReceivables:number;payables:number;overduePayables:number;taxLiabilities:number;confidence:"ledger-derived";notes:string[]};
