@@ -115,8 +115,8 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
 
   const scoreExplanation = [
     cashResult < 0
-      ? `Trading is currently losing ${Math.abs(round(result, 2))} per month.`
-      : `Trading is currently producing ${round(result, 2)} per month after supplied outgoings.`,
+      ? `Supplied cash inflows are currently ${Math.abs(round(cashResult, 2))} per month below supplied operating costs, drawings and loan repayments.`
+      : `Supplied cash inflows are currently ${round(cashResult, 2)} per month above supplied operating costs, drawings and loan repayments.`,
     runwayMonths === null
       ? "The supplied monthly figures are cash-positive, so loss-based runway is not applicable."
       : `Cash runway is approximately ${round(runwayMonths)} months at the current monthly loss.`,
