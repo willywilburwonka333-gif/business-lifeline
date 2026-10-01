@@ -157,3 +157,7 @@ test("operating margin excludes owner drawings and loan repayments", () => {
   assert.equal(metrics.operatingMargin, 40);
   assert.equal(metrics.expenseRatio, 60);
 });
+
+
+test("does not double count overdue obligations inside total debt pressure",()=>{const data=makeBusiness({monthlyRevenue:10000,totalDebt:120000,overdueTax:10000,overdueSuppliers:5000});const m=calculateHealth(data);assert.equal(m.debtPressure,100)});
+test("zero revenue and zero debt has no debt pressure",()=>{const m=calculateHealth(makeBusiness({monthlyRevenue:0,totalDebt:0}));assert.equal(m.debtPressure,0)});
