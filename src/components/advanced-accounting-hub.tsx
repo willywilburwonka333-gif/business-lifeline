@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { appendJournal, readBooksStore, saveBooksStore, type LedgerJournal } from "@/lib/lifeline-books-engine";
 
 type Side="debit"|"credit";
 type Line={account:string;side:Side;amount:number};
@@ -34,12 +35,11 @@ export function AdvancedAccountingHub(){
  const gstCredits=store.bills.reduce((s,b)=>s+b.gst,0);
  const postJournal=(date:string,memo:string,lines:Line[],source:string)=>setStore(s=>{
    const postingDate=date||new Date().toISOString().slice(0,10);
-   const debit=Math.round(lines.filter(l=>l.side==="debit").reduce((sum,l)=>sum+l.amount,0)*100)/100;
-   const credit=Math.round(lines.filter(l=>l.side==="credit").reduce((sum,l)=>sum+l.amount,0)*100)/100;
-   if(debit!==credit||debit<=0)return s;
-   if(s.lockDate&&postingDate<=s.lockDate)return s;
-   if(s.journals.some(j=>j.source===source))return s;
-   return {...s,journals:[{id:id("journal"),date:postingDate,memo,lines,source},...s.journals]};
+   const journal:LedgerJournal={id:id("journal"),date:postingDate,memo,lines,source};
+   const result=appendJournal({...readBooksStore(),...s,journals:s.journals},journal);
+   if(!result.added)return s;
+   saveBooksStore(result.store);
+   return {...s,journals:result.store.journals};
  });
  const addJournal=(e:FormEvent)=>{e.preventDefault();if(journal.amount<=0)return;postJournal(journal.date,journal.memo,[{account:journal.debitAccount,side:"debit",amount:journal.amount},{account:journal.creditAccount,side:"credit",amount:journal.amount}],"Manual");setJournal({date:"",memo:"",debitAccount:"Bank",creditAccount:"Sales",amount:0})};
  const createDoc=(e:FormEvent)=>{e.preventDefault();if(!doc.customer||!doc.items.some(i=>i.description&&i.rate>0))return;setStore(s=>{
