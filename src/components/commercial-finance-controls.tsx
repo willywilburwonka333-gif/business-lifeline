@@ -118,38 +118,17 @@ export function CommercialFinanceControls({ initialTab = "banking" }: { initialT
   };
 
   const parseStatementCsv = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const file = event.target.files?.[0]; if (!file) return;
     const text = await file.text();
-    const rows = text.split(/\r?\n/).filter(Boolean);
-    if (rows.length < 2) return;
-    const headers = rows[0].split(",").map((value) => value.trim().toLowerCase().replace(/[^a-z0-9]+/g, ""));
-    const field = (...names: string[]) => names.map((name) => headers.indexOf(name)).find((index) => typeof index === "number" && index >= 0) ?? -1;
-    const dateIndex = field("date", "transactiondate", "valuedate");
-    const descIndex = field("description", "narrative", "details", "transaction", "memo");
-    const amountIndex = field("amount", "value");
-    const debitIndex = field("debit", "withdrawal", "moneyout");
-    const creditIndex = field("credit", "deposit", "moneyin");
-    const directionIndex = field("direction", "type");
-    const accountId = bankTx.accountId || store.accounts[0]?.id || "bank-main";
-    const imported: BankTransaction[] = [];
-    for (const line of rows.slice(1)) {
-      const cols = line.split(",").map((value) => value.trim().replace(/^"|"$/g, ""));
-      const description = descIndex >= 0 ? cols[descIndex] : cols[1] || "Imported bank transaction";
-      const rawDebit = debitIndex >= 0 ? Number((cols[debitIndex] || "").replace(/[$,]/g, "")) : 0;
-      const rawCredit = creditIndex >= 0 ? Number((cols[creditIndex] || "").replace(/[$,]/g, "")) : 0;
-      let amount = amountIndex >= 0 ? Number((cols[amountIndex] || "").replace(/[$,]/g, "")) : rawCredit || rawDebit;
-      let direction: BankTransaction["direction"] = rawDebit > 0 ? "out" : "in";
-      if (amount < 0) { direction = "out"; amount = Math.abs(amount); }
-      if (directionIndex >= 0 && /debit|out|withdraw/i.test(cols[directionIndex] || "")) direction = "out";
-      if (directionIndex >= 0 && /credit|in|deposit/i.test(cols[directionIndex] || "")) direction = "in";
-      if (!Number.isFinite(amount) || amount <= 0) continue;
-      imported.push({ id: id("bankcsv"), accountId, date: dateIndex >= 0 ? (cols[dateIndex] || today()) : today(), description, amount: round(amount), direction, matchedSource: "", status: "unmatched" });
-    }
-    setStore((current) => ({ ...current, transactions: [...imported, ...current.transactions] }));
-    event.target.value = "";
+    const rows:string[][]=[]; let row:string[]=[],cell="",quoted=false;
+    for(let i=0;i<text.length;i++){const ch=text[i];if(ch==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++;}else quoted=!quoted;}else if(ch===','&&!quoted){row.push(cell.trim());cell="";}else if((ch==='\n'||ch==='\r')&&!quoted){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(cell.trim());cell="";if(row.some(Boolean))rows.push(row);row=[];}else cell+=ch;}row.push(cell.trim());if(row.some(Boolean))rows.push(row);
+    if(rows.length<2)return;const headers=rows[0].map(value=>value.toLowerCase().replace(/[^a-z0-9]+/g,""));
+    const field=(...names:string[])=>names.map(name=>headers.indexOf(name)).find(index=>typeof index==="number"&&index>=0)??-1;
+    const dateIndex=field("date","transactiondate","valuedate"),descIndex=field("description","narrative","details","transaction","memo"),amountIndex=field("amount","value"),debitIndex=field("debit","withdrawal","moneyout"),creditIndex=field("credit","deposit","moneyin"),directionIndex=field("direction","type");
+    const accountId=bankTx.accountId||store.accounts[0]?.id||"bank-main",existing=new Set(store.transactions.map(tx=>[tx.accountId,tx.date,tx.description.toLowerCase(),tx.amount,tx.direction].join("|"))),imported:BankTransaction[]=[];
+    for(const cols of rows.slice(1)){const description=descIndex>=0?cols[descIndex]:cols[1]||"Imported bank transaction",rawDebit=debitIndex>=0?Number((cols[debitIndex]||"").replace(/[$,]/g,"")):0,rawCredit=creditIndex>=0?Number((cols[creditIndex]||"").replace(/[$,]/g,"")):0;let amount=amountIndex>=0?Number((cols[amountIndex]||"").replace(/[$,]/g,"")):rawCredit||rawDebit,direction:BankTransaction["direction"]=rawDebit>0?"out":"in";if(amount<0){direction="out";amount=Math.abs(amount)}if(directionIndex>=0&&/debit|out|withdraw/i.test(cols[directionIndex]||""))direction="out";if(directionIndex>=0&&/credit|in|deposit/i.test(cols[directionIndex]||""))direction="in";if(!Number.isFinite(amount)||amount<=0)continue;const date=dateIndex>=0?(cols[dateIndex]||today()):today(),rounded=round(amount),key=[accountId,date,description.toLowerCase(),rounded,direction].join("|");if(existing.has(key))continue;existing.add(key);imported.push({id:id("bankcsv"),accountId,date,description,amount:rounded,direction,matchedSource:"",status:"unmatched"});}
+    setStore(current=>({...current,transactions:[...imported,...current.transactions]}));event.target.value="";
   };
-
   const autoMatch = () => {
     setStore((current) => {
       const alreadyUsed = new Set(current.transactions.filter((tx) => tx.matchedSource).map((tx) => tx.matchedSource));
