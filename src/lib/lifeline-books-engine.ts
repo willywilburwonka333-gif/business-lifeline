@@ -447,7 +447,7 @@ export function gstSummary(store: BooksStore, start?: string, end?: string): Gst
       else inputTaxedSales = round(inputTaxedSales + amount);
     }
   }
-  let purchasesIncludingGst = 0;
+  const documentTaxableSales = taxableSales;\n  let purchasesIncludingGst = 0;
   for (const bill of store.bills) {
     if (bill.status === "draft" || !inPeriod(bill.date, start, end)) continue;
     purchasesIncludingGst = round(purchasesIncludingGst + Number(bill.amount || 0));
