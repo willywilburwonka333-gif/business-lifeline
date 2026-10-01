@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { appendJournal, readBooksStore, saveBooksStore, type LedgerJournal } from "@/lib/lifeline-books-engine";
 
 const KEY = "business-lifeline-commercial-finance-controls-v1";
 const ACCOUNTING_KEY = "business-lifeline-advanced-accounting-v1";
@@ -33,25 +34,9 @@ function readAccounting(): AccountingStore {
 }
 
 function writeJournal(journal: Journal) {
-  const accounting = readAccounting();
-  const journals = Array.isArray(accounting.journals) ? accounting.journals : [];
-  if (journals.some((item) => item.source === journal.source)) return false;
-  const debit = round(journal.lines.filter((line) => line.side === "debit").reduce((sum, line) => sum + line.amount, 0));
-  const credit = round(journal.lines.filter((line) => line.side === "credit").reduce((sum, line) => sum + line.amount, 0));
-  if (debit !== credit) return false;
-  if (accounting.lockDate && journal.date <= accounting.lockDate) return false;
-  localStorage.setItem(ACCOUNTING_KEY, JSON.stringify({
-    ...accounting,
-    journals: [journal, ...journals],
-    docs: accounting.docs || [],
-    bills: accounting.bills || [],
-    refunds: accounting.refunds || [],
-    nextQuote: accounting.nextQuote || 1,
-    nextInvoice: accounting.nextInvoice || 1,
-    nextCredit: accounting.nextCredit || 1,
-    lockDate: accounting.lockDate || "",
-  }));
-  window.dispatchEvent(new CustomEvent("business-lifeline-ledger-sync", { detail: { changed: true } }));
+  const result = appendJournal(readBooksStore(), journal as LedgerJournal);
+  if (!result.added) return false;
+  saveBooksStore(result.store);
   return true;
 }
 
