@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { LIFELINE_BOOKS_KEY, readBooksStore, type BooksStore, type LedgerJournal } from "@/lib/lifeline-books-engine";
-import { calculatePayroll, payrollJournalLines, validatePayroll, type PayComponent } from "@/lib/lifeline-payroll-engine";
+import { calculatePayroll, payrollJournalLines, type PayComponent } from "@/lib/lifeline-payroll-engine";
 
 export const LIFELINE_PEOPLE_KEY = "business-lifeline-people-v1";
 const OPERATIONS_KEY = "business-lifeline-connected-operations-v2";
