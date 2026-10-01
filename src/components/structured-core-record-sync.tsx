@@ -14,13 +14,7 @@ const RECORD_TYPES = ["customers","products","sales","quotes","crm-accounts","cr
 
 type RecordType = (typeof RECORD_TYPES)[number];
 type BusinessRecord = { id: string; name?: string; customerName?: string; [key: string]: unknown };
-type Store = {
-  customers: BusinessRecord[];
-  products: BusinessRecord[];
-  sales: BusinessRecord[];
-  quotes: BusinessRecord[];
-  [key: string]: unknown;
-};
+type Store = Record<RecordType, BusinessRecord[]>;
 type SyncMeta = Record<string, string>;
 type CloudRecord = {
   type?: string;
@@ -36,7 +30,8 @@ function readStore(): Store | null {
   try {
     const core=JSON.parse(localStorage.getItem(OPS_KEY)||"{}") as Record<string,unknown>,crm=JSON.parse(localStorage.getItem(CRM_KEY)||"{}") as Record<string,unknown>,ops=JSON.parse(localStorage.getItem(OPERATIONS_KEY)||"{}") as Record<string,unknown>;
     const arr=(v:unknown)=>Array.isArray(v)?v as BusinessRecord[]:[];
-    return {customers:arr(core.customers),products:arr(core.products),sales:arr(core.sales),quotes:arr(core.quotes),"crm-accounts":arr(crm.accounts),"crm-contacts":arr(crm.contacts),"crm-opportunities":arr(crm.opportunities),"crm-activities":arr(crm.activities),projects:arr(ops.projects),"project-tasks":arr(ops.projectTasks),"purchase-orders":arr(ops.purchaseOrders),inventory:arr(ops.inventory),"stock-movements":arr(ops.movements),"service-orders":arr(ops.serviceOrders),"production-orders":arr(ops.productionOrders)} as Store;
+    const people=JSON.parse(localStorage.getItem("business-lifeline-people-v1")||"{}") as Record<string,unknown>,books=JSON.parse(localStorage.getItem("business-lifeline-books-v1")||"{}") as Record<string,unknown>,pos=JSON.parse(localStorage.getItem("business-lifeline-pos-v1")||"{}") as Record<string,unknown>;
+    return {customers:arr(core.customers),products:arr(core.products),sales:arr(core.sales),quotes:arr(core.quotes),"crm-accounts":arr(crm.accounts),"crm-contacts":arr(crm.contacts),"crm-opportunities":arr(crm.opportunities),"crm-activities":arr(crm.activities),projects:arr(ops.projects),"project-tasks":arr(ops.projectTasks),"purchase-orders":arr(ops.purchaseOrders),inventory:arr(ops.inventory),"stock-movements":arr(ops.movements),"service-orders":arr(ops.serviceOrders),"production-orders":arr(ops.productionOrders),boms:arr(ops.boms),routings:arr(ops.routings),"work-centres":arr(ops.workCentres),people:arr(people.employees),"pay-runs":arr(people.payRuns),"books-journals":arr(books.journals),"pos-sales":arr(pos.sales)};
   } catch { return null; }
 }
 function saveStore(store: Store) {
