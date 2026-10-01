@@ -5,7 +5,7 @@ import { appendJournal, readBooksStore, saveBooksStore, type LedgerJournal } fro
 
 type Side="debit"|"credit";
 type Line={account:string;side:Side;amount:number};
-type Journal={id:string;date:string;memo:string;lines:Line[];source:string};
+type Journal=LedgerJournal;
 type Item={description:string;qty:number;rate:number;gst:"gst"|"free"|"input"};
 type Doc={id:string;number:string;kind:"quote"|"invoice"|"credit";customer:string;date:string;due:string;status:"draft"|"sent"|"accepted"|"part-paid"|"paid"|"void";items:Item[];payments:number;notes:string};
 type Bill={id:string;number:string;supplier:string;date:string;due:string;amount:number;gst:number;status:"draft"|"approved"|"part-paid"|"paid";paid:number};
