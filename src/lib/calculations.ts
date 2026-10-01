@@ -22,10 +22,11 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
   const expenseRatio = data.monthlyRevenue ? (operatingExpenses / data.monthlyRevenue) * 100 : 200;
   const monthlyBurn = Math.max(0, -cashResult);
   const runwayMonths = monthlyBurn > 0 ? data.cashAvailable / monthlyBurn : null;
+  // totalDebt is treated as total recorded debt. Do not add overdue tax/suppliers again here;
+  // those obligations are scored separately below and may already be included in totalDebt.
   const debtPressure = data.monthlyRevenue
-    ? ((data.totalDebt + data.overdueTax + data.overdueSuppliers) /
-        (data.monthlyRevenue * 12)) * 100
-    : 100;
+    ? (Math.max(0, data.totalDebt) / (data.monthlyRevenue * 12)) * 100
+    : data.totalDebt > 0 ? 100 : 0;
   const receivablesPressure = data.monthlyRevenue
     ? (data.overdueInvoices / data.monthlyRevenue) * 100
     : data.overdueInvoices > 0 ? 100 : 0;
@@ -35,7 +36,7 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
     ? (uncoveredArrears / data.monthlyRevenue) * 100
     : uncoveredArrears > 0 ? 100 : 0;
   const liquidResources = data.cashAvailable + Math.max(0, data.overdueInvoices * 0.5);
-  const nearTermPressure = urgentArrears + Math.max(0, monthlyBurn);
+  const nearTermPressure = urgentArrears + Math.max(0, monthlyBurn) + Math.max(0, data.loanRepayments);
 
   const trendScores = { growing: 100, stable: 78, volatile: 42, declining: 22 };
   const revenueStability = trendScores[data.revenueTrend];
