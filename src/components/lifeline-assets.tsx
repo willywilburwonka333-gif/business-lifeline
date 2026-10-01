@@ -2,9 +2,9 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
-  LIFELINE_BOOKS_KEY,
+  appendJournal,
   readBooksStore,
-  type BooksStore,
+  saveBooksStore,
   type LedgerJournal,
 } from "@/lib/lifeline-books-engine";
 
@@ -45,14 +45,9 @@ function readAssets(): AssetStore {
 }
 
 function postJournal(journal: LedgerJournal) {
-  const books = readBooksStore();
-  if (books.journals.some((item) => item.source === journal.source)) return false;
-  const debit = round(journal.lines.filter((line) => line.side === "debit").reduce((sum, line) => sum + line.amount, 0));
-  const credit = round(journal.lines.filter((line) => line.side === "credit").reduce((sum, line) => sum + line.amount, 0));
-  if (debit !== credit || debit <= 0 || (books.lockDate && journal.date <= books.lockDate)) return false;
-  const next: BooksStore = { ...books, journals: [journal, ...books.journals] };
-  localStorage.setItem(LIFELINE_BOOKS_KEY, JSON.stringify(next));
-  window.dispatchEvent(new CustomEvent("business-lifeline-ledger-sync", { detail: { changed: true } }));
+  const result = appendJournal(readBooksStore(), journal);
+  if (!result.added) return false;
+  saveBooksStore(result.store);
   return true;
 }
 
