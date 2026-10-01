@@ -23,7 +23,7 @@ export function CustomerInvoice({onClose}:{onClose:()=>void}){
  const [customer,setCustomer]=useState<Customer>(emptyCustomer);
  const [offer,setOffer]=useState("Lifeline MRI");
  const selected=DIAGNOSTIC_OFFERS.find(x=>x.name===offer)??DIAGNOSTIC_OFFERS[1];
- const [amount,setAmount]=useState(selected.price);
+ const [amount,setAmount]=useState<number>(selected.price);
  const [description,setDescription]=useState("Business Lifeline MRI — Paid Beta diagnostic and results walkthrough");
  const [issued,setIssued]=useState(today());
  const [due,setDue]=useState(today());
