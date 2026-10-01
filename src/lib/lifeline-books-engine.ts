@@ -467,6 +467,22 @@ export function gstSummary(store: BooksStore, start?: string, end?: string): Gst
   return { taxableSales, gstOnSales, gstFreeSales, inputTaxedSales, purchasesIncludingGst, gstCredits, estimatedNetGst: round(gstOnSales - gstCredits) };
 }
 
+export function invoiceJournal(document: SalesDocument): LedgerJournal | null {
+  if (document.kind !== "invoice" && document.kind !== "credit") return null;
+  const total = round(document.items.reduce((sum,item)=>sum+Number(item.qty||0)*Number(item.rate||0),0));
+  const gst = round(document.items.reduce((sum,item)=>sum+(item.gst==="gst"?Number(item.qty||0)*Number(item.rate||0)/11:0),0));
+  const net = round(total-gst); if(total<=0)return null;
+  const credit=document.kind==="credit";
+  return { id:"journal-"+document.id, date:document.date, memo:(credit?"Credit note ":"Invoice ")+document.number, source:"DOC:"+document.id+":"+(credit?"CREDIT":"ISSUED"), lines: credit
+    ? [{account:"Sales Returns",side:"debit",amount:net},...(gst>0?[{account:"GST Payable",side:"debit" as const,amount:gst}]:[]),{account:"Accounts Receivable",side:"credit",amount:total}]
+    : [{account:"Accounts Receivable",side:"debit",amount:total},{account:"Sales Revenue",side:"credit",amount:net},...(gst>0?[{account:"GST Payable",side:"credit" as const,amount:gst}]:[])] };
+}
+
+export function supplierBillJournal(bill: SupplierBill, expenseAccount="Operating Expense"): LedgerJournal | null {
+  const total=round(bill.amount),gst=round(Math.max(0,Math.min(total,bill.gst))),net=round(total-gst);if(total<=0)return null;
+  return {id:"journal-"+bill.id,date:bill.date,memo:"Supplier bill "+bill.number,source:"BILL:"+bill.id+":APPROVED",lines:[{account:expenseAccount,side:"debit",amount:net},...(gst>0?[{account:"GST Input Credit",side:"debit" as const,amount:gst}]:[]),{account:"Accounts Payable",side:"credit",amount:total}]};
+}
+
 export function booksIntegrity(store: BooksStore) {
   const unbalanced = store.journals.filter((journal) => !validateJournal(journal).balanced);
   const duplicateSources = new Map<string, number>();
