@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createBusinessOs, newOsId, osSummary, readBusinessOs, writeBusinessOs, type BusinessOsState, type OsTask, type OsTeamMember } from "@/lib/business-os";
+import { createBusinessOs, newOsId, osSummary, readBusinessOs, writeBusinessOs, type BusinessOsState, type OsContact, type OsTask, type OsTeamMember } from "@/lib/business-os";
 import type { SavedReport } from "@/lib/saved-report";
 import { LifelineCrmWorkspace } from "@/components/lifeline-crm-workspace";
 
