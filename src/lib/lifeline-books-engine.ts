@@ -465,7 +465,7 @@ export function gstSummary(store: BooksStore, start?: string, end?: string): Gst
   }
   if (Math.abs(ledgerGstOnSales) > .005) {
     gstOnSales = Math.max(0, ledgerGstOnSales);
-    taxableSales = Math.max(documentTaxableSales, round(gstOnSales * 11));
+    taxableSales = round(gstOnSales * 11);
   }
   const gstCredits = Math.max(0, ledgerGstCredits);
   return { taxableSales, gstOnSales, gstFreeSales, inputTaxedSales, purchasesIncludingGst, gstCredits, estimatedNetGst: round(gstOnSales - gstCredits) };
