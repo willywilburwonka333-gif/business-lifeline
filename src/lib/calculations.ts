@@ -14,16 +14,13 @@ const pressureLevelFor = (score: number, criticalTriggers: string[]): PressureLe
 };
 
 export function calculateHealth(data: BusinessData): HealthMetrics {
-  const totalMonthlyOutgoings =
-    data.fixedExpenses + data.variableExpenses + data.ownerDrawings + data.loanRepayments;
-  const result = data.monthlyRevenue - totalMonthlyOutgoings;
-  const operatingMargin = data.monthlyRevenue
-    ? (result / data.monthlyRevenue) * 100
-    : -100;
-  const expenseRatio = data.monthlyRevenue
-    ? (totalMonthlyOutgoings / data.monthlyRevenue) * 100
-    : 200;
-  const monthlyBurn = Math.max(0, -result);
+  const operatingExpenses = data.fixedExpenses + data.variableExpenses;
+  const operatingResult = data.monthlyRevenue - operatingExpenses;
+  const totalMonthlyCashOutgoings = operatingExpenses + data.ownerDrawings + data.loanRepayments;
+  const cashResult = data.monthlyRevenue - totalMonthlyCashOutgoings;
+  const operatingMargin = data.monthlyRevenue ? (operatingResult / data.monthlyRevenue) * 100 : -100;
+  const expenseRatio = data.monthlyRevenue ? (operatingExpenses / data.monthlyRevenue) * 100 : 200;
+  const monthlyBurn = Math.max(0, -cashResult);
   const runwayMonths = monthlyBurn > 0 ? data.cashAvailable / monthlyBurn : null;
   const debtPressure = data.monthlyRevenue
     ? ((data.totalDebt + data.overdueTax + data.overdueSuppliers) /
@@ -46,7 +43,7 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
     50 + operatingMargin * 2 - Math.min(receivablesPressure, 50) * 0.35,
   );
   const runwayScore = runwayMonths === null
-    ? (result >= 0 ? 100 : 0)
+    ? (cashResult >= 0 ? 100 : 0)
     : clamp(runwayMonths * 20);
   const debtScore = clamp(
     100 -
@@ -69,7 +66,7 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
 
   const confidenceChecks = [
     data.monthlyRevenue > 0,
-    totalMonthlyOutgoings > 0,
+    totalMonthlyCashOutgoings > 0,
     data.cashAvailable >= 0,
     data.accountsReceivable >= data.overdueInvoices,
     data.biggestProblem.trim().length >= 4,
@@ -95,10 +92,10 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
   if (data.overdueSuppliers > 0 && uncoveredArrears > 0) {
     criticalTriggers.push("Available cash does not cover overdue supplier and tax obligations");
   }
-  if (result < 0 && runwayMonths !== null && runwayMonths < 1) {
+  if (cashResult < 0 && runwayMonths !== null && runwayMonths < 1) {
     criticalTriggers.push("Less than one month of cash runway remains at the current loss rate");
   }
-  if (data.monthlyRevenue === 0 && totalMonthlyOutgoings > 0 && data.yearsOperating > 0) {
+  if (data.monthlyRevenue === 0 && totalMonthlyCashOutgoings > 0 && data.yearsOperating > 0) {
     criticalTriggers.push("An operating business reported expenses but no current revenue");
   }
   const concernText = data.urgentConcerns.join(" ").toLowerCase();
@@ -108,16 +105,16 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
 
   // Hard caps prevent a blended score from hiding immediate danger.
   if (urgentArrears > data.cashAvailable && urgentArrears > 0) {
-    overallScore = Math.min(overallScore, result < 0 ? 34 : 44);
+    overallScore = Math.min(overallScore, cashResult < 0 ? 34 : 44);
   }
-  if (result < 0 && data.revenueTrend === "declining" && urgentArrears > 0) {
+  if (cashResult < 0 && data.revenueTrend === "declining" && urgentArrears > 0) {
     overallScore = Math.min(overallScore, 30);
   }
   if (criticalTriggers.length >= 2) overallScore = Math.min(overallScore, 24);
   else if (criticalTriggers.length === 1) overallScore = Math.min(overallScore, 39);
 
   const scoreExplanation = [
-    result < 0
+    cashResult < 0
       ? `Trading is currently losing ${Math.abs(round(result, 2))} per month.`
       : `Trading is currently producing ${round(result, 2)} per month after supplied outgoings.`,
     runwayMonths === null
@@ -132,7 +129,7 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
   ];
 
   return {
-    monthlyOperatingResult: round(result, 2),
+    monthlyOperatingResult: round(cashResult, 2),
     operatingMargin: round(operatingMargin),
     expenseRatio: round(expenseRatio),
     runwayMonths: runwayMonths === null ? null : round(runwayMonths),

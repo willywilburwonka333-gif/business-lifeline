@@ -146,3 +146,14 @@ test("keeps every score within zero and one hundred", () => {
     assert.ok(score >= 0 && score <= 100);
   }
 });
+
+
+test("operating margin excludes owner drawings and loan repayments", () => {
+  const metrics = calculateHealth(makeBusiness({
+    monthlyRevenue: 20000, fixedExpenses: 8000, variableExpenses: 4000,
+    ownerDrawings: 5000, loanRepayments: 2000, cashAvailable: 10000,
+  }));
+  assert.equal(metrics.monthlyOperatingResult, 1000);
+  assert.equal(metrics.operatingMargin, 40);
+  assert.equal(metrics.expenseRatio, 60);
+});
