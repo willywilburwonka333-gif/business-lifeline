@@ -5,7 +5,7 @@ export type WorkStatus = "planned" | "scheduled" | "active" | "blocked" | "compl
 
 export type MoneyLine = { id:string; description:string; quantity:number; unitPrice:number; taxRate:number; accountCode?:string; productId?:string };
 export type Location = { id:string; name:string; type:"store"|"warehouse"|"vehicle"|"site"; active:boolean };
-export type InventoryBalance = { productId:string; locationId:string; onHand:number; allocated:number; available:number; averageCost:number };
+export type InventoryBalance = { productId:string; locationId:string; onHand:number; allocated:number; available:number; averageCost:number; reorderPoint?:number };
 export type StockMovement = { id:string; productId:string; fromLocationId?:string; toLocationId?:string; quantity:number; kind:"receipt"|"sale"|"transfer"|"adjustment"|"return"|"production-consume"|"production-output"; occurredAt:string; sourceId?:string };
 
 export type SalesOrder = { id:string; accountId:string; contactId?:string; opportunityId?:string; quoteId?:string; status:OrderStatus; lines:MoneyLine[]; requiredAt?:string; locationId?:string; createdAt:string; updatedAt:string };
@@ -68,6 +68,17 @@ export function projectEconomics(project:Project,tasks:ProjectTask[],variations:
   const budgetCost=project.budgetCost+approved.reduce((s,v)=>s+v.costChange,0);
   const actualCost=scoped.reduce((s,t)=>s+t.actualCost,0);
   return {budgetRevenue,budgetCost,actualCost,forecastMargin:budgetRevenue-Math.max(budgetCost,actualCost)};
+}
+
+export function adjustStocktake(balance:InventoryBalance[],productId:string,locationId:string,counted:number){
+ const item=balance.find(x=>x.productId===productId&&x.locationId===locationId);if(!item)throw new Error("Stock item not found.");
+ const safe=Math.max(0,Number(counted)||0),variance=safe-item.onHand,varianceValue=variance*item.averageCost;
+ return{balances:balance.map(x=>x===item?{...x,onHand:safe,available:Math.max(0,safe-x.allocated)}:x),variance,varianceValue};
+}
+export function reorderItems(balance:InventoryBalance[]){return balance.filter(x=>x.available<=Math.max(0,x.reorderPoint||0));}
+export function projectProfitability(project:Project,tasks:ProjectTask[],variations:Variation[],materialCost=0,otherExpenses=0){
+ const e=projectEconomics(project,tasks,variations),labour=tasks.filter(t=>t.projectId===project.id).reduce((n,t)=>n+t.actualCost,0),cost=labour+Math.max(0,materialCost)+Math.max(0,otherExpenses),profit=e.budgetRevenue-cost;
+ return{revenue:e.budgetRevenue,labour,materials:Math.max(0,materialCost),expenses:Math.max(0,otherExpenses),cost,profit,marginPercent:e.budgetRevenue>0?profit/e.budgetRevenue*100:0};
 }
 
 export function requiredBomComponents(bom:BillOfMaterial,outputQuantity:number){
