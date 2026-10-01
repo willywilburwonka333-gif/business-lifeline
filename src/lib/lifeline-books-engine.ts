@@ -447,7 +447,8 @@ export function gstSummary(store: BooksStore, start?: string, end?: string): Gst
       else inputTaxedSales = round(inputTaxedSales + amount);
     }
   }
-  const documentTaxableSales = taxableSales;\n  let purchasesIncludingGst = 0;
+  const documentTaxableSales = taxableSales;
+  let purchasesIncludingGst = 0;
   for (const bill of store.bills) {
     if (bill.status === "draft" || !inPeriod(bill.date, start, end)) continue;
     purchasesIncludingGst = round(purchasesIncludingGst + Number(bill.amount || 0));
@@ -462,7 +463,10 @@ export function gstSummary(store: BooksStore, start?: string, end?: string): Gst
       if (line.account === "GST Input Credit") ledgerGstCredits = round(ledgerGstCredits + (line.side === "debit" ? line.amount : -line.amount));
     }
   }
-  if (Math.abs(ledgerGstOnSales) > .005) {\n    gstOnSales = Math.max(0, ledgerGstOnSales);\n    taxableSales = Math.max(documentTaxableSales, round(gstOnSales * 11));\n  }
+  if (Math.abs(ledgerGstOnSales) > .005) {
+    gstOnSales = Math.max(0, ledgerGstOnSales);
+    taxableSales = Math.max(documentTaxableSales, round(gstOnSales * 11));
+  }
   const gstCredits = Math.max(0, ledgerGstCredits);
   return { taxableSales, gstOnSales, gstFreeSales, inputTaxedSales, purchasesIncludingGst, gstCredits, estimatedNetGst: round(gstOnSales - gstCredits) };
 }
