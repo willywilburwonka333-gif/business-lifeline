@@ -515,7 +515,7 @@ export function booksIntegrity(store: BooksStore) {
   const duplicateSources = new Map<string, number>();
   for (const journal of store.journals) duplicateSources.set(journal.source, (duplicateSources.get(journal.source) ?? 0) + 1);
   const duplicates = [...duplicateSources.entries()].filter(([source, count]) => source && count > 1).map(([source, count]) => ({ source, count }));
-  const lockedViolations = store.lockDate ? store.journals.filter((journal) => journal.date <= store.lockDate && journal.source.startsWith("OPS:")) : [];
+  const lockedViolations = store.lockDate ? store.journals.filter((journal) => journal.date <= store.lockDate) : [];
   const trial = trialBalance(store);
   const totalDebit = round(trial.reduce((sum, row) => sum + row.debit, 0));
   const totalCredit = round(trial.reduce((sum, row) => sum + row.credit, 0));
