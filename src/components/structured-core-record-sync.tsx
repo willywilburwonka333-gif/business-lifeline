@@ -7,8 +7,10 @@ import { firebaseAuth, firebaseDb } from "@/lib/firebase-client";
 
 const ACTIVE_KEY = "business-lifeline-active-business-v1";
 const OPS_KEY = "business-lifeline-operating-platform-v1";
+const CRM_KEY = "business-lifeline-crm-v1";
+const OPERATIONS_KEY = "business-lifeline-operations-v1";
 const META_KEY = "business-lifeline-record-sync-meta-v1";
-const RECORD_TYPES = ["customers", "products", "sales", "quotes"] as const;
+const RECORD_TYPES = ["customers","products","sales","quotes","crm-accounts","crm-contacts","crm-opportunities","crm-activities","projects","project-tasks","purchase-orders","inventory","stock-movements","service-orders","production-orders"] as const;
 
 type RecordType = (typeof RECORD_TYPES)[number];
 type BusinessRecord = { id: string; name?: string; customerName?: string; [key: string]: unknown };
@@ -32,23 +34,15 @@ function isRecordType(value: string | undefined): value is RecordType {
 
 function readStore(): Store | null {
   try {
-    const raw = localStorage.getItem(OPS_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    return {
-      ...parsed,
-      customers: Array.isArray(parsed.customers) ? (parsed.customers as BusinessRecord[]) : [],
-      products: Array.isArray(parsed.products) ? (parsed.products as BusinessRecord[]) : [],
-      sales: Array.isArray(parsed.sales) ? (parsed.sales as BusinessRecord[]) : [],
-      quotes: Array.isArray(parsed.quotes) ? (parsed.quotes as BusinessRecord[]) : [],
-    };
-  } catch {
-    return null;
-  }
+    const core=JSON.parse(localStorage.getItem(OPS_KEY)||"{}") as Record<string,unknown>,crm=JSON.parse(localStorage.getItem(CRM_KEY)||"{}") as Record<string,unknown>,ops=JSON.parse(localStorage.getItem(OPERATIONS_KEY)||"{}") as Record<string,unknown>;
+    const arr=(v:unknown)=>Array.isArray(v)?v as BusinessRecord[]:[];
+    return {customers:arr(core.customers),products:arr(core.products),sales:arr(core.sales),quotes:arr(core.quotes),"crm-accounts":arr(crm.accounts),"crm-contacts":arr(crm.contacts),"crm-opportunities":arr(crm.opportunities),"crm-activities":arr(crm.activities),projects:arr(ops.projects),"project-tasks":arr(ops.projectTasks),"purchase-orders":arr(ops.purchaseOrders),inventory:arr(ops.inventory),"stock-movements":arr(ops.movements),"service-orders":arr(ops.serviceOrders),"production-orders":arr(ops.productionOrders)} as Store;
+  } catch { return null; }
 }
-
 function saveStore(store: Store) {
-  localStorage.setItem(OPS_KEY, JSON.stringify(store));
+  const core=JSON.parse(localStorage.getItem(OPS_KEY)||"{}");Object.assign(core,{customers:store.customers,products:store.products,sales:store.sales,quotes:store.quotes});localStorage.setItem(OPS_KEY,JSON.stringify(core));
+  const crm=JSON.parse(localStorage.getItem(CRM_KEY)||"{}");Object.assign(crm,{accounts:store["crm-accounts"],contacts:store["crm-contacts"],opportunities:store["crm-opportunities"],activities:store["crm-activities"]});localStorage.setItem(CRM_KEY,JSON.stringify(crm));
+  const ops=JSON.parse(localStorage.getItem(OPERATIONS_KEY)||"{}");Object.assign(ops,{projects:store.projects,projectTasks:store["project-tasks"],purchaseOrders:store["purchase-orders"],inventory:store.inventory,movements:store["stock-movements"],serviceOrders:store["service-orders"],productionOrders:store["production-orders"]});localStorage.setItem(OPERATIONS_KEY,JSON.stringify(ops));
   window.dispatchEvent(new Event("business-lifeline-operating-updated"));
 }
 
@@ -191,8 +185,8 @@ export function StructuredCoreRecordSync() {
             <header>
               <div>
                 <small>STRUCTURED CLOUD RECORDS</small>
-                <h2>Customers, products, sales and quotes</h2>
-                <p>Core records now sync independently between signed-in devices.</p>
+                <h2>Core CRM, sales, jobs, stock and operations</h2>
+                <p>Important records sync independently per business across signed-in devices.</p>
               </div>
               <button onClick={() => setOpen(false)} aria-label="Close">×</button>
             </header>
