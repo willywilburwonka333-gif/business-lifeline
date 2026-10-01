@@ -133,14 +133,16 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
   const ensureCommercialWorkspace = useCallback(async (activeUser: User) => {
     if (!firebaseDb) return;
     const businessId = businessIdFor(activeUser.uid);
-    await setDoc(doc(firebaseDb, "businesses", businessId), {
+    const businessRef = doc(firebaseDb, "businesses", businessId);
+    const existingBusiness = await getDoc(businessRef);
+    await setDoc(businessRef, {
       id: businessId,
-      name: "My Business Lifeline Workspace",
+      name: existingBusiness.exists() ? existingBusiness.data().name || "My Business Lifeline Workspace" : "My Business Lifeline Workspace",
       ownerId: activeUser.uid,
       status: "active",
-      plan: "beta",
+      plan: existingBusiness.exists() ? existingBusiness.data().plan || "beta" : "beta",
       updatedAt: serverTimestamp(),
-      createdAt: serverTimestamp(),
+      ...(!existingBusiness.exists() ? { createdAt: serverTimestamp() } : {}),
     }, { merge: true });
     await setDoc(doc(firebaseDb, "businesses", businessId, "members", activeUser.uid), {
       userId: activeUser.uid,
