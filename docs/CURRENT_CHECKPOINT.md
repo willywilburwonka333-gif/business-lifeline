@@ -32,3 +32,5 @@ After the Firebase project exists, register the web app, document the required e
 ## Release note
 
 The current `main` version is the intended Build Week submission candidate. Stage 2 account work is not required for the existing local-first product to function.
+
+<!-- production redeploy trigger: customer-ready invoicing 2026-10-02 -->
