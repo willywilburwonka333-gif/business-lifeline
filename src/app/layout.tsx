@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { BetaSafetyLoader } from "@/components/beta-safety-loader";
+import { BetaSafetyCentre } from "@/components/beta-safety-centre";
 import { BusinessOsScrollAssist } from "@/components/business-os-scroll-assist";
 import { CommercialCloudBridge } from "@/components/commercial-cloud-bridge";
 import { ConnectionStatus } from "@/components/connection-status";
@@ -70,5 +70,5 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#071b2d" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body><a className="skip-link" href="#main-content">Skip to main content</a><ConnectionStatus /><CommercialCloudBridge /><OperatingLedgerSync /><NativeBooksMriSync /><TeamWorkspaceManager /><StructuredCoreRecordSync /><SharedPlatformShell /><BetaSafetyLoader /><BusinessOsScrollAssist />{children}</body></html>;
+  return <html lang="en"><body><a className="skip-link" href="#main-content">Skip to main content</a><ConnectionStatus /><CommercialCloudBridge /><OperatingLedgerSync /><NativeBooksMriSync /><TeamWorkspaceManager /><StructuredCoreRecordSync /><SharedPlatformShell /><BetaSafetyCentre /><BusinessOsScrollAssist />{children}</body></html>;
 }
