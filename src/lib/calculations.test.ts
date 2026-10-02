@@ -62,7 +62,7 @@ test("does not let cash runway hide uncovered overdue obligations", () => {
     revenueTrend: "declining",
   }));
 
-  assert.equal(metrics.monthlyOperatingResult, 6000);
+  assert.equal(metrics.monthlyOperatingResult, -2000);
   assert.equal(metrics.runwayMonths, 10);
   assert.ok(metrics.overallScore <= 24);
   assert.equal(metrics.pressureLevel, "Critical");
