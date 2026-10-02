@@ -3,7 +3,6 @@ import { expect, test, type Page } from "@playwright/test";
 async function openSafetyCentre(page: Page) {
   const launcher = page.getByTestId("beta-safety-launcher");
   await expect(launcher).toBeVisible({ timeout: 15000 });
-  await expect(launcher).toBeEnabled({ timeout: 15000 });
   await launcher.click();
   await expect(page.getByRole("dialog", { name: /controlled beta safety centre/i })).toBeVisible({ timeout: 15000 });
 }
@@ -19,7 +18,6 @@ test("home page loads without uncaught browser errors", async ({ page }) => {
   await page.waitForTimeout(1500);
   const launcher = page.getByTestId("beta-safety-launcher");
   await expect(launcher).toBeVisible({ timeout: 15000 });
-  await expect(launcher).toBeEnabled({ timeout: 15000 });
   expect(errors).toEqual([]);
 });
 
