@@ -1,7 +1,8 @@
 import { atoPayg2026, type PayFrequency, type PaygScale } from "./ato-payg-2026.ts";
+import { atoStsl2026 } from "./ato-stsl-2026.ts";
 export type PayComponentKind="ordinary"|"overtime"|"paid-leave"|"allowance"|"bonus-commission"|"deduction";
 export type PayComponent={kind:PayComponentKind;description:string;hours?:number;rate?:number;amount?:number;stpCode?:string;qualifyingEarnings?:boolean};
-export type PayrollEmployee={id:string;name:string;hourlyRate:number;superRatePercent:number;withholdingRatePercent:number;payg2026?:{frequency:PayFrequency;scale:PaygScale;resident?:boolean}};
+export type PayrollEmployee={id:string;name:string;hourlyRate:number;superRatePercent:number;withholdingRatePercent:number;payg2026?:{frequency:PayFrequency;scale:PaygScale;resident?:boolean;studyLoan?:boolean;taxFreeThreshold?:boolean;tfnProvided?:boolean}};
 export type PayrollResult={components:PayComponent[];ordinaryGross:number;overtime:number;paidLeave:number;allowances:number;bonuses:number;deductions:number;gross:number;payg:number;qualifyingEarnings:number;super:number;net:number;stp:{gross:number;overtime:number;paidLeave:number;allowances:number;bonuses:number;payg:number;super:number}};
 const round=(n:number)=>Math.round((Number(n)||0)*100)/100;
 export function calculatePayroll(employee:PayrollEmployee,components:PayComponent[]):PayrollResult{
@@ -9,7 +10,7 @@ export function calculatePayroll(employee:PayrollEmployee,components:PayComponen
  const sum=(kind:PayComponentKind)=>round(components.filter(c=>c.kind===kind).reduce((n,c)=>n+amount(c),0));
  const ordinaryGross=sum("ordinary"),overtime=sum("overtime"),paidLeave=sum("paid-leave"),allowances=sum("allowance"),bonuses=sum("bonus-commission"),deductions=sum("deduction");
  const gross=round(ordinaryGross+overtime+paidLeave+allowances+bonuses);
- const payg=employee.payg2026?atoPayg2026({gross,...employee.payg2026}).withholding:round(gross*Math.max(0,employee.withholdingRatePercent)/100);
+ const basePayg=employee.payg2026?atoPayg2026({gross,...employee.payg2026}).withholding:round(gross*Math.max(0,employee.withholdingRatePercent)/100); const stsl=employee.payg2026?.studyLoan?atoStsl2026({gross,frequency:employee.payg2026.frequency,taxFreeThreshold:employee.payg2026.taxFreeThreshold!==false,tfnProvided:employee.payg2026.tfnProvided!==false}):0; const payg=round(basePayg+stsl);
  const qualifyingEarnings=round(components.filter(c=>c.kind!=="deduction"&&c.qualifyingEarnings!==false).reduce((n,c)=>n+amount(c),0));
  const superAmount=round(qualifyingEarnings*Math.max(0,employee.superRatePercent)/100);
  const net=round(gross-payg-deductions);
