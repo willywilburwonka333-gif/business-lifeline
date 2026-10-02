@@ -117,7 +117,7 @@ export function LifelinePeople() {
   const [ready, setReady] = useState(false);
   const [employee, setEmployee] = useState({
     name: "", email: "", employmentType: "full-time" as Employee["employmentType"], hourlyRate: 0,
-    ordinaryHoursPerWeek: 38, employerName: "", employerAbn: "", superFundName: "", awardOrAgreement: "", classification: "", superRatePercent: 12, withholdingRatePercent: 0, payFrequency:"weekly", taxResident:true, taxFreeThreshold:true, tfnProvided:true, studyLoan:false, annualLeaveAccrualPerHour: 0, personalLeaveAccrualPerHour: 0,
+    ordinaryHoursPerWeek: 38, employerName: "", employerAbn: "", superFundName: "", awardOrAgreement: "", classification: "", superRatePercent: 12, withholdingRatePercent: 0, payFrequency:"weekly" as Employee["payFrequency"], taxResident:true, taxFreeThreshold:true, tfnProvided:true, studyLoan:false, annualLeaveAccrualPerHour: 0, personalLeaveAccrualPerHour: 0,
   });
   const [period, setPeriod] = useState({ start: "", end: "", payDate: today() });
   const [message, setMessage] = useState("");
