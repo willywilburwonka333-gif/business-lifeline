@@ -2,10 +2,14 @@ import { expect, test } from "@playwright/test";
 
 test("home page loads without uncaught browser errors", async ({ page }) => {
   const errors: string[] = [];
-  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("pageerror", (error) => { errors.push(error.message); console.log("[pageerror]", error.message); });
+  page.on("console", (msg) => { if (msg.type() === "error") console.log("[console-error]", msg.text()); });
+  page.on("requestfailed", (request) => console.log("[request-failed]", request.url(), request.failure()?.errorText));
   await page.goto("/");
   await expect(page).toHaveTitle(/Business Lifeline/i);
   await expect(page.locator("body")).toBeVisible();
+  await page.waitForTimeout(1500);
+  await expect(page.getByRole("button", { name: /safety & feedback/i })).toBeVisible();
   expect(errors).toEqual([]);
 });
 
