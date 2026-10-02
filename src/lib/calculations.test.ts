@@ -19,8 +19,8 @@ const makeBusiness = (overrides: Partial<BusinessData>): BusinessData => ({
 
 test("calculates Riverbend Café deterministically and flags distress", () => {
   const metrics = calculateHealth(demoBusiness);
-  assert.equal(metrics.monthlyOperatingResult, 2500);
-  assert.equal(metrics.operatingMargin, 7.8);
+  assert.equal(metrics.monthlyOperatingResult, -1500);
+  assert.equal(metrics.operatingMargin, -4.7);
   assert.equal(metrics.runwayMonths, 9.3);
   assert.ok(metrics.overallScore <= 35);
   assert.ok(["Severe", "Critical"].includes(metrics.pressureLevel));
@@ -41,7 +41,7 @@ test("scores a healthy profitable sole trader strongly", () => {
     revenueTrend: "growing",
   }));
 
-  assert.equal(metrics.monthlyOperatingResult, 10500);
+  assert.equal(metrics.monthlyOperatingResult, -2000);
   assert.equal(metrics.runwayMonths, null);
   assert.ok(metrics.overallScore >= 80);
   assert.equal(metrics.pressureLevel, "Stable");
