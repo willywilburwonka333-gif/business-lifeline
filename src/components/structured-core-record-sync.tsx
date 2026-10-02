@@ -10,7 +10,7 @@ const OPS_KEY = "business-lifeline-operating-platform-v1";
 const CRM_KEY = "business-lifeline-crm-v1";
 const OPERATIONS_KEY = "business-lifeline-operations-v1";
 const META_KEY = "business-lifeline-record-sync-meta-v1";
-const RECORD_TYPES = ["customers","products","sales","quotes","crm-accounts","crm-contacts","crm-opportunities","crm-activities","projects","project-tasks","purchase-orders","inventory","stock-movements","service-orders","production-orders","boms","routings","work-centres","people","pay-runs","books-journals","pos-sales"] as const;
+const RECORD_TYPES = ["customers","products","sales","quotes","crm-accounts","crm-contacts","crm-opportunities","crm-activities","projects","project-tasks","purchase-orders","inventory","stock-movements","service-orders","production-orders","boms","routings","work-centres","people","pay-runs","books-journals","pos-sales","warehouse-bins","warehouse-balances","warehouse-tasks","trace-events","automation-rules","audit-events"] as const;
 
 type RecordType = (typeof RECORD_TYPES)[number];
 type BusinessRecord = { id: string; name?: string; customerName?: string; [key: string]: unknown };
@@ -30,8 +30,8 @@ function readStore(): Store | null {
   try {
     const core=JSON.parse(localStorage.getItem(OPS_KEY)||"{}") as Record<string,unknown>,crm=JSON.parse(localStorage.getItem(CRM_KEY)||"{}") as Record<string,unknown>,ops=JSON.parse(localStorage.getItem(OPERATIONS_KEY)||"{}") as Record<string,unknown>;
     const arr=(v:unknown)=>Array.isArray(v)?v as BusinessRecord[]:[];
-    const people=JSON.parse(localStorage.getItem("business-lifeline-people-v1")||"{}") as Record<string,unknown>,books=JSON.parse(localStorage.getItem("business-lifeline-books-v1")||"{}") as Record<string,unknown>,pos=JSON.parse(localStorage.getItem("business-lifeline-pos-v1")||"{}") as Record<string,unknown>;
-    return {customers:arr(core.customers),products:arr(core.products),sales:arr(core.sales),quotes:arr(core.quotes),"crm-accounts":arr(crm.accounts),"crm-contacts":arr(crm.contacts),"crm-opportunities":arr(crm.opportunities),"crm-activities":arr(crm.activities),projects:arr(ops.projects),"project-tasks":arr(ops.projectTasks),"purchase-orders":arr(ops.purchaseOrders),inventory:arr(ops.inventory),"stock-movements":arr(ops.movements),"service-orders":arr(ops.serviceOrders),"production-orders":arr(ops.productionOrders),boms:arr(ops.boms),routings:arr(ops.routings),"work-centres":arr(ops.workCentres),people:arr(people.employees),"pay-runs":arr(people.payRuns),"books-journals":arr(books.journals),"pos-sales":arr(pos.sales)};
+    const people=JSON.parse(localStorage.getItem("business-lifeline-people-v1")||"{}") as Record<string,unknown>,books=JSON.parse(localStorage.getItem("business-lifeline-books-v1")||"{}") as Record<string,unknown>,pos=JSON.parse(localStorage.getItem("business-lifeline-pos-v1")||"{}") as Record<string,unknown>,warehouse=JSON.parse(localStorage.getItem("business-lifeline-warehouse-v1")||"{}") as Record<string,unknown>,platformRules=JSON.parse(localStorage.getItem("business-lifeline-automation-rules-v1")||"[]"),platformAudit=JSON.parse(localStorage.getItem("business-lifeline-audit-v1")||"[]");
+    return {customers:arr(core.customers),products:arr(core.products),sales:arr(core.sales),quotes:arr(core.quotes),"crm-accounts":arr(crm.accounts),"crm-contacts":arr(crm.contacts),"crm-opportunities":arr(crm.opportunities),"crm-activities":arr(crm.activities),projects:arr(ops.projects),"project-tasks":arr(ops.projectTasks),"purchase-orders":arr(ops.purchaseOrders),inventory:arr(ops.inventory),"stock-movements":arr(ops.movements),"service-orders":arr(ops.serviceOrders),"production-orders":arr(ops.productionOrders),boms:arr(ops.boms),routings:arr(ops.routings),"work-centres":arr(ops.workCentres),people:arr(people.employees),"pay-runs":arr(people.payRuns),"books-journals":arr(books.journals),"pos-sales":arr(pos.sales),"warehouse-bins":arr(warehouse.bins),"warehouse-balances":arr(warehouse.balances),"warehouse-tasks":arr(warehouse.tasks),"trace-events":arr(ops.traceEvents),"automation-rules":arr(platformRules),"audit-events":arr(platformAudit)};
   } catch { return null; }
 }
 function saveStore(store: Store) {
@@ -41,6 +41,9 @@ function saveStore(store: Store) {
   const people=JSON.parse(localStorage.getItem("business-lifeline-people-v1")||"{}");Object.assign(people,{employees:store.people,payRuns:store["pay-runs"]});localStorage.setItem("business-lifeline-people-v1",JSON.stringify(people));
   const books=JSON.parse(localStorage.getItem("business-lifeline-books-v1")||"{}");books.journals=store["books-journals"];localStorage.setItem("business-lifeline-books-v1",JSON.stringify(books));
   const pos=JSON.parse(localStorage.getItem("business-lifeline-pos-v1")||"{}");pos.sales=store["pos-sales"];localStorage.setItem("business-lifeline-pos-v1",JSON.stringify(pos));
+  const warehouse=JSON.parse(localStorage.getItem("business-lifeline-warehouse-v1")||"{}");Object.assign(warehouse,{bins:store["warehouse-bins"],balances:store["warehouse-balances"],tasks:store["warehouse-tasks"]});localStorage.setItem("business-lifeline-warehouse-v1",JSON.stringify(warehouse));
+  ops.traceEvents=store["trace-events"];localStorage.setItem(OPERATIONS_KEY,JSON.stringify(ops));
+  localStorage.setItem("business-lifeline-automation-rules-v1",JSON.stringify(store["automation-rules"]));localStorage.setItem("business-lifeline-audit-v1",JSON.stringify(store["audit-events"]));
   window.dispatchEvent(new Event("business-lifeline-operating-updated"));
 }
 
