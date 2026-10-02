@@ -46,7 +46,8 @@ function downloadJson(filename: string, value: unknown) {
 }
 
 export function BetaSafetyCentre() {
-  const [open, setOpen] = useState(false);\n  const [hydrated, setHydrated] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const [tab, setTab] = useState<"safety" | "feedback" | "outcomes">("safety");
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [outcome, setOutcome] = useState<Outcome>(blankOutcome);
@@ -56,6 +57,7 @@ export function BetaSafetyCentre() {
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
+    setHydrated(true);
     try {
       const storedFeedback = JSON.parse(localStorage.getItem(FEEDBACK_KEY) || "[]") as Feedback[];
       const storedOutcome = JSON.parse(localStorage.getItem(OUTCOME_KEY) || "null") as Outcome | null;
