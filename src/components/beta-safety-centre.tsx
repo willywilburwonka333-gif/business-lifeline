@@ -46,9 +46,7 @@ function downloadJson(filename: string, value: unknown) {
 }
 
 export function BetaSafetyCentre() {
-  const [open, setOpen] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
-  const [tab, setTab] = useState<"safety" | "feedback" | "outcomes">("safety");
+  const [open, setOpen] = useState(false);\n  const [hydrated, setHydrated] = useState(false);\n  const [tab, setTab] = useState<"safety" | "feedback" | "outcomes">("safety");
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [outcome, setOutcome] = useState<Outcome>(blankOutcome);
   const [feedbackType, setFeedbackType] = useState<Feedback["type"]>("bug");
