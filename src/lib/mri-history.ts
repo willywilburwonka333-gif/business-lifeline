@@ -1,0 +1,9 @@
+import type { BusinessData, BusinessReport } from "./types.ts";
+import type { DiagnosticStandard } from "./business-health-standard.ts";
+export const MRI_HISTORY_KEY="business-lifeline-mri-history-v1";
+export type MriSnapshot={id:string;createdAt:string;businessName:string;data:BusinessData;report:BusinessReport;standard:DiagnosticStandard};
+export const createSnapshot=(data:BusinessData,report:BusinessReport,standard:DiagnosticStandard,createdAt=new Date().toISOString()):MriSnapshot=>({id:`${createdAt}:${data.businessName.trim().toLowerCase()}`,createdAt,businessName:data.businessName,data,report,standard});
+export function parseHistory(raw:string|null):MriSnapshot[]{if(!raw)return[];try{const x=JSON.parse(raw);return Array.isArray(x)?x.filter(v=>v&&typeof v==="object"&&typeof v.createdAt==="string"&&v.standard&&typeof v.standard.score==="number").slice(-24):[]}catch{return[]}}
+export function appendSnapshot(snapshot:MriSnapshot,storage:Storage=window.localStorage){const history=parseHistory(storage.getItem(MRI_HISTORY_KEY));const next=[...history.filter(x=>x.id!==snapshot.id),snapshot].slice(-24);storage.setItem(MRI_HISTORY_KEY,JSON.stringify(next));return next}
+export function businessHistory(name:string,storage:Storage=window.localStorage){const key=name.trim().toLowerCase();return parseHistory(storage.getItem(MRI_HISTORY_KEY)).filter(x=>x.businessName.trim().toLowerCase()===key)}
+export function compareSnapshots(a:MriSnapshot,b:MriSnapshot){return{scoreDelta:b.standard.score-a.standard.score,evidenceDelta:b.standard.evidenceConfidence-a.standard.evidenceConfidence,monthlyResultDelta:b.report.metrics.monthlyOperatingResult-a.report.metrics.monthlyOperatingResult,overdueDelta:(b.data.overdueTax+b.data.overdueSuppliers)-(a.data.overdueTax+a.data.overdueSuppliers),cashDelta:b.data.cashAvailable-a.data.cashAvailable}}
