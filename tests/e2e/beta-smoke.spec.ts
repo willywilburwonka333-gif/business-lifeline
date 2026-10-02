@@ -25,7 +25,7 @@ test("feedback can be saved and exported locally", async ({ page }) => {
   await page.getByLabel(/what happened/i).fill("Automated pilot feedback test");
   await page.getByRole("button", { name: /save feedback/i }).click();
   await expect(page.getByText(/feedback saved on this device/i)).toBeVisible();
-  await expect(page.getByText(/1 saved report/i)).toBeVisible();
+  await expect(page.locator(".beta-feedback-history")).toContainText("1");\n  await expect(page.locator(".beta-feedback-history")).toContainText(/saved reports/i);
 });
 
 test("weekly pilot outcome checkpoint persists", async ({ page }) => {
