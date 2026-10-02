@@ -1,0 +1,5 @@
+import{auditEvent,can,type AuditEvent,type Permission,type PlatformRole}from"./shared-platform.ts";
+export type MutationContext={role:PlatformRole;actor:string};
+export function authoriseMutation(ctx:MutationContext,permission:Permission,input:{action:string;recordType:string;recordId:string;summary:string},now=new Date().toISOString()){if(!can(ctx.role,permission))throw new Error(`Role ${ctx.role} cannot ${permission}.`);return auditEvent({actor:ctx.actor,action:input.action,recordType:input.recordType,recordId:input.recordId,summary:input.summary},now)}
+export function appendAudit(existing:AuditEvent[],event:AuditEvent,max=500){return[event,...existing.filter(x=>x.id!==event.id)].slice(0,max)}
+export function requiredPermission(recordType:string):Permission{if(["books-journals","pos-sales","invoices","bills","payments"].includes(recordType))return"finance.write";if(["people","pay-runs"].includes(recordType))return"people.write";if(["automation-rules"].includes(recordType))return"automation.manage";return"records.write"}
