@@ -102,13 +102,13 @@ export function BetaSafetyCentre() {
 
   return (
     <>
-      <button className="beta-safety-launcher" onClick={() => setOpen(true)}>
+      <button type="button" data-testid="beta-safety-launcher" className="beta-safety-launcher" aria-expanded={open} aria-controls="beta-safety-dialog" onClick={() => setOpen(true)}>
         <span>CONTROLLED BETA</span>
         <strong>Safety & feedback</strong>
       </button>
 
       {open && (
-        <div className="beta-safety-backdrop" role="dialog" aria-modal="true" aria-label="Controlled beta safety centre">
+        <div id="beta-safety-dialog" className="beta-safety-backdrop" role="dialog" aria-modal="true" aria-label="Controlled beta safety centre">
           <section className="beta-safety-panel">
             <header>
               <div>
