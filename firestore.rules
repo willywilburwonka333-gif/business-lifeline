@@ -162,6 +162,15 @@ service cloud.firestore {
         allow delete: if hasRole(businessId, ['owner', 'manager']);
       }
 
+      match /records/{recordId} {
+        allow read: if hasMembership(businessId);
+        allow create, update: if hasRole(businessId, ['owner', 'manager', 'staff', 'accountant'])
+          && request.resource.data.updatedBy == request.auth.uid
+          && request.resource.data.type is string
+          && request.resource.data.id is string;
+        allow delete: if hasRole(businessId, ['owner', 'manager']);
+      }
+
       match /auditEvents/{eventId} {
         allow create: if hasMembership(businessId)
           && request.resource.data.actorId == request.auth.uid;
