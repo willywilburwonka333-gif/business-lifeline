@@ -47,7 +47,6 @@ function downloadJson(filename: string, value: unknown) {
 
 export function BetaSafetyCentre() {
   const [open, setOpen] = useState(false);
-  const [interactive, setInteractive] = useState(false);
   const [tab, setTab] = useState<"safety" | "feedback" | "outcomes">("safety");
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [outcome, setOutcome] = useState<Outcome>(blankOutcome);
@@ -57,7 +56,6 @@ export function BetaSafetyCentre() {
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
-    setInteractive(true);
     try {
       const storedFeedback = JSON.parse(localStorage.getItem(FEEDBACK_KEY) || "[]") as Feedback[];
       const storedOutcome = JSON.parse(localStorage.getItem(OUTCOME_KEY) || "null") as Outcome | null;
@@ -104,7 +102,7 @@ export function BetaSafetyCentre() {
 
   return (
     <>
-      <button type="button" data-testid="beta-safety-launcher" className="beta-safety-launcher" aria-expanded={open} aria-controls="beta-safety-dialog" disabled={!interactive} onClick={() => setOpen(true)}>
+      <button type="button" data-testid="beta-safety-launcher" className="beta-safety-launcher" aria-expanded={open} aria-controls="beta-safety-dialog" onClick={() => setOpen(true)}>
         <span>CONTROLLED BETA</span>
         <strong>Safety & feedback</strong>
       </button>
