@@ -196,7 +196,7 @@ export function AccountingConnections() {
   return (
     <section className="panel accounting-connections no-print" aria-labelledby="accounting-connections-title">
       <div className="section-heading"><span>Connected accounting</span><h3 id="accounting-connections-title">Bring the whole financial picture into Business Lifeline</h3></div>
-      <p className="template-note">Customers sign in on the provider's secure page. Business Lifeline receives approved access tokens—not passwords—and imports only the data needed for diagnosis, forecasting and recovery.</p>
+      <p className="template-note">Customers sign in on the provider&apos;s secure page. Business Lifeline receives approved access tokens—not passwords—and imports only the data needed for diagnosis, forecasting and recovery.</p>
 
       <aside className="urgent"><b>Security boundary</b><p>Connections use official OAuth, encrypted server-side token storage and the signed-in Business Lifeline account. Access can be disconnected at any time.</p></aside>
 
