@@ -28,7 +28,8 @@ export function AdvancedAccountingHub(){
  const[refund,setRefund]=useState({reference:"",customer:"",amount:0,date:"",method:"Bank transfer"});
  useEffect(()=>{try{const raw=localStorage.getItem(KEY);if(raw)setStore({...empty,...JSON.parse(raw)})}catch{}setReady(true)},[]);
  useEffect(()=>{if(ready)localStorage.setItem(KEY,JSON.stringify(store))},[store,ready]);
- const integrity=useMemo(()=>booksIntegrity(store as BooksStore),[store]);\n const trial=useMemo(()=>{const map=new Map<string,{debit:number;credit:number}>();store.journals.forEach(j=>j.lines.forEach(l=>{const v=map.get(l.account)||{debit:0,credit:0};v[l.side]+=l.amount;map.set(l.account,v)}));return [...map.entries()].map(([account,v])=>({account,...v,balance:v.debit-v.credit}))},[store.journals]);
+ const integrity=useMemo(()=>booksIntegrity(store as BooksStore) ,[store]);
+ const trial=useMemo(()=>{const map=new Map<string,{debit:number;credit:number}>();store.journals.forEach(j=>j.lines.forEach(l=>{const v=map.get(l.account)||{debit:0,credit:0};v[l.side]+=l.amount;map.set(l.account,v)}));return [...map.entries()].map(([account,v])=>({account,...v,balance:v.debit-v.credit}))},[store.journals]);
  const ar=store.docs.filter(d=>d.kind==="invoice"&&d.status!=="paid"&&d.status!=="void").reduce((s,d)=>s+Math.max(0,calc(d.items).total-d.payments),0);
  const ap=store.bills.filter(b=>b.status!=="paid").reduce((s,b)=>s+Math.max(0,b.amount-b.paid),0);
  const sales=store.docs.filter(d=>d.kind==="invoice"&&d.status!=="void").reduce((s,d)=>s+calc(d.items).total,0);
