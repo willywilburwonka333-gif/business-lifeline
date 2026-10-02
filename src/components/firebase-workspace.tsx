@@ -46,6 +46,10 @@ const CLOUD_KEYS = [
   "business-lifeline-growth-plan-v1",
   "business-lifeline-exit-plan-v1",
   "business-lifeline-professional-validation-v1",
+  "business-lifeline-warehouse-v1",
+  "business-lifeline-automation-rules-v1",
+  "business-lifeline-audit-v1",
+  "business-lifeline-mri-history-v1",
 ] as const;
 const CLOUD_PREFIXES = [
   "business-lifeline-13-week-v1:",
