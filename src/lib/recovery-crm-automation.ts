@@ -1,0 +1,10 @@
+export type HealthSignal={businessId:string;accountId:string;score:number;previousScore?:number;cashRunwayDays?:number;overdueRecoveryActions?:number;nextRescanAt?:string};
+export type RecoveryAutomation={id:string;kind:"health-drop"|"cash-critical"|"actions-overdue"|"rescan-due";priority:"normal"|"high"|"critical";title:string;detail:string;accountId:string;dueAt:string};
+export function recoveryAutomations(signal:HealthSignal,nowIso:string){const out:RecoveryAutomation[]=[];const add=(kind:RecoveryAutomation["kind"],priority:RecoveryAutomation["priority"],title:string,detail:string,dueAt=nowIso)=>out.push({id:`${kind}-${signal.accountId}-${dueAt.slice(0,10)}`,kind,priority,title,detail,accountId:signal.accountId,dueAt});
+ if(signal.previousScore!=null&&signal.previousScore-signal.score>=5)add("health-drop","high","Business health deteriorated",`Health score fell from ${signal.previousScore} to ${signal.score}. Review the MRI evidence and recovery plan.`);
+ if(signal.cashRunwayDays!=null&&signal.cashRunwayDays<30)add("cash-critical","critical","Cash runway is critical",`Estimated cash runway is ${Math.max(0,Math.round(signal.cashRunwayDays))} days. Review immediate cash actions.`);
+ if((signal.overdueRecoveryActions??0)>0)add("actions-overdue","high","Recovery actions overdue",`${signal.overdueRecoveryActions} recovery action(s) require follow-up.`);
+ if(signal.nextRescanAt&&signal.nextRescanAt<=nowIso)add("rescan-due","normal","Business MRI rescan due","Run a rescan and compare health movement.",signal.nextRescanAt);
+ return out;
+}
+export function recoveryPriorityScore(signal:HealthSignal){let score=0;if(signal.score<25)score+=50;else if(signal.score<50)score+=30;else if(signal.score<70)score+=10;if(signal.cashRunwayDays!=null){if(signal.cashRunwayDays<14)score+=35;else if(signal.cashRunwayDays<30)score+=25;else if(signal.cashRunwayDays<60)score+=10}score+=Math.min(20,(signal.overdueRecoveryActions??0)*5);if(signal.previousScore!=null&&signal.score<signal.previousScore)score+=Math.min(20,signal.previousScore-signal.score);return Math.min(100,score)}
