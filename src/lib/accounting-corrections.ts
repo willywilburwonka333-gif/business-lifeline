@@ -19,7 +19,7 @@ export function correctingJournal(store:BooksStore,originalSource:string,replace
  if(!reversed.added)return{store,added:false,reason:reversed.reason};
  const posted=appendJournal(reversed.store,replacement);
  if(!posted.added)return{store,added:false,reason:posted.reason};
- return{store:posted.store,added:true,reason:"corrected" as const,correction:{...reversed.correction!,replacementSource:replacement.source}};
+ return{store:posted.store,added:true,reason:"corrected" as const,correction:{id:input.reversalId,originalSource,reversalSource:"REVERSAL:"+originalSource,replacementSource:replacement.source,reason:input.reason.trim(),actor:input.actor,correctedAt:input.date}};
 }
 export function accountingLineage(store:BooksStore,source:string){
  const original=store.journals.find(j=>j.source===source);
