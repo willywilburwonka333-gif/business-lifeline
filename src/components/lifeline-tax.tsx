@@ -1,5 +1,6 @@
 "use client";
 
+import { notifyBusinessDataChanged } from "@/lib/business-data-events";
 import { useEffect, useMemo, useState } from "react";
 import {
   gstSummary,
@@ -61,7 +62,7 @@ export function LifelineTax() {
   const [message, setMessage] = useState("");
 
   useEffect(() => { setStore(readTax()); setReady(true); }, []);
-  useEffect(() => { if (ready) localStorage.setItem(LIFELINE_TAX_KEY, JSON.stringify(store)); }, [store, ready]);
+  useEffect(() => { if (ready) { localStorage.setItem(LIFELINE_TAX_KEY, JSON.stringify(store)); notifyBusinessDataChanged({domain:"tax",entityType:"tax-store",reason:"tax-store-saved"}); } }, [store, ready]);
   useEffect(() => {
     const refresh = () => setRevision((value) => value + 1);
     window.addEventListener("business-lifeline-ledger-sync", refresh);

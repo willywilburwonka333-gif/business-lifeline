@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { BUSINESS_DATA_CHANGED } from "@/lib/business-data-events";
 
 const OPS_KEY = "business-lifeline-connected-operations-v2";
 const ACCOUNTING_KEY = "business-lifeline-advanced-accounting-v1";
@@ -231,10 +232,12 @@ export function OperatingLedgerSync() {
     };
     window.addEventListener("storage", onStorage);
     window.addEventListener("business-lifeline-operating-updated", sync as EventListener);
+    window.addEventListener(BUSINESS_DATA_CHANGED, sync as EventListener);
     return () => {
       window.clearInterval(timer);
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("business-lifeline-operating-updated", sync as EventListener);
+      window.removeEventListener(BUSINESS_DATA_CHANGED, sync as EventListener);
     };
   }, []);
   return null;

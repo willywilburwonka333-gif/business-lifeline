@@ -1,3 +1,4 @@
+import { notifyBusinessDataChanged } from "@/lib/business-data-events";
 import { emptyBusiness } from "@/lib/demo";
 import { generateReport } from "@/lib/planner";
 import type { BusinessData } from "@/lib/types";
@@ -210,4 +211,5 @@ export function writeSmartImport(draft: SmartImportDraft) {
     evidenceUpdatedAt: draft.updatedAt,
   }));
   window.dispatchEvent(new CustomEvent("business-lifeline-evidence-updated", { detail: { updatedAt: draft.updatedAt } }));
+  notifyBusinessDataChanged({domain:"mri",entityType:"mri-report",reason:"mri-evidence-refreshed",at:draft.updatedAt});
 }

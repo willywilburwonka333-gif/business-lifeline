@@ -11,6 +11,7 @@ import {
   readChart,
   trialBalance,
 } from "@/lib/lifeline-books-engine";
+import { BUSINESS_DATA_CHANGED } from "@/lib/business-data-events";
 import { mergeImportDraft, readSmartImport, writeSmartImport, type ImportedField } from "@/lib/mri-smart-import";
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -115,12 +116,14 @@ export function NativeBooksMriSync() {
     window.addEventListener("business-lifeline-ledger-sync", sync);
     window.addEventListener("business-lifeline-operating-updated", sync);
     window.addEventListener("business-lifeline-business-switched", sync);
+    window.addEventListener(BUSINESS_DATA_CHANGED, sync);
     window.addEventListener("storage", sync);
     return () => {
       window.clearInterval(timer);
       window.removeEventListener("business-lifeline-ledger-sync", sync);
       window.removeEventListener("business-lifeline-operating-updated", sync);
       window.removeEventListener("business-lifeline-business-switched", sync);
+      window.removeEventListener(BUSINESS_DATA_CHANGED, sync);
       window.removeEventListener("storage", sync);
     };
   }, []);
