@@ -25,3 +25,6 @@ test("final chain: orphaned causation and impossible stock are detected",()=>{
  assert.equal(correlationLineage([e],"flow2").valid,false);
  const audit=lifecycleAudit({events:[e],books:emptyBooks(),inventory:[{onHand:1,allocated:2,available:-1}],mri:{score:50}});assert.equal(audit.ready,false);
 });
+
+import{affectedSubsystems,propagationContract}from"./business-data-events.ts";
+test("propagation contract updates every relevant core subsystem",()=>{assert.deepEqual(new Set(affectedSubsystems("pos")),new Set(["inventory","books","mri","recovery","cloud","dashboard"]));assert.ok(affectedSubsystems("people").includes("payroll"));assert.ok(affectedSubsystems("crm").includes("operations"));assert.ok(affectedSubsystems("books").includes("mri"));const contract=propagationContract();for(const domain of ["books","crm","operations","pos","people","tax","mri"] as const){assert.ok(contract[domain].length>=3)}});
