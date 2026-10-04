@@ -1,5 +1,6 @@
 "use client";
 
+import { notifyBusinessDataChanged } from "@/lib/business-data-events";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   calculateStocktake,
@@ -121,7 +122,7 @@ export function ConnectedOperationsV2() {
   const [cashClose, setCashClose] = useState({ openingCash: 0, closingCash: 0 });
 
   useEffect(() => { setStore(readStore()); setReady(true); }, []);
-  useEffect(() => { if (ready) { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); window.dispatchEvent(new Event("business-lifeline-operating-updated")); } }, [store, ready]);
+  useEffect(() => { if (ready) { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); window.dispatchEvent(new Event("business-lifeline-operating-updated")); notifyBusinessDataChanged({domain:"operations",entityType:"connected-operations",reason:"connected-operations-saved"}); } }, [store, ready]);
 
   const employeeRates = useMemo(() => {
     try {
