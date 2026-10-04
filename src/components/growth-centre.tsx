@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { GROWTH_PLAN_KEY, buildGrowthAnalysis, growthScenario, readGrowthPlan, readOperatingSnapshot, type GrowthInitiative, type GrowthPlan, type GrowthSegment } from "@/lib/growth-engine";
 import type { SavedReport } from "@/lib/saved-report";
+import { growthScorecard, growthPortfolio } from "@/lib/growth-intelligence";
 
 const id = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const currencyFor = (country: string) => country.toLowerCase().includes("australia") ? "AUD" : country.toLowerCase().includes("new zealand") ? "NZD" : country.toLowerCase().includes("united kingdom") ? "GBP" : country.toLowerCase().includes("canada") ? "CAD" : "USD";
@@ -25,6 +26,8 @@ export function GrowthCentre({ saved }: { saved: SavedReport }) {
   }, [plan]);
 
   const analysis = useMemo(() => buildGrowthAnalysis(saved, plan, operating), [saved, plan, operating]);
+  const scorecard = useMemo(() => growthScorecard(saved, plan, operating), [saved, plan, operating]);
+  const portfolio = useMemo(() => growthPortfolio(plan), [plan]);
   const scenarioResult = useMemo(() => growthScenario(saved, scenario), [saved, scenario]);
 
   const addInitiative = (event: FormEvent) => {
@@ -71,7 +74,11 @@ export function GrowthCentre({ saved }: { saved: SavedReport }) {
       <article><span>Catalogue margin</span><strong>{analysis.averageCatalogueMargin ? `${analysis.averageCatalogueMargin}%` : "Needs price/cost data"}</strong><small>{analysis.lowMarginItems} recorded item(s) below 20% gross margin</small></article>
       <article><span>Quote conversion</span><strong>{analysis.quoteCount ? `${analysis.pipelineConversionPercent}%` : "Needs quote history"}</strong><small>{analysis.acceptedQuotes}/{analysis.quoteCount} recorded quotes accepted</small></article>
       <article><span>Payroll headroom</span><strong>{money(analysis.payrollHeadroomBeforeLoss, saved.data.country)}</strong><small>Approximate monthly headroom before current result reaches zero</small></article>
+      <article><span>Growth readiness</span><strong>{scorecard.score}/100</strong><small>{scorecard.readiness.band} · evidence {scorecard.evidenceScore}%</small></article>
+      <article><span>Experiment portfolio</span><strong>{Math.round(portfolio.portfolioReturn*100)}%</strong><small>{portfolio.scale.length} scale · {portfolio.stop.length} stop recommendation(s)</small></article>
     </section>
+
+    <section className="panel"><div className="section-heading"><span>Decision gate</span><h3>Can this business safely scale now?</h3></div><div className="insight-grid"><section><strong>Blockers</strong><ul>{scorecard.readiness.blockers.length?scorecard.readiness.blockers.map((x)=><li key={x}>{x}</li>):<li>No hard growth blocker detected.</li>}</ul></section><section><strong>Watch-outs</strong><ul>{scorecard.readiness.watch.length?scorecard.readiness.watch.map((x)=><li key={x}>{x}</li>):<li>No additional watch-out detected.</li>}</ul></section></div></section>
 
     <section className="panel">
       <div className="section-heading"><span>Growth destination</span><h3>Set the target before spending to chase it</h3></div>
