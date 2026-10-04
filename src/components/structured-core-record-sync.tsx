@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { collection, doc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
 import { firebaseAuth, firebaseDb } from "@/lib/firebase-client";
+import { BUSINESS_DATA_CHANGED, notifyBusinessDataChanged } from "@/lib/business-data-events";
 
 const ACTIVE_KEY = "business-lifeline-active-business-v1";
 const OPS_KEY = "business-lifeline-operating-platform-v1";
@@ -45,6 +46,7 @@ function saveStore(store: Store) {
   ops.traceEvents=store["trace-events"];localStorage.setItem(OPERATIONS_KEY,JSON.stringify(ops));
   localStorage.setItem("business-lifeline-automation-rules-v1",JSON.stringify(store["automation-rules"]));localStorage.setItem("business-lifeline-audit-v1",JSON.stringify(store["audit-events"]));
   window.dispatchEvent(new Event("business-lifeline-operating-updated"));
+  notifyBusinessDataChanged({domain:"cloud",entityType:"structured-records",reason:"cloud-records-applied"});
 }
 
 function readMeta(): SyncMeta {
@@ -166,7 +168,9 @@ export function StructuredCoreRecordSync() {
 
     void push();
     const timer = window.setInterval(() => void push(), 4000);
-    return () => window.clearInterval(timer);
+    const onDataChanged = () => void push();
+    window.addEventListener(BUSINESS_DATA_CHANGED, onDataChanged);
+    return () => { window.clearInterval(timer); window.removeEventListener(BUSINESS_DATA_CHANGED, onDataChanged); };
   }, [businessId, user]);
 
   const label = useMemo(() => `${count} cloud record${count === 1 ? "" : "s"}`, [count]);
