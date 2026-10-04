@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EXIT_PLAN_KEY, buildBuyerReadinessPack, buildExitAnalysis, dataRoomLabels, readExitPlan, readinessLabels, type DealOffer, type DiligenceIssue, type EarningsBasis, type ExitPath, type ExitPlan, type HandoverItem, type ReadinessKey } from "@/lib/exit-readiness";
 import { readOperatingSnapshot } from "@/lib/growth-engine";
 import type { SavedReport } from "@/lib/saved-report";
+import { sellScore } from "@/lib/sell-intelligence";
 
 const currencyFor = (country: string) => country.toLowerCase().includes("australia") ? "AUD" : country.toLowerCase().includes("new zealand") ? "NZD" : country.toLowerCase().includes("united kingdom") ? "GBP" : country.toLowerCase().includes("canada") ? "CAD" : "USD";
 const money = (value: number, country: string) => value.toLocaleString("en", { style: "currency", currency: currencyFor(country), maximumFractionDigits: 0 });
@@ -15,6 +16,7 @@ export function ExitCentre({ saved }: { saved: SavedReport }) {
   const [issue, setIssue] = useState({ title: "", area: "Financial", severity: "medium" as DiligenceIssue["severity"], owner: "", dueDate: "", notes: "" });
   const [handover, setHandover] = useState({ title: "", owner: "", dueDate: "" });
   const analysis = useMemo(() => buildExitAnalysis(saved, plan, operating), [saved, plan, operating]);
+  const sell = useMemo(() => sellScore(saved, plan, operating), [saved, plan, operating]);
 
   useEffect(() => {
     window.localStorage.setItem(EXIT_PLAN_KEY, JSON.stringify(plan));
@@ -68,7 +70,11 @@ export function ExitCentre({ saved }: { saved: SavedReport }) {
       <article><span>Maintainable earnings used</span><strong>{money(analysis.earnings, saved.data.country)}</strong><small>Planning input, not a formal valuation</small></article>
       <article><span>Indicative scenario range</span><strong>{money(analysis.lowIndicative, saved.data.country)} – {money(analysis.highIndicative, saved.data.country)}</strong><small>User-selected multiples only</small></article>
       <article><span>Exit process stage</span><strong>{analysis.lifecycleStage}</strong><small>{analysis.openDiligenceIssues} open diligence issue(s) · {analysis.activeOffers} active offer(s)</small></article>
+      <article><span>Sell readiness</span><strong>{sell.score}/100</strong><small>{sell.gate.ready?"Market-readiness gate passed":"Not yet market-ready"}</small></article>
+      <article><span>Buyer risk</span><strong>{sell.gate.buyerRisk.score}/100</strong><small>{sell.gate.buyerRisk.band}</small></article>
     </section>
+
+    <section className="panel"><div className="section-heading"><span>Market-readiness gate</span><h3>What still blocks a clean transaction?</h3></div>{sell.gate.blockers.length?<ol>{sell.gate.blockers.map((x)=><li key={x}>{x}</li>)}</ol>:<p>Core transferability, data-room, earnings and buyer-risk thresholds are currently met. Professional valuation, legal, tax and transaction review are still separate.</p>}{sell.bestOffer&&<p><strong>Best structured offer:</strong> {sell.bestOffer.offer.buyer} · quality {sell.bestOffer.qualityScore}/100 · {Math.round(sell.bestOffer.cashRatio*100)}% cash at completion.</p>}</section>
 
     <section className="panel">
       <div className="section-heading"><span>Run evidence</span><h3>Operating proof carried forward automatically</h3></div>
