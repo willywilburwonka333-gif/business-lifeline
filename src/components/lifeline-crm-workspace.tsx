@@ -1,6 +1,7 @@
 "use client";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createEmptyCrmStore, pipelineForecast, opportunityProbability, type CrmActivity, type CrmContact, type CrmOpportunity, type CrmStore } from "@/lib/lifeline-crm";
+import { notifyBusinessDataChanged } from "@/lib/business-data-events";
 import { advanceOpportunity, crmIntegrity } from "@/lib/customer-lifecycle";
 
 const KEY="business-lifeline-crm-v1";
@@ -26,7 +27,7 @@ export function LifelineCrmWorkspace({country}:{country:string}){
  const [store,setStore]=useState<CrmStore>(createEmptyCrmStore()); const [view,setView]=useState<View>("overview"); const [ready,setReady]=useState(false);
  const [company,setCompany]=useState(""); const [contact,setContact]=useState({firstName:"",lastName:"",email:"",phone:"",accountId:""});
  const [deal,setDeal]=useState({accountId:"",title:"",value:0,expectedCloseDate:""}); const [note,setNote]=useState("");
- useEffect(()=>{setStore(load());setReady(true)},[]); useEffect(()=>{if(ready)localStorage.setItem(KEY,JSON.stringify(store))},[store,ready]);
+ useEffect(()=>{setStore(load());setReady(true)},[]); useEffect(()=>{if(ready){localStorage.setItem(KEY,JSON.stringify(store));notifyBusinessDataChanged({domain:"crm",entityType:"crm-store",reason:"crm-store-saved"});}},[store,ready]);
  const forecast=useMemo(()=>pipelineForecast(store),[store]); const integrity=useMemo(()=>crmIntegrity(store),[store]); const pipeline=store.pipelines[0]; const openTasks=store.tasks.filter(t=>t.status==="open");
  const selectedAccount=store.accounts[0];
  const addCompany=(e:FormEvent)=>{e.preventDefault();if(!company.trim())return;const now=iso();setStore(s=>({...s,accounts:[{id:id("account"),name:company.trim(),type:"prospect",tags:[],customFields:{},createdAt:now,updatedAt:now},...s.accounts]}));setCompany("")};
