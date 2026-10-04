@@ -12,3 +12,19 @@ export function subscribeBusinessDataChanged(handler:(change:BusinessDataChange)
  window.addEventListener(BUSINESS_DATA_CHANGED,listener);
  return()=>window.removeEventListener(BUSINESS_DATA_CHANGED,listener);
 }
+
+export type BusinessSubsystem="books"|"crm"|"operations"|"inventory"|"payroll"|"tax"|"mri"|"recovery"|"cloud"|"dashboard";
+const IMPACT:Record<BusinessDataDomain,BusinessSubsystem[]>={
+ books:["books","mri","recovery","cloud","dashboard"],
+ crm:["crm","operations","recovery","cloud","dashboard"],
+ operations:["operations","inventory","books","mri","recovery","cloud","dashboard"],
+ pos:["inventory","books","mri","recovery","cloud","dashboard"],
+ people:["payroll","books","mri","recovery","cloud","dashboard"],
+ tax:["tax","mri","recovery","cloud","dashboard"],
+ mri:["mri","recovery","crm","dashboard"],
+ automation:["operations","crm","dashboard","cloud"],
+ cloud:["books","crm","operations","inventory","payroll","tax","mri","recovery","dashboard"],
+ other:["dashboard","cloud"],
+};
+export function affectedSubsystems(domain:BusinessDataDomain){return[...IMPACT[domain]]}
+export function propagationContract(){return Object.fromEntries(Object.entries(IMPACT).map(([domain,targets])=>[domain,[...targets]])) as Record<BusinessDataDomain,BusinessSubsystem[]>}
