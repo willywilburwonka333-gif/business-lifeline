@@ -1,3 +1,4 @@
+import{notifyBusinessDataChanged}from"./business-data-events.ts";
 export const LIFELINE_BOOKS_KEY = "business-lifeline-advanced-accounting-v1";
 export const LIFELINE_BOOKS_SETTINGS_KEY = "business-lifeline-books-settings-v1";
 
@@ -208,7 +209,7 @@ export function saveBooksStore(store: BooksStore, storage?: Storage) {
   const target = storage ?? (typeof window !== "undefined" ? window.localStorage : null);
   if (!target) return false;
   target.setItem(LIFELINE_BOOKS_KEY, JSON.stringify(store));
-  if (!storage && typeof window !== "undefined") window.dispatchEvent(new CustomEvent("business-lifeline-ledger-sync", { detail: { changed: true } }));
+  if (!storage && typeof window !== "undefined") { window.dispatchEvent(new CustomEvent("business-lifeline-ledger-sync", { detail: { changed: true } })); notifyBusinessDataChanged({domain:"books",entityType:"ledger",reason:"books-store-saved"}); }
   return true;
 }
 
