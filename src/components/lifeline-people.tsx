@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { notifyBusinessDataChanged } from "@/lib/business-data-events";
 import { LIFELINE_BOOKS_KEY, readBooksStore, type BooksStore, type LedgerJournal } from "@/lib/lifeline-books-engine";
 import { calculatePayroll, payrollJournalLines, type PayComponent } from "@/lib/lifeline-payroll-engine";
 
@@ -109,6 +110,7 @@ function postJournal(journal: LedgerJournal) {
   const next: BooksStore = { ...store, journals: [journal, ...store.journals] };
   localStorage.setItem(LIFELINE_BOOKS_KEY, JSON.stringify(next));
   window.dispatchEvent(new CustomEvent("business-lifeline-ledger-sync", { detail: { changed: true } }));
+  notifyBusinessDataChanged({domain:"books",entityType:"payroll-journal",entityId:journal.id,reason:"payroll-journal-posted"});
   return true;
 }
 
@@ -124,7 +126,7 @@ export function LifelinePeople() {
   const [timesheetRevision, setTimesheetRevision] = useState(0);
 
   useEffect(() => { setStore(readPeople()); setReady(true); }, []);
-  useEffect(() => { if (ready) localStorage.setItem(LIFELINE_PEOPLE_KEY, JSON.stringify(store)); }, [store, ready]);
+  useEffect(() => { if (ready) { localStorage.setItem(LIFELINE_PEOPLE_KEY, JSON.stringify(store)); notifyBusinessDataChanged({domain:"people",entityType:"people-store",reason:"people-store-saved"}); } }, [store, ready]);
   useEffect(() => {
     const refresh = () => setTimesheetRevision((value) => value + 1);
     window.addEventListener("business-lifeline-operating-updated", refresh);
