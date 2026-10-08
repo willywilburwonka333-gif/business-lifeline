@@ -1,4 +1,5 @@
 name: Anonymous deployment access audit
+# Second independent check after owner confirmed publishing Firebase rules.
 on:
   push:
     branches:
