@@ -39,7 +39,8 @@ export function generateReport(data: BusinessData): BusinessReport {
   const urgentHelp = data.urgentConcerns.some((x) => ["payroll", "tax", "legal", "debts", "closure"].includes(x)) || data.overdueTax >= Math.max(10000, data.monthlyRevenue * 0.3);
   const warnings: string[] = [];
   const strengths: string[] = [];
-  if (m.monthlyOperatingResult < 0) warnings.push("The business is losing money each month at its current cost base.");
+  if (m.monthlyOperatingResult < 0) warnings.push("Supplied monthly cash outgoings, including owner drawings and loan repayments, exceed supplied revenue. This cash gap does not by itself establish an accounting loss.");
+  if (data.monthlyRevenue < data.fixedExpenses + data.variableExpenses) warnings.push("Supplied revenue does not cover supplied operating expenses before owner drawings and loan repayments.");
   if (m.runwayMonths !== null && m.runwayMonths < 3) warnings.push("Cash runway is under three months.");
   if (data.overdueTax > 0) warnings.push("Overdue tax needs an agreed payment plan.");
   if (data.overdueSuppliers > 0) warnings.push("Supplier arrears may disrupt essential trading relationships.");
@@ -48,14 +49,14 @@ export function generateReport(data: BusinessData): BusinessReport {
   if (factors.includes("margins")) warnings.push("Pricing or margins may not be covering the full cost to serve.");
   if (factors.includes("staffing")) warnings.push("Staffing availability or labour cost is adding operating pressure.");
   if (factors.includes("overexpansion")) warnings.push("Recent expansion may have increased commitments faster than cash generation.");
-  if (m.monthlyOperatingResult >= 0) strengths.push("The core monthly result is positive.");
+  if (m.monthlyOperatingResult >= 0) strengths.push("The estimated monthly cash position is positive after operating costs, owner drawings and loan repayments.");
   if (data.yearsOperating >= 3) strengths.push(`${data.yearsOperating} years of trading history provides useful customer and sales data.`);
   if (data.cashAvailable >= data.fixedExpenses * 0.5) strengths.push("Available cash provides some room to act.");
   if (data.accountsReceivable > 0) strengths.push(`There is ${data.accountsReceivable.toLocaleString()} in receivables that may convert to cash.`);
   if (strengths.length === 0) strengths.push("Completing this diagnosis early creates a clear basis for action.");
 
   const risks = [
-    ...(m.monthlyOperatingResult < 0 ? [`Ongoing monthly cash loss of ${Math.abs(m.monthlyOperatingResult).toLocaleString()}.`] : []),
+    ...(m.monthlyOperatingResult < 0 ? [`Estimated monthly cash shortfall of ${Math.abs(m.monthlyOperatingResult).toLocaleString()}, after drawings and loan repayments.`] : []),
     ...(data.overdueTax > 0 ? [`Tax arrears of ${data.overdueTax.toLocaleString()}.`] : []),
     ...(data.revenueTrend === "declining" || factors.includes("demand") ? ["Declining customer demand without an immediate sales response."] : []),
     ...(data.overdueSuppliers > 0 ? [`Supplier arrears of ${data.overdueSuppliers.toLocaleString()}.`] : []),

@@ -130,6 +130,8 @@ export function BetaSafetyCentre() {
             {tab === "safety" && (
               <section className="beta-safety-content">
                 <h3>Controlled beta boundaries</h3>
+                <p role="note"><strong>Commercial use is not yet independently cleared.</strong> Demonstrate the MRI with fictional or de-identified figures. Before accepting identifiable or confidential client records, confirm written client authority, a scoped service agreement, privacy/security review, accountant-reviewed calculations and appropriate professional referral arrangements. Passing automated tests is not legal or financial certification.</p>
+                <p><strong>Operator pilot rule:</strong> Present every MRI finding as an evidence-based indicator, not proof of a root cause. Review the source figures with the owner. Separate observed facts, assumptions, suggested operational actions and referrals to qualified advisers. Never promise a turnaround or diagnose legal insolvency.</p>
                 <div className="beta-safety-grid">
                   <article>
                     <strong>Use it for</strong>
