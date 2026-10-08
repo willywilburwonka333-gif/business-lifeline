@@ -40,11 +40,11 @@ export function ExecutiveSnapshot({ data, report }: { data: BusinessData; report
           <small>Based on completeness and consistency of supplied data</small>
         </article>
         <article>
-          <span>Monthly result</span>
+          <span>Estimated monthly cash result</span>
           <strong className={metrics.monthlyOperatingResult < 0 ? "negative" : "positive"}>
             {money(metrics.monthlyOperatingResult, data.country)}
           </strong>
-          <small>{metrics.operatingMargin}% operating margin</small>
+          <small>After owner drawings and loan repayments; separate from {metrics.operatingMargin}% operating margin</small>
         </article>
         <article>
           <span>Cash runway</span>
