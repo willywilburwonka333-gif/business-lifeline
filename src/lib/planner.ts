@@ -49,7 +49,7 @@ export function generateReport(data: BusinessData): BusinessReport {
   if (factors.includes("margins")) warnings.push("Pricing or margins may not be covering the full cost to serve.");
   if (factors.includes("staffing")) warnings.push("Staffing availability or labour cost is adding operating pressure.");
   if (factors.includes("overexpansion")) warnings.push("Recent expansion may have increased commitments faster than cash generation.");
-  if (m.monthlyOperatingResult >= 0) strengths.push("The supplied monthly cash estimate is non-negative after costs, drawings and loan repayments.");
+  if (m.monthlyOperatingResult >= 0) strengths.push("The estimated monthly cash position is positive after operating costs, owner drawings and loan repayments.");
   if (data.yearsOperating >= 3) strengths.push(`${data.yearsOperating} years of trading history provides useful customer and sales data.`);
   if (data.cashAvailable >= data.fixedExpenses * 0.5) strengths.push("Available cash provides some room to act.");
   if (data.accountsReceivable > 0) strengths.push(`There is ${data.accountsReceivable.toLocaleString()} in receivables that may convert to cash.`);
