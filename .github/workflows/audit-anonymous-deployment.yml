@@ -1,0 +1,25 @@
+name: Anonymous deployment access audit
+on:
+  push:
+    branches:
+      - audit/anonymous-access-probe-20261008
+permissions:
+  contents: read
+jobs:
+  anonymous-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check production URL without cookies, tokens, or Vercel login
+        shell: bash
+        run: |
+          set -u
+          for path in "/" "/api/health" "/legal/privacy"; do
+            url="https://business-lifeline.vercel.app${path}"
+            echo "===== Checking anonymous access to ${path} ====="
+            curl -sS --max-time 12 --connect-timeout 8 -o /tmp/probe-body -D /tmp/probe-headers \
+              -w 'http_code=%{http_code} remote_ip=%{remote_ip} redirect_url=%{redirect_url}\n' \
+              "$url" || true
+            grep -Ei '^(HTTP/|location:|x-vercel-id:|x-vercel-error:)' /tmp/probe-headers || true
+            echo "protection_page=$(grep -Eioc 'Authentication Required|Vercel Authentication|Log in to Vercel|Deployment Protection' /tmp/probe-body || true)"
+          done
