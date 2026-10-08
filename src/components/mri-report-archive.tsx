@@ -13,6 +13,7 @@ export function MriReportArchive({ onOpen }: { onOpen: (saved: SavedReport) => v
   const [reports, setReports] = useState<ArchivedMri[]>([]);
   const [expanded, setExpanded] = useState(false);
   const [status, setStatus] = useState("");
+  const [lastSavedStatus, setLastSavedStatus] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -47,6 +48,13 @@ export function MriReportArchive({ onOpen }: { onOpen: (saved: SavedReport) => v
   }, []);
 
   useEffect(() => {
+    const update = () => { setLastSavedStatus(localStorage.getItem("business-lifeline-last-archive-status-v1") || ""); };
+    update();
+    window.addEventListener("business-lifeline-mri-archive-updated", update);
+    return () => window.removeEventListener("business-lifeline-mri-archive-updated", update);
+  }, []);
+
+  useEffect(() => {
     if (uid && expanded && businessId) void load();
   }, [uid, businessId, expanded, load]);
 
@@ -58,6 +66,7 @@ export function MriReportArchive({ onOpen }: { onOpen: (saved: SavedReport) => v
         {expanded ? "Hide history" : "Open report history"}
       </button>
     </div>
+    {lastSavedStatus && <p role="status">{lastSavedStatus}</p>}
     {expanded && <>
       <p>Historical reports are saved under the selected client's business account. They stay available after a new MRI or local device clear. Up to 100 recent reports are listed here.</p>
       <button type="button" className="button ghost" disabled={busy} onClick={() => void load()}>{busy ? "Loading reports…" : "Refresh reports"}</button>

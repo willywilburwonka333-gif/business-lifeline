@@ -66,14 +66,19 @@ export function BusinessLifeline({ aiEnabled = false }: { aiEnabled?: boolean })
     const standard = diagnosticStandard(nextData, nextReport.metrics, false, { draft, accuracyProfile: profile });
     if (!demo) appendSnapshot(createSnapshot(nextData, nextReport, standard));
     setView("report");
-    setSaveNotice(demo ? "Fictional demo: not archived in the client's account." : "Saving this dated MRI to the client's Firebase account…");
+    const updateSaveNotice = (message: string) => {
+      setSaveNotice(message);
+      localStorage.setItem("business-lifeline-last-archive-status-v1", message);
+      window.dispatchEvent(new Event("business-lifeline-mri-archive-updated"));
+    };
+    updateSaveNotice(demo ? "Fictional demo: not archived in this account." : "Saving this dated MRI to this client's Firebase account…");
     window.scrollTo(0, 0);
     if (!demo) {
       try {
         const result = await archiveMriForSignedInOwner(saved);
-        setSaveNotice(result === "saved" ? "MRI securely archived under this client's account. Earlier reports are preserved." : "Saved only in this browser. Sign in to the client's account to create a permanent cloud record.");
+        updateSaveNotice(result === "saved" ? "MRI saved to this client's cloud archive. Previous reports are preserved." : "Browser-only report. Sign in to create a permanent cloud archive.");
       } catch (error) {
-        setSaveNotice(`Cloud archive failed: ${error instanceof Error ? error.message : "Unknown error"}. Do not clear this device until a verified backup exists.`);
+        updateSaveNotice(`Cloud archive failed: ${error instanceof Error ? error.message : "Unknown error"}. Do not clear this device until a verified backup exists.`);
       }
     }
   };
