@@ -178,13 +178,19 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
       updatedAt: serverTimestamp(),
       ...(!existingBusiness?.exists() ? { createdAt: serverTimestamp() } : {}),
     }, { merge: true });
-    await setDoc(doc(firebaseDb, "businesses", businessId, "members", activeUser.uid), {
-      userId: activeUser.uid,
-      email: activeUser.email ?? null,
-      role: "owner",
-      status: "active",
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
+    const ownerMemberRef = doc(firebaseDb, "businesses", businessId, "members", activeUser.uid);
+    // Updating an existing owner membership is intentionally forbidden by the
+    // security rules, so only create it on first account setup.
+    const ownerMember = await getDoc(ownerMemberRef);
+    if (!ownerMember.exists()) {
+      await setDoc(ownerMemberRef, {
+        userId: activeUser.uid,
+        email: activeUser.email ?? null,
+        role: "owner",
+        status: "active",
+        updatedAt: serverTimestamp(),
+      });
+    }
     await setDoc(doc(firebaseDb, "users", activeUser.uid, "businessMemberships", businessId), {
       businessId,
       role: "owner",
