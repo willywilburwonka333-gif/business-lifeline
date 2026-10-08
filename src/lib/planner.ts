@@ -37,9 +37,11 @@ export function generateReport(data: BusinessData): BusinessReport {
   const m = calculateHealth(data);
   const factors = data.pressureFactors ?? [];
   const urgentHelp = data.urgentConcerns.some((x) => ["payroll", "tax", "legal", "debts", "closure"].includes(x)) || data.overdueTax >= Math.max(10000, data.monthlyRevenue * 0.3);
+  const needsStabilisation = m.overallScore < 70 || urgentHelp || m.monthlyOperatingResult < 0 || data.overdueTax > 0 || data.overdueSuppliers > 0;
   const warnings: string[] = [];
   const strengths: string[] = [];
-  if (m.monthlyOperatingResult < 0) warnings.push("Supplied monthly cash outgoings, including owner drawings and loan repayments, exceed supplied revenue. This cash gap does not by itself establish an accounting loss.");
+  if (m.cashFlowBasis === "revenue-proxy") warnings.push("Cash result and runway use invoiced revenue, not confirmed cash receipts. Enter actual receipts and payments and check a dated cash forecast before relying on them.");
+  if (m.monthlyOperatingResult < 0) warnings.push(m.cashFlowBasis === "cash-receipts-payments" ? "Owner-reported cash payments exceed receipts for the month; reconcile statements and review timing. This is not necessarily an accounting loss." : "Supplied monthly cash outgoings, including owner drawings and loan repayments, exceed supplied revenue. This cash gap does not by itself establish an accounting loss.");
   if (data.monthlyRevenue < data.fixedExpenses + data.variableExpenses) warnings.push("Supplied revenue does not cover supplied operating expenses before owner drawings and loan repayments.");
   if (m.runwayMonths !== null && m.runwayMonths < 3) warnings.push("Cash runway is under three months.");
   if (data.overdueTax > 0) warnings.push("Overdue tax needs an agreed payment plan.");
@@ -64,25 +66,25 @@ export function generateReport(data: BusinessData): BusinessReport {
   ].slice(0, 3);
 
   const today = [
-    action("Build a 13-week cash forecast", "Critical", "High", "Moderate", "A weekly view shows exactly when cash gaps occur and what must be negotiated."),
+    needsStabilisation ? action("Build a 13-week cash forecast", "Critical", "High", "Moderate", "A dated weekly cash view tests whether upcoming wages, tax, suppliers and loan payments can be met.") : action("Review weekly cash receipts and payments", "Medium", "Medium", "Easy", "Check collections and payments against invoiced revenue and monitor emerging cash pressure."),
     ...(data.overdueInvoices > 0 ? [action("Call every overdue customer", "Critical", "High", "Easy", `There is ${data.overdueInvoices.toLocaleString()} overdue and collection is the fastest cash lever.`)] : []),
     ...(urgentHelp ? [action("Contact a qualified turnaround or insolvency adviser", "Critical", "High", "Easy", "The reported warning signs need prompt, jurisdiction-specific professional assessment.")] : []),
   ].slice(0, 3);
   const sevenDays = [
-    action("Freeze non-essential spending and owner drawings", "High", "High", "Moderate", "Protect cash while the business is under pressure."),
+    ...(needsStabilisation ? [action("Review genuinely discretionary spending and owner drawings", "High", "High", "Moderate", "Protect essential wages, obligations and operations. Review implications with the owner or appropriate adviser; do not automatically freeze all drawings.")] : [action("Review operating efficiency and cash conversion", "Medium", "Medium", "Easy", "Identify unnecessary administration and delayed collections without disrupting healthy operations.")]),
     ...(data.overdueTax > 0 ? [action("Contact the tax authority to propose a payment plan", "High", "High", "Moderate", "Early engagement can reduce enforcement risk and make payments predictable.")] : []),
     ...(factors.includes("demand") || factors.includes("marketing") ? [action("Run a focused customer-demand recovery test", "High", "High", "Moderate", "Test one specific offer and channel, then measure cash collected rather than attention alone.")] : []),
     action("Rank products and services by contribution margin", "High", "High", "Moderate", "Focus sales and labour on work that generates cash, not just revenue."),
   ].slice(0, 4);
   const thirtyDays = [
-    action("Renegotiate the three largest fixed costs", "High", "High", "Hard", "Structural cost reductions improve every future month."),
+    ...(needsStabilisation ? [action("Review the three largest controllable fixed costs", "High", "High", "Hard", "Check contracts, service delivery and employee impacts before changing major commitments.")] : [action("Identify one sustainable margin improvement", "Medium", "Medium", "Moderate", "Improve a measurable cost or pricing driver while protecting quality and customers.")]),
     ...(factors.includes("overexpansion") ? [action("Pause expansion and review every new commitment", "High", "High", "Moderate", "Stop additional cash commitments until the existing business funds itself.")] : []),
-    action("Launch a focused revenue recovery offer", "High", "High", "Moderate", `A targeted offer should support the immediate goal: ${data.immediateGoal}.`),
+    ...(needsStabilisation ? [action("Test a focused sales or retention improvement", "High", "High", "Moderate", `Measure contribution margin and cash collected against the goal: ${data.immediateGoal}.`)] : []),
     action("Set weekly cash and sales scorecards", "Medium", "Medium", "Easy", "Frequent tracking exposes slippage before it becomes a crisis."),
   ].slice(0, 4);
   const ninetyDays = [
     action("Review pricing and customer profitability", "Medium", "High", "Moderate", "Sustainable margins require pricing that covers the full cost to serve."),
-    action("Restructure debt where viable", "Medium", "High", "Hard", "Matching repayments to realistic cash generation reduces recurring pressure."),
+    ...(m.debtPressure > 35 ? [action("Discuss debt-service options with a qualified adviser", "Medium", "High", "Hard", "Model repayments and risks before any refinancing or restructuring decision.")] : []),
     action("Create a written resilience plan", "Medium", "Medium", "Moderate", "Cash reserves, trigger points, and contingencies prevent a repeat crisis."),
   ];
   const industryRecommendations = industryGuidance(data.industry);

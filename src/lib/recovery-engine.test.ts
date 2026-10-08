@@ -17,3 +17,11 @@ test("cash shortfall is not mislabeled as an accounting operating loss",()=>{
  assert.match(cash.rootCause,/verify/i);
  assert.doesNotMatch(cash.rootCause,/definitive cause/i);
 });
+
+test("healthy businesses do not receive automatic crisis-mode freezes or restructuring",()=>{
+ const data={...demoBusiness,monthlyRevenue:100000,fixedExpenses:30000,variableExpenses:30000,ownerDrawings:5000,loanRepayments:2000,cashAvailable:250000,accountsReceivable:20000,overdueInvoices:1000,totalDebt:20000,overdueTax:0,overdueSuppliers:0,revenueTrend:"growing" as const,urgentConcerns:[]};
+ const report=generateReport(data);
+ assert.ok(report.metrics.overallScore>=70);
+ assert.ok(!report.sevenDays.some(x=>/freeze|discretionary spending/i.test(x.title)));
+ assert.ok(!report.ninetyDays.some(x=>/debt-service|restructur/i.test(x.title)));
+});
