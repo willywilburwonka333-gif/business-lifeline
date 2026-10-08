@@ -54,7 +54,7 @@ Unpaid wages or super, suspected inability to meet debts as they fall due, legal
 Record independently: time spent, source errors, data-confidence grade, false alarms, missed material risks, usability rating, and actual business changes after 30 days. Obtain written consent for any testimonial and do not claim an accuracy rate until independent professional evidence supports it.
 
 ## Current technical position
-At 8 October 2026 the `main` branch has a green automated quality/security/beta-E2E history at `aa82f922`; **production deployment, Firebase credentials, tenant isolation on production, external provider availability, legal/commercial and professional reviews remain separately unverified**. Open historical PR #51 is stale and failing checks; do not merge it into main without rebasing and repairing actual issues.
+At 8 October 2026 the `main` branch has a green automated quality/security/beta-E2E history at `aa82f922`; **production deployment, Firebase credentials, tenant isolation on production, external provider availability, legal/commercial and professional reviews remain separately unverified**. Open historical PR #51 is stale and failing checks; do not merge it into main without rebasing and repairing actual issues. The current dependency lockfile is not in sync with the package ranges: clean `npm ci` fails and a separate reviewed lockfile regeneration is needed before claiming reproducible builds.
 
 ## References for review (Australia)
 - Tax Practitioners Board: https://www.tpb.gov.au/bas-services
