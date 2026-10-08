@@ -68,7 +68,7 @@ export function MriReportArchive({ onOpen }: { onOpen: (saved: SavedReport) => v
     </div>
     {lastSavedStatus && <p role="status">{lastSavedStatus}</p>}
     {expanded && <>
-      <p>Historical reports are saved under the selected client's business account. They stay available after a new MRI or local device clear. Up to 100 recent reports are listed here.</p>
+      <p>Historical reports are saved under the selected business account. They stay available after a new MRI or local device clear. Up to 100 recent reports are listed here.</p>
       <button type="button" className="button ghost" disabled={busy} onClick={() => void load()}>{busy ? "Loading reports…" : "Refresh reports"}</button>
       {status && <p role="alert">{status}</p>}
       {reports.length === 0 && !busy && !status && <p>No cloud-archived MRIs for this account yet. Finish a new MRI while signed in.</p>}
