@@ -1,6 +1,6 @@
 export type ReleaseCapability={id:string;label:string;state:"verified-core"|"external-integration-required"|"beta";note:string};
 export const V1_CAPABILITIES:ReleaseCapability[]=[
-{id:"mri",label:"Rules-first MRI and recovery",state:"verified-core",note:"Deterministic scoring, evidence confidence, recovery actions and rescans."},
+{id:"mri",label:"Rules-first MRI and recovery",state:"verified-core",note:"Deterministic screening and recovery actions are code-tested; accuracy with real businesses and confidential-data controls still require external validation."},
 {id:"crm",label:"CRM and customer lifecycle",state:"verified-core",note:"Accounts, contacts, opportunities, activities, deterministic follow-up cadences and delivery handoff."},
 {id:"books",label:"Books and money integrity",state:"verified-core",note:"Double-entry journals, AR/AP posting, payments, reversals/corrections, purchasing-to-bill flow and reconciliation controls."},
 {id:"pos",label:"POS accounting core",state:"verified-core",note:"Sales/refunds/register workflow with ledger and inventory integration."},

@@ -117,7 +117,7 @@ test("urgent payroll or legal concerns create an escalation trigger", () => {
     urgentConcerns: ["Unable to pay super and received a statutory demand"],
   }));
 
-  assert.ok(metrics.criticalTriggers.some((trigger) => /urgent payroll, legal, tax or closure/i.test(trigger)));
+  assert.ok(metrics.criticalTriggers.some((trigger) => /urgent payroll, legal, tax, debt or closure/i.test(trigger)));
   assert.ok(metrics.overallScore <= 39);
   assert.equal(metrics.pressureLevel, "Severe");
 });

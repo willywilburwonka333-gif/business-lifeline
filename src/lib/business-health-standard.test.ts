@@ -7,3 +7,12 @@ test("healthy business remains outside distress bands",()=>{const d={...demoBusi
 test("score and every domain stay bounded 0 to 100",()=>{for(const d of [demoBusiness,{...demoBusiness,monthlyRevenue:1,totalDebt:999999999,overdueTax:999999,cashAvailable:0}]){const s=diagnosticStandard(d,calculateHealth(d));assert.ok(s.score>=0&&s.score<=100);for(const domain of s.domains)assert.ok(domain.score>=0&&domain.score<=100)}});
 test("confirmed import evidence increases confidence without changing health score",()=>{const base=diagnosticStandard(demoBusiness,calculateHealth(demoBusiness));const draft={fields:[{key:"monthlyRevenue" as const,value:demoBusiness.monthlyRevenue,source:"P&L",confidence:"high" as const}],conflicts:[],updatedAt:new Date(0).toISOString()};const withEvidence=diagnosticStandard(demoBusiness,calculateHealth(demoBusiness),false,{draft});assert.equal(withEvidence.score,base.score);assert.ok(withEvidence.evidenceConfidence>=base.evidenceConfidence)});
 test("import conflicts reduce evidence confidence and surface a warning",()=>{const draft={fields:[],conflicts:[{key:"monthlyRevenue" as const,selected:{key:"monthlyRevenue" as const,value:100,source:"A",confidence:"high" as const},alternatives:[{key:"monthlyRevenue" as const,value:200,source:"B",confidence:"high" as const}],reason:"conflict"}],updatedAt:new Date(0).toISOString()};const s=diagnosticStandard(demoBusiness,calculateHealth(demoBusiness),false,{draft});assert.ok(s.dataWarnings.some(x=>x.includes("conflict")));assert.ok(s.evidenceConfidence<100)});
+
+test("completed owner inputs never imply independently validated evidence",()=>{
+ const metrics=calculateHealth(demoBusiness);
+ const standard=diagnosticStandard(demoBusiness,metrics);
+ assert.equal(metrics.cashFlowBasis,"revenue-proxy");
+ assert.ok(standard.evidenceConfidence<=65);
+ assert.match(standard.dataWarnings.join(" "),/cash runway is provisional/i);
+ assert.notEqual(standard.evidenceGrade,"A");
+});

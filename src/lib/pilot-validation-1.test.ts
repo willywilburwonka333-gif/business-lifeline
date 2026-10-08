@@ -36,6 +36,9 @@ test("pilot 1: recovery rescan measures objectively better business state",()=>{
   monthlyRevenue:70000,fixedExpenses:27000,variableExpenses:25500,ownerDrawings:3500,loanRepayments:3500,
   cashAvailable:26000,accountsReceivable:1800,overdueInvoices:500,totalDebt:126000,overdueTax:9000,overdueSuppliers:3500,
   revenueTrend:"stable" as const,
+  // The owner confirmed payment arrangements and no longer reports an immediate inability to pay.
+  // Keep the remaining overdue tax in the figures so the professional warning still applies.
+  urgentConcerns:[],
   biggestProblem:"Cash pressure is improving; remaining focus is tax plan and margin discipline.",
   immediateGoal:"Sustain positive cash flow and clear remaining arrears.",
   pressureFactors:["costs","margins"],

@@ -17,7 +17,20 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
   const operatingExpenses = data.fixedExpenses + data.variableExpenses;
   const operatingResult = data.monthlyRevenue - operatingExpenses;
   const totalMonthlyCashOutgoings = operatingExpenses + data.ownerDrawings + data.loanRepayments;
-  const cashResult = data.monthlyRevenue - totalMonthlyCashOutgoings;
+  const hasCashMovements =
+    typeof data.monthlyCashReceipts === "number" &&
+    Number.isFinite(data.monthlyCashReceipts) &&
+    data.monthlyCashReceipts >= 0 &&
+    typeof data.monthlyCashPayments === "number" &&
+    Number.isFinite(data.monthlyCashPayments) &&
+    data.monthlyCashPayments >= 0;
+  // Invoice-based revenue is not cash collected. If actual movements are absent
+  // the cash result and runway remain explicitly provisional screening estimates.
+  // Total cash payments already include operating, debt, tax and owner cash outlays.
+  const cashFlowBasis = hasCashMovements ? "cash-receipts-payments" : "revenue-proxy";
+  const cashResult = hasCashMovements
+    ? data.monthlyCashReceipts! - data.monthlyCashPayments!
+    : data.monthlyRevenue - totalMonthlyCashOutgoings;
   const operatingMargin = data.monthlyRevenue ? (operatingResult / data.monthlyRevenue) * 100 : -100;
   const expenseRatio = data.monthlyRevenue ? (operatingExpenses / data.monthlyRevenue) * 100 : 200;
   const monthlyBurn = Math.max(0, -cashResult);
@@ -35,13 +48,19 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
   const uncoveredArrearsPressure = data.monthlyRevenue
     ? (uncoveredArrears / data.monthlyRevenue) * 100
     : uncoveredArrears > 0 ? 100 : 0;
-  const liquidResources = data.cashAvailable + Math.max(0, data.overdueInvoices * 0.5);
-  const nearTermPressure = urgentArrears + Math.max(0, monthlyBurn) + Math.max(0, data.loanRepayments);
+  // Overdue customer invoices are NOT immediately available funds and should never
+  // be counted as liquid cash without collection evidence.
+  const liquidResources = data.cashAvailable;
+  const nearTermPressure = urgentArrears + monthlyBurn +
+    (hasCashMovements ? 0 : Math.max(0, data.loanRepayments));
 
   const trendScores = { growing: 100, stable: 78, volatile: 42, declining: 22 };
   const revenueStability = trendScores[data.revenueTrend];
   const cashFlowScore = clamp(
-    50 + operatingMargin * 2 - Math.min(receivablesPressure, 50) * 0.35,
+    (hasCashMovements
+      ? 50 + (cashResult / Math.max(1, data.monthlyCashPayments!)) * 100
+      : 50 + operatingMargin * 2) -
+      Math.min(receivablesPressure, 50) * 0.35,
   );
   const runwayScore = runwayMonths === null
     ? (cashResult >= 0 ? 100 : 0)
@@ -75,8 +94,10 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
     data.industry.trim().length >= 2,
     data.country.trim().length >= 2,
   ];
-  const dataConfidence = Math.round(
-    confidenceChecks.filter(Boolean).length / confidenceChecks.length * 100,
+  // This is input completeness, not independent verification or accuracy.
+  const dataConfidence = Math.min(
+    hasCashMovements ? 80 : 65,
+    Math.round(confidenceChecks.filter(Boolean).length / confidenceChecks.length * 100),
   );
 
   let overallScore = Math.round(
@@ -89,7 +110,13 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
   );
 
   const criticalTriggers: string[] = [];
-  if (data.overdueTax > 0) criticalTriggers.push("Tax obligations are overdue");
+  // Any tax arrears appear as a warning; only material overdue tax (or an
+  // explicitly urgent owner concern) is escalated to a severe critical trigger.
+  if (data.overdueTax > 0 &&
+      (data.overdueTax >= Math.max(1000, data.monthlyRevenue * 0.1) ||
+       data.urgentConcerns.some(x => x.toLowerCase() === "tax"))) {
+    criticalTriggers.push("Material or urgent tax obligations are overdue");
+  }
   if (data.overdueSuppliers > 0 && uncoveredArrears > 0) {
     criticalTriggers.push("Available cash does not cover overdue supplier and tax obligations");
   }
@@ -100,8 +127,8 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
     criticalTriggers.push("An operating business reported expenses but no current revenue");
   }
   const concernText = data.urgentConcerns.join(" ").toLowerCase();
-  if (/(wage|payroll|super|statutory demand|court|legal action|director penalty|closure)/.test(concernText)) {
-    criticalTriggers.push("The owner reported an urgent payroll, legal, tax or closure concern");
+  if (/(wage|payroll|super|statutory demand|court|legal|tax|debt|director penalty|closure)/.test(concernText)) {
+    criticalTriggers.push("The owner reported an urgent payroll, legal, tax, debt or closure concern");
   }
 
   // Hard caps prevent a blended score from hiding immediate danger.
@@ -115,12 +142,12 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
   else if (criticalTriggers.length === 1) overallScore = Math.min(overallScore, 39);
 
   const scoreExplanation = [
-    cashResult < 0
-      ? `Supplied cash inflows are currently ${Math.abs(round(cashResult, 2))} per month below supplied operating costs, drawings and loan repayments.`
-      : `Supplied cash inflows are currently ${round(cashResult, 2)} per month above supplied operating costs, drawings and loan repayments.`,
+    hasCashMovements
+      ? `Owner-reported actual cash receipts less total cash payments yield ${round(cashResult, 2)} for the month. Reconcile these figures against records.`
+      : `Indicative monthly cash result is ${round(cashResult, 2)} using invoiced revenue as a proxy for money collected. Unpaid invoices and payment dates may materially change this estimate.`,
     runwayMonths === null
-      ? "The supplied monthly figures are cash-positive, so loss-based runway is not applicable."
-      : `Cash runway is approximately ${round(runwayMonths)} months at the current monthly loss.`,
+      ? "No monthly burn is estimated from these inputs; that does not establish ability to pay upcoming obligations."
+      : `${hasCashMovements ? "Owner-reported cash" : "Revenue-proxy"} runway estimate is ${round(runwayMonths)} months; verify with a dated 13-week forecast.`,
     urgentArrears > 0
       ? `${round(urgentArrears, 2)} of tax and supplier obligations are overdue.`
       : "No overdue tax or supplier obligations were supplied.",
@@ -130,6 +157,8 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
   ];
 
   return {
+    cashFlowBasis,
+    operatingSurplusEstimate: round(operatingResult, 2),
     monthlyOperatingResult: round(cashResult, 2),
     operatingMargin: round(operatingMargin),
     expenseRatio: round(expenseRatio),

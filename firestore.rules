@@ -197,9 +197,10 @@ service cloud.firestore {
         allow read, create, update: if hasRole(businessId, ['owner', 'manager']);
         allow delete: if hasRole(businessId, ['owner']);
       }
+      // No broad read fallback: Firestore ORs matching allow rules, so permitting
+      // all members here would bypass role checks on finance and payroll.
       match /{document=**} {
-        allow read: if hasMembership(businessId);
-        allow write: if false;
+        allow read, write: if false;
       }
     }
 
