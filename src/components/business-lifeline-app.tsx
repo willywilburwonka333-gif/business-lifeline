@@ -7,6 +7,8 @@ import { JudgeLanding } from "@/components/judge-landing";
 import { ProductTutorial, tutorialStorageKey, type TutorialStep } from "@/components/product-tutorial";
 import { SavedScenarioPlanner } from "@/components/saved-scenario-planner";
 import { MriReportArchive } from "@/components/mri-report-archive";
+import { HistoricalMriReport } from "@/components/historical-mri-report";
+import type { ArchivedMri } from "@/lib/mri-cloud-archive";
 import { demoBusinesses } from "@/lib/demo";
 import { generateReport } from "@/lib/planner";
 import { MRI_IMPORT_KEY } from "@/lib/mri-smart-import";
@@ -44,6 +46,7 @@ function buildDemoReport(data: (typeof demoBusinesses)[number]): BusinessReport 
 
 export function BusinessLifelineApp() {
   const [saved, setSaved] = useState<AppState>(undefined);
+  const [historical, setHistorical] = useState<ArchivedMri | null>(null);
   const [showAssessment, setShowAssessment] = useState(false);
   const [showQuestions, setShowQuestions] = useState(false);
   const [reportMode, setReportMode] = useState<ReportMode>("private");
@@ -164,14 +167,11 @@ export function BusinessLifelineApp() {
   const helpButton = <button type="button" className="product-help-button no-print" onClick={() => setTutorial(showQuestions ? "mri-form" : showAssessment ? "mri-setup" : "welcome")}>Help &amp; tutorial</button>;
 
   if (saved === undefined) return <main className="loading app-loading" aria-label="Loading Business Lifeline"><span>Loading Business Lifeline…</span></main>;
-  const openArchived = (historical: SavedReport) => {
-    writeSavedReport(historical);
-    lastRaw.current = window.localStorage.getItem(REPORT_STORAGE_KEY);
-    setSaved(historical);
-    setShowAssessment(false);
-    setShowQuestions(false);
+  const openArchived = (entry: ArchivedMri) => {
+    setHistorical(entry);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+  if (historical) return <HistoricalMriReport entry={historical} onBack={() => setHistorical(null)} />;
   if (saved) return <><MriReportArchive onOpen={openArchived} /><SavedScenarioPlanner saved={saved} onReset={reset} /></>;
   if (showAssessment && showQuestions) return <><BusinessLifeline aiEnabled={reportMode === "ai" && aiConsent} />{helpButton}{tutorialLayer}</>;
   if (showAssessment) return (

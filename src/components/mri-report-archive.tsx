@@ -5,9 +5,8 @@ import { onAuthStateChanged } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase-client";
 import { clientBusinessId } from "@/lib/mri-cloud-archive";
 import { listMriReportsForOwner, type ArchivedMri } from "@/lib/mri-cloud-archive";
-import type { SavedReport } from "@/lib/saved-report";
 
-export function MriReportArchive({ onOpen }: { onOpen: (saved: SavedReport) => void }) {
+export function MriReportArchive({ onOpen }: { onOpen: (entry: ArchivedMri) => void }) {
   const [uid, setUid] = useState("");
   const [businessId, setBusinessId] = useState("");
   const [reports, setReports] = useState<ArchivedMri[]>([]);
@@ -79,7 +78,7 @@ export function MriReportArchive({ onOpen }: { onOpen: (saved: SavedReport) => v
             <span className="tag high">{item.saved.report.metrics.overallScore}/100</span>
           </div>
           <p>{new Date(item.createdAt).toLocaleString("en-AU", {dateStyle:"medium",timeStyle:"short"})}</p>
-          <button type="button" className="button ghost" onClick={() => onOpen(item.saved)}>Open saved MRI</button>
+          <button type="button" className="button ghost" onClick={() => onOpen(item)}>Open saved MRI</button>
         </article>)}
       </div>
     </>}
