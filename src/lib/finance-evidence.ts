@@ -14,5 +14,5 @@ export function financeEvidence(periodStart?:string,periodEnd?:string,storage?:S
 export function applyFinanceEvidence(base:BusinessData,evidence=financeEvidence()):BusinessData{
  const monthlyRevenue=Math.max(0,evidence.revenue),operating=Math.max(0,evidence.costOfSales+evidence.expenses);
  const prior=base.monthlyRevenue,trend:RevenueTrend=prior>0?monthlyRevenue>prior*1.05?"growing":monthlyRevenue<prior*.95?"declining":"stable":base.revenueTrend;
- return{...base,monthlyRevenue,fixedExpenses:operating,variableExpenses:0,cashAvailable:evidence.cash,accountsReceivable:evidence.receivables,overdueInvoices:evidence.overdueReceivables,overdueSuppliers:evidence.overduePayables,overdueTax:base.overdueTax,revenueTrend:trend};
+ return{...base,monthlyRevenue,fixedExpenses:operating,variableExpenses:0,monthlyCashReceipts:null,monthlyCashPayments:null,cashAvailable:evidence.cash,accountsReceivable:evidence.receivables,overdueInvoices:evidence.overdueReceivables,overdueSuppliers:evidence.overduePayables,overdueTax:base.overdueTax,revenueTrend:trend};
 }
