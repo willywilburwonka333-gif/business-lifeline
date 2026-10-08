@@ -1,0 +1,34 @@
+name: Firebase rules emulator tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-access:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Node 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Java for Firestore emulator
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install test tools
+        run: |
+          npm install --no-audit --no-fund
+          npm install --no-save --no-package-lock --no-audit --no-fund @firebase/rules-unit-testing@4 firebase-tools@14
+      - name: Test real Firestore and Storage rules in local emulators
+        run: npx firebase emulators:exec --project demo-business-lifeline --config firebase.emulator.json --only firestore,storage "node --test tests/firebase-rules.emulator.test.mjs"
