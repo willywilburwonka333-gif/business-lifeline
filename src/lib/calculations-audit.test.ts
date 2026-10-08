@@ -127,3 +127,11 @@ test("a nominal tax balance is not automatically a severe crisis", () => {
   assert.ok(!m.criticalTriggers.some(x => /tax obligations are overdue/i.test(x)));
   assert.notEqual(m.pressureLevel, "Severe");
 });
+
+test("explicit serious legal, tax and unpaid-debt concerns cannot silently score stable", () => {
+  for (const concern of ["legal","tax","debts"]) {
+    const m = calculateHealth(base({ overdueTax: 0, overdueSuppliers: 0, urgentConcerns: [concern] }));
+    assert.ok(m.criticalTriggers.some(t => /owner reported an urgent/i.test(t)), concern);
+    assert.ok(m.overallScore <= 39, concern);
+  }
+});

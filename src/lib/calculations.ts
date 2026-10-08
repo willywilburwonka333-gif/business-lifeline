@@ -127,8 +127,8 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
     criticalTriggers.push("An operating business reported expenses but no current revenue");
   }
   const concernText = data.urgentConcerns.join(" ").toLowerCase();
-  if (/(wage|payroll|super|statutory demand|court|legal action|director penalty|closure)/.test(concernText)) {
-    criticalTriggers.push("The owner reported an urgent payroll, legal, tax or closure concern");
+  if (/(wage|payroll|super|statutory demand|court|legal|tax|debt|director penalty|closure)/.test(concernText)) {
+    criticalTriggers.push("The owner reported an urgent payroll, legal, tax, debt or closure concern");
   }
 
   // Hard caps prevent a blended score from hiding immediate danger.
