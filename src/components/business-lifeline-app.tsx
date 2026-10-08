@@ -6,6 +6,7 @@ import { BusinessRecords } from "@/components/business-records";
 import { JudgeLanding } from "@/components/judge-landing";
 import { ProductTutorial, tutorialStorageKey, type TutorialStep } from "@/components/product-tutorial";
 import { SavedScenarioPlanner } from "@/components/saved-scenario-planner";
+import { MriReportArchive } from "@/components/mri-report-archive";
 import { demoBusinesses } from "@/lib/demo";
 import { generateReport } from "@/lib/planner";
 import { MRI_IMPORT_KEY } from "@/lib/mri-smart-import";
@@ -163,7 +164,15 @@ export function BusinessLifelineApp() {
   const helpButton = <button type="button" className="product-help-button no-print" onClick={() => setTutorial(showQuestions ? "mri-form" : showAssessment ? "mri-setup" : "welcome")}>Help &amp; tutorial</button>;
 
   if (saved === undefined) return <main className="loading app-loading" aria-label="Loading Business Lifeline"><span>Loading Business Lifeline…</span></main>;
-  if (saved) return <SavedScenarioPlanner saved={saved} onReset={reset} />;
+  const openArchived = (historical: SavedReport) => {
+    writeSavedReport(historical);
+    lastRaw.current = window.localStorage.getItem(REPORT_STORAGE_KEY);
+    setSaved(historical);
+    setShowAssessment(false);
+    setShowQuestions(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  if (saved) return <><MriReportArchive onOpen={openArchived} /><SavedScenarioPlanner saved={saved} onReset={reset} /></>;
   if (showAssessment && showQuestions) return <><BusinessLifeline aiEnabled={reportMode === "ai" && aiConsent} />{helpButton}{tutorialLayer}</>;
   if (showAssessment) return (
     <>
@@ -195,5 +204,5 @@ export function BusinessLifelineApp() {
       {helpButton}{tutorialLayer}
     </>
   );
-  return <><JudgeLanding onStart={beginAssessment} onDemo={openDemo} demoLoading={demoLoading} />{helpButton}{tutorialLayer}</>;
+  return <><MriReportArchive onOpen={openArchived} /><JudgeLanding onStart={beginAssessment} onDemo={openDemo} demoLoading={demoLoading} />{helpButton}{tutorialLayer}</>;
 }
