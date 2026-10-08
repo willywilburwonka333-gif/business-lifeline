@@ -12,7 +12,7 @@ import {
   signInWithPopup,
   signOut,
 } from "firebase/auth";
-import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc, type DocumentSnapshot } from "firebase/firestore";
 import { firebaseAuth, firebaseConfigured, firebaseDb } from "@/lib/firebase-client";
 
 const CLOUD_KEYS = [
@@ -138,15 +138,25 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
     if (!firebaseDb) return;
     const businessId = businessIdFor(activeUser.uid);
     const businessRef = doc(firebaseDb, "businesses", businessId);
-    const existingBusiness = await getDoc(businessRef);
+    // A signed-in owner may create their own deterministic workspace but cannot
+    // read a document that doesn't yet exist under the restrictive Firestore rules.
+    // Treat ONLY permission-denied during this bootstrap read as "not yet
+    // initialised"; the subsequent create still has to pass Firestore rules.
+    let existingBusiness: DocumentSnapshot | null = null;
+    try {
+      existingBusiness = await getDoc(businessRef);
+    } catch (error) {
+      const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
+      if (!code.includes("permission-denied")) throw error;
+    }
     await setDoc(businessRef, {
       id: businessId,
-      name: existingBusiness.exists() ? existingBusiness.data().name || "My Business Lifeline Workspace" : "My Business Lifeline Workspace",
+      name: existingBusiness?.exists() ? existingBusiness.data().name || "My Business Lifeline Workspace" : "My Business Lifeline Workspace",
       ownerId: activeUser.uid,
       status: "active",
-      plan: existingBusiness.exists() ? existingBusiness.data().plan || "beta" : "beta",
+      plan: existingBusiness?.exists() ? existingBusiness.data().plan || "beta" : "beta",
       updatedAt: serverTimestamp(),
-      ...(!existingBusiness.exists() ? { createdAt: serverTimestamp() } : {}),
+      ...(!existingBusiness?.exists() ? { createdAt: serverTimestamp() } : {}),
     }, { merge: true });
     await setDoc(doc(firebaseDb, "businesses", businessId, "members", activeUser.uid), {
       userId: activeUser.uid,
