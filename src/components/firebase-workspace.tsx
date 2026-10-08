@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   GoogleAuthProvider,
   User,
@@ -58,6 +58,24 @@ const CLOUD_PREFIXES = [
 ] as const;
 
 const businessIdFor = (uid: string) => `business-${uid}`;
+const DEVICE_OWNER_KEY = "bl-session-owner-v1";
+const SYNC_BASELINE_KEY = (uid: string) => `bl-cloud-fingerprint-v1:${uid}`;
+const payloadFingerprint = (payload: CloudPayload): string => {
+  // Non-cryptographic change detector, not a data-integrity signature.
+  const serial = JSON.stringify(Object.keys(payload).sort().map(key => [key, payload[key]]));
+  let hash = 2166136261;
+  for (let i = 0; i < serial.length; i += 1) hash = Math.imul(hash ^ serial.charCodeAt(i), 16777619);
+  return String(hash >>> 0);
+};
+function clearVaultCache() {
+  if (typeof indexedDB !== "undefined") indexedDB.deleteDatabase("business-lifeline-vault");
+}
+function purgeBrowserClientData() {
+  // Include modules that are local-only, reports, imported files and the active business pointer.
+  const keys = Object.keys(localStorage).filter(key => key.startsWith("business-lifeline-"));
+  keys.forEach(key => localStorage.removeItem(key));
+  clearVaultCache();
+}
 type SyncState = "local" | "syncing" | "synced" | "error";
 type CloudPayload = Record<string, string | null>;
 type BillingStatus = { configured?: boolean; plan?: "free" | "pro" | "rescue"; subscriptionStatus?: string | null; rescuePurchased?: boolean; customerReady?: boolean };
@@ -87,7 +105,7 @@ function restoreLocalPayload(payload: Partial<CloudPayload>) {
 }
 
 function clearLocalPayload() {
-  cloudEligibleKeys().forEach((key) => window.localStorage.removeItem(key));
+  purgeBrowserClientData();
 }
 
 function messageForError(error: unknown) {
@@ -104,6 +122,8 @@ function messageForError(error: unknown) {
 export function FirebaseWorkspace({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(!firebaseAuth);
+  const authEpoch = useRef(0);
+  const syncing = useRef(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [createMode, setCreateMode] = useState(false);
   const [email, setEmail] = useState("");
@@ -158,13 +178,19 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
       updatedAt: serverTimestamp(),
       ...(!existingBusiness?.exists() ? { createdAt: serverTimestamp() } : {}),
     }, { merge: true });
-    await setDoc(doc(firebaseDb, "businesses", businessId, "members", activeUser.uid), {
-      userId: activeUser.uid,
-      email: activeUser.email ?? null,
-      role: "owner",
-      status: "active",
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
+    const ownerMemberRef = doc(firebaseDb, "businesses", businessId, "members", activeUser.uid);
+    // Updating an existing owner membership is intentionally forbidden by the
+    // security rules, so only create it on first account setup.
+    const ownerMember = await getDoc(ownerMemberRef);
+    if (!ownerMember.exists()) {
+      await setDoc(ownerMemberRef, {
+        userId: activeUser.uid,
+        email: activeUser.email ?? null,
+        role: "owner",
+        status: "active",
+        updatedAt: serverTimestamp(),
+      });
+    }
     await setDoc(doc(firebaseDb, "users", activeUser.uid, "businessMemberships", businessId), {
       businessId,
       role: "owner",
@@ -173,65 +199,134 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
     }, { merge: true });
   }, []);
 
-  const syncWorkspace = useCallback(async (activeUser: User, preferCloud = false) => {
-    if (!firebaseDb) return;
+  const syncWorkspace = useCallback(async (activeUser: User, mode: "auto" | "restore" | "push" = "auto"): Promise<boolean> => {
+    if (!firebaseDb || firebaseAuth?.currentUser?.uid !== activeUser.uid) return false;
+    if (syncing.current) return false;
+    syncing.current = true;
     setSyncState("syncing");
-    setSyncMessage("Syncing secure workspace…");
+    setSyncMessage("Checking account-owned cloud workspace…");
     try {
       await ensureCommercialWorkspace(activeUser);
+      if (firebaseAuth?.currentUser?.uid !== activeUser.uid) return false;
       const workspaceRef = doc(firebaseDb, "userWorkspaces", activeUser.uid);
       const snapshot = await getDoc(workspaceRef);
+      if (firebaseAuth?.currentUser?.uid !== activeUser.uid) return false;
       const localPayload = readLocalPayload();
-      const cloudPayload = snapshot.exists() ? snapshot.data().payload as Partial<CloudPayload> | undefined : undefined;
-
-      if (cloudPayload && (preferCloud || !hasUsefulLocalData(localPayload))) {
+      const cloudPayload = snapshot.exists() ? (snapshot.data().payload as CloudPayload | undefined) : undefined;
+      const baselineKey = SYNC_BASELINE_KEY(activeUser.uid);
+      const previousFingerprint = localStorage.getItem(baselineKey);
+      const localFingerprint = payloadFingerprint(localPayload);
+      const remoteFingerprint = payloadFingerprint(cloudPayload || {});
+      const shouldRestore = Boolean(cloudPayload) && (
+        mode === "restore" ||
+        !hasUsefulLocalData(localPayload) ||
+        (mode === "auto" && !previousFingerprint && remoteFingerprint !== localFingerprint) ||
+        (mode === "auto" && previousFingerprint === localFingerprint && remoteFingerprint !== previousFingerprint)
+      );
+      if (shouldRestore && cloudPayload) {
+        clearLocalPayload();
         restoreLocalPayload(cloudPayload);
-        await writeAudit(activeUser, "workspace.restore", "Restored the cloud workspace onto this device.");
+        localStorage.setItem(baselineKey, remoteFingerprint);
+        localStorage.setItem(DEVICE_OWNER_KEY, activeUser.uid);
+        await writeAudit(activeUser, "workspace.restore", "Restored account-owned cloud workspace.");
         setSyncState("synced");
         setSyncMessage("Cloud workspace restored");
-        window.setTimeout(() => window.location.reload(), 350);
-        return;
+        window.dispatchEvent(new Event("business-lifeline-account-restored"));
+        return true;
       }
-
+      if (mode === "auto" && cloudPayload && previousFingerprint &&
+          remoteFingerprint !== previousFingerprint &&
+          localFingerprint !== previousFingerprint &&
+          localFingerprint !== remoteFingerprint) {
+        setSyncState("error");
+        setSyncMessage("Different changes exist on this device and in Firebase. Download a backup, then choose Restore cloud copy or Sync this device.");
+        return false;
+      }
+      if (cloudPayload && remoteFingerprint === localFingerprint) {
+        localStorage.setItem(baselineKey, remoteFingerprint);
+        setSyncState("synced");
+        setSyncMessage("Cloud workspace up to date");
+        return true;
+      }
+      if (mode === "restore" && !cloudPayload) {
+        setSyncState("error");
+        setSyncMessage("No cloud workspace exists to restore.");
+        return false;
+      }
+      if (firebaseAuth?.currentUser?.uid !== activeUser.uid) return false;
       await setDoc(workspaceRef, {
         ownerId: activeUser.uid,
         ownerEmail: activeUser.email ?? null,
         businessId: businessIdFor(activeUser.uid),
         payload: localPayload,
         updatedAt: serverTimestamp(),
-        version: 2,
+        version: 3,
       }, { merge: true });
-      await writeAudit(activeUser, "workspace.sync", "Synced this device to the secure cloud workspace.");
+      localStorage.setItem(baselineKey, localFingerprint);
+      localStorage.setItem(DEVICE_OWNER_KEY, activeUser.uid);
+      await writeAudit(activeUser, "workspace.sync", "Synced this device to its owner account.");
       setSyncState("synced");
       setSyncMessage("Cloud workspace up to date");
+      return true;
     } catch (syncError) {
       setSyncState("error");
       setSyncMessage(messageForError(syncError));
+      return false;
+    } finally {
+      syncing.current = false;
     }
   }, [ensureCommercialWorkspace, writeAudit]);
 
   useEffect(() => {
     if (!firebaseAuth) return;
     return onAuthStateChanged(firebaseAuth, (nextUser) => {
+      const epoch = ++authEpoch.current;
+      setAuthReady(false);
       setUser(nextUser);
-      setAuthReady(true);
-      if (nextUser) {
-        void syncWorkspace(nextUser);
-        void nextUser.getIdToken().then((token) => fetch("/api/billing/status", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" })).then((response) => response.ok ? response.json() : null).then((value) => value && setBilling(value)).catch(() => setBilling({ plan: "free" }));
-      }
-      else {
-        setSyncState("local");
-        setSyncMessage("Stored privately on this device");
-        setBilling({ plan: "free" });
-      }
+      const init = async () => {
+        const previousOwner = localStorage.getItem(DEVICE_OWNER_KEY);
+        if (!nextUser) {
+          if (previousOwner && previousOwner !== "guest") clearLocalPayload();
+          localStorage.setItem(DEVICE_OWNER_KEY, "guest");
+          if (epoch === authEpoch.current) {
+            setSyncState("local");
+            setSyncMessage("Guest data stays on this device only");
+            setBilling({ plan: "free" });
+            setAuthReady(true);
+          }
+          return;
+        }
+        if (previousOwner !== nextUser.uid) {
+          if (!previousOwner && hasUsefulLocalData(readLocalPayload())) {
+            // Legacy unassigned browser data must never silently attach to a new client.
+            const belongsToAccount = window.confirm("This browser contains data without an assigned account. Only import it if it belongs to this account. OK to keep it here for this owner, Cancel to clear it.");
+            if (!belongsToAccount) clearLocalPayload();
+          } else {
+            // Switching clients MUST remove all previous locally cached client information.
+            clearLocalPayload();
+          }
+          localStorage.setItem(DEVICE_OWNER_KEY, nextUser.uid);
+          // A new account always treats the cloud as authoritative when it exists.
+          localStorage.removeItem(SYNC_BASELINE_KEY(nextUser.uid));
+        }
+        const ok = await syncWorkspace(nextUser);
+        if (epoch !== authEpoch.current) return;
+        setAuthReady(ok);
+        void nextUser.getIdToken().then(token => fetch("/api/billing/status", {
+          headers: { Authorization: `Bearer ${token}` }, cache: "no-store",
+        })).then(response => response.ok ? response.json() : null)
+          .then(value => value && setBilling(value))
+          .catch(() => setBilling({ plan: "free" }));
+      };
+      void init();
     });
   }, [syncWorkspace]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !authReady) return;
     const timer = window.setInterval(() => void syncWorkspace(user), 30000);
     return () => window.clearInterval(timer);
-  }, [syncWorkspace, user]);
+  }, [syncWorkspace, user, authReady]);
 
   const submitEmail = async (event: FormEvent) => {
     event.preventDefault();
@@ -326,6 +421,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
     if (!confirmed) return;
     if (user) await writeAudit(user, "workspace.local_clear", "Cleared Business Lifeline data from one device.");
     clearLocalPayload();
+    localStorage.setItem(DEVICE_OWNER_KEY, user?.uid ?? "guest");
     window.location.reload();
   };
 
@@ -386,9 +482,19 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
   };
 
   const logOut = async () => {
-    if (!firebaseAuth) return;
+    if (!firebaseAuth || !user || !authReady) return;
+    const synced = await syncWorkspace(user);
+    if (!synced) {
+      setError("Cloud saving is incomplete. Download your data or resolve the sync warning before signing out.");
+      setPanelOpen(true);
+      return;
+    }
+    setAuthReady(false);
+    clearLocalPayload();
+    localStorage.setItem(DEVICE_OWNER_KEY, "guest");
     await signOut(firebaseAuth);
     setPanelOpen(false);
+    window.location.reload();
   };
 
   return (
@@ -426,8 +532,8 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
               {notice && <p className="cloud-account-notice" role="status">{notice}</p>}
               {error && <p className="cloud-account-error" role="alert">{error}</p>}
               <div className="cloud-account-panel-actions">
-                <button type="button" className="button primary" onClick={() => void syncWorkspace(user)}>Sync this device</button>
-                <button type="button" className="button ghost" onClick={() => void syncWorkspace(user, true)}>Restore cloud copy</button>
+                <button type="button" className="button primary" onClick={() => { if (window.confirm("Replace the cloud workspace with this device’s copy? Download your data first if you are unsure.")) void syncWorkspace(user, "push"); }}>Sync this device</button>
+                <button type="button" className="button ghost" onClick={() => void syncWorkspace(user, "restore").then(ok => { if (ok) window.location.reload(); })}>Restore cloud copy</button>
                 <button type="button" className="button ghost" onClick={() => void exportWorkspace()}>Download my data</button>
                 <button type="button" className="button ghost" onClick={() => void clearThisDevice()}>Clear this device</button>
                 <button type="button" className="button ghost" onClick={() => void logOut()}>Sign out</button>
@@ -454,8 +560,8 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
         </section>
       )}
 
-      {!authReady && <div className="cloud-auth-loading no-print">Checking secure workspace…</div>}
-      {children}
+      {!authReady && <div className="cloud-auth-loading no-print" role="status">Checking and isolating account data… {user && <button type="button" onClick={() => void syncWorkspace(user, "restore").then(ok => { if (ok) { setAuthReady(true); window.location.reload(); } })}>Retry from cloud</button>}</div>}
+      {authReady ? children : null}
     </>
   );
 }

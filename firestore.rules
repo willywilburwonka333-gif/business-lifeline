@@ -63,7 +63,7 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.token == inviteId
         && request.resource.data.status == 'active'
-        && request.resource.data.role in ['manager', 'staff', 'accountant']
+        && request.resource.data.role in ['manager', 'staff', 'accountant', 'consultant']
         && hasRole(request.resource.data.businessId, ['owner', 'manager']);
 
       allow get: if signedIn()
@@ -131,7 +131,7 @@ service cloud.firestore {
             )
             || (
               hasRole(businessId, ['owner', 'manager'])
-              && request.resource.data.role in ['manager', 'staff', 'accountant']
+              && request.resource.data.role in ['manager', 'staff', 'accountant', 'consultant']
             )
           );
 
@@ -155,7 +155,7 @@ service cloud.firestore {
       }
 
       match /modules/{moduleId} {
-        allow read: if hasMembership(businessId);
+        allow read: if hasRole(businessId, ['owner', 'manager', 'staff', 'accountant']);
         allow create, update: if hasRole(businessId, ['owner', 'manager', 'staff'])
           && request.resource.data.module == moduleId
           && request.resource.data.updatedBy == request.auth.uid;
@@ -163,7 +163,7 @@ service cloud.firestore {
       }
 
       match /records/{recordId} {
-        allow read: if hasMembership(businessId);
+        allow read: if hasRole(businessId, ['owner', 'manager', 'staff', 'accountant']);
         allow create, update: if hasRole(businessId, ['owner', 'manager', 'staff', 'accountant'])
           && request.resource.data.updatedBy == request.auth.uid
           && request.resource.data.type is string
@@ -179,14 +179,28 @@ service cloud.firestore {
       }
 
       match /crm/{documentId} {
-        allow read: if hasMembership(businessId);
+        allow read: if hasRole(businessId, ['owner', 'manager', 'staff', 'accountant']);
         allow create, update: if hasRole(businessId, ['owner', 'manager', 'staff']);
         allow delete: if hasRole(businessId, ['owner', 'manager']);
       }
       match /operations/{documentId} {
-        allow read: if hasMembership(businessId);
+        allow read: if hasRole(businessId, ['owner', 'manager', 'staff', 'accountant']);
         allow create, update: if hasRole(businessId, ['owner', 'manager', 'staff']);
         allow delete: if hasRole(businessId, ['owner', 'manager']);
+      }
+      // MRI history remains the client's property. Consultants see only reports
+      // after explicit invitation; they never receive access to operating modules.
+      match /mriReports/{reportId} {
+        allow read: if hasRole(businessId, ['owner', 'manager', 'accountant', 'consultant']);
+        allow create: if hasRole(businessId, ['owner', 'manager'])
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.businessId == businessId
+          && request.resource.data.id is string
+          && request.resource.data.createdAt is string
+          && request.resource.data.businessName is string
+          && request.resource.data.saved is map;
+        allow update: if false;
+        allow delete: if hasRole(businessId, ['owner']);
       }
       match /finance/{documentId} {
         allow read: if hasRole(businessId, ['owner', 'manager', 'accountant']);

@@ -15,7 +15,7 @@ import {
 } from "firebase/firestore";
 import { firebaseAuth, firebaseDb } from "@/lib/firebase-client";
 
-type Role = "owner" | "manager" | "staff" | "accountant";
+type Role = "owner" | "manager" | "staff" | "accountant" | "consultant";
 type Membership = { businessId: string; name: string; role: Role; status: "active" | "inactive" };
 type Member = { userId: string; email: string; displayName: string; role: Role; status: string };
 type Invite = { token: string; businessId: string; businessName: string; email: string; role: Role; status: string };
@@ -118,7 +118,7 @@ export function TeamWorkspaceManager() {
 
   useEffect(() => {
     if (!firebaseDb || !activeId || !user) return;
-    const stops = SOURCES.map(([module, key]) => onSnapshot(doc(firebaseDb!, "businesses", activeId, "modules", module), (snapshot) => {
+    const stops = active?.role === "consultant" ? [] : SOURCES.map(([module, key]) => onSnapshot(doc(firebaseDb!, "businesses", activeId, "modules", module), (snapshot) => {
       if (!snapshot.exists()) return;
       const remote = snapshot.data().payload;
       const serialised = typeof remote === "string" ? remote : JSON.stringify(remote);
@@ -131,7 +131,7 @@ export function TeamWorkspaceManager() {
       setTimeout(() => { applyingRemote.current = false; }, 100);
     }));
     return () => stops.forEach((stop) => stop());
-  }, [activeId, user]);
+  }, [activeId, user, active?.role]);
 
   useEffect(() => {
     if (!firebaseDb || !activeId || !user || !canWrite(active?.role)) return;
@@ -260,10 +260,10 @@ export function TeamWorkspaceManager() {
           <form onSubmit={createBusiness}><h4>Create another business</h4><input placeholder="Business name" value={businessName} onChange={(event) => setBusinessName(event.target.value)} /><button>Create business workspace</button></form>
           <form onSubmit={acceptInvite}><h4>Join with invite code</h4><input placeholder="Invite code" value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} /><button>Join business</button></form>
         </section>
-        <section><h3>Team</h3>{active ? <><p><strong>{active.name}</strong> · Your role: {active.role}</p>{members.map((member) => <article className="team-member" key={member.userId}><div><strong>{member.displayName || member.email}</strong><span>{member.email}</span></div><div>{active.role === "owner" && member.role !== "owner" ? <select value={member.role} onChange={(event) => changeRole(member, event.target.value as Role)}><option value="manager">Manager</option><option value="staff">Staff</option><option value="accountant">Accountant</option></select> : <span>{member.role}</span>}{active.role === "owner" && member.role !== "owner" && <button onClick={() => removeMember(member)}>Remove</button>}</div></article>)}
-          {(active.role === "owner" || active.role === "manager") && <form onSubmit={createInvite}><h4>Invite a team member</h4><input type="email" placeholder="Their email" value={invite.email} onChange={(event) => setInvite({ ...invite, email: event.target.value })} /><select value={invite.role} onChange={(event) => setInvite({ ...invite, role: event.target.value as Role })}><option value="manager">Manager</option><option value="staff">Staff</option><option value="accountant">Accountant</option></select><button>Create secure invite code</button>{latestInvite && <output className="invite-code">{latestInvite}</output>}</form>}</> : <p>Create or join a business to manage a team.</p>}</section>
+        <section><h3>Team</h3>{active ? <><p><strong>{active.name}</strong> · Your role: {active.role}</p>{members.map((member) => <article className="team-member" key={member.userId}><div><strong>{member.displayName || member.email}</strong><span>{member.email}</span></div><div>{active.role === "owner" && member.role !== "owner" ? <select value={member.role} onChange={(event) => changeRole(member, event.target.value as Role)}><option value="manager">Manager</option><option value="staff">Staff</option><option value="accountant">Accountant</option><option value="consultant">Consultant (MRI only)</option></select> : <span>{member.role}</span>}{active.role === "owner" && member.role !== "owner" && <button onClick={() => removeMember(member)}>Remove</button>}</div></article>)}
+          {(active.role === "owner" || active.role === "manager") && <form onSubmit={createInvite}><h4>Invite a team member</h4><input type="email" placeholder="Their email" value={invite.email} onChange={(event) => setInvite({ ...invite, email: event.target.value })} /><select value={invite.role} onChange={(event) => setInvite({ ...invite, role: event.target.value as Role })}><option value="manager">Manager</option><option value="staff">Staff</option><option value="accountant">Accountant</option><option value="consultant">Consultant (MRI only)</option></select><button>Create secure invite code</button>{latestInvite && <output className="invite-code">{latestInvite}</output>}</form>}</> : <p>Create or join a business to manage a team.</p>}</section>
       </div>
-      <footer><strong>Live modules:</strong> Operations, Books, Bank, Pay, People, Spend, Assets, Tax, Vault, health, growth, exit and professional validation. Accountant access is read-only; staff cannot manage membership.</footer>
+      <footer><strong>Live modules:</strong> Operations, Books, Bank, Pay, People, Spend, Assets, Tax, Vault, health, growth, exit and professional validation. Invited consultants can read historical MRI reports only.</footer>
     </section></div>}
   </>;
 }

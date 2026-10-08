@@ -6,3 +6,9 @@ test("no recursive wildcard grants reads that bypass finance/payroll role checks
  assert.ok(fallbacks.every(rule=>/allow read, write: if false;/.test(rule)));
  assert.doesNotMatch(rules,/match \/\{document=\*\*\} \{\s*allow read: if hasMembership\(businessId\)/);
 });
+
+test("client MRI archive is immutable and restricted to explicit roles",()=>{
+ assert.match(rules,/match \/mriReports\/\{reportId\}/);
+ assert.match(rules,/allow read: if hasRole\(businessId, \['owner', 'manager', 'accountant', 'consultant'\]\)/);
+ assert.match(rules,/allow update: if false/);
+});

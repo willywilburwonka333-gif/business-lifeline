@@ -82,3 +82,31 @@ test("Storage vault only permits its own signed-in user", async () => {
   await assertFails(uploadBytes(ref(alice.storage(), "businesses/business-alice/secret.txt"),
     new Uint8Array([1])));
 });
+
+test("client owns immutable MRI history; invited consultant cannot read operating data", async () => {
+  await environment.withSecurityRulesDisabled(async context => {
+    await setDoc(doc(context.firestore(), ownBusiness, "members", "consultant"), {
+      userId: "consultant", role: "consultant", status: "active"
+    });
+    await setDoc(doc(context.firestore(), ownBusiness, "modules", "finance"), {
+      module: "finance", payload: "private"
+    });
+  });
+  const consultant = environment.authenticatedContext("consultant");
+  const data = {
+    id: "scan1", businessId: "business-alice", businessName: "Alice",
+    createdAt: "2026-10-08T00:00:00Z", createdBy: "alice", saved: { data: {}, report: {} }
+  };
+  const path = `${ownBusiness}/mriReports/scan1`;
+  await assertSucceeds(setDoc(doc(alice.firestore(), path), data));
+  await assertSucceeds(getDoc(doc(alice.firestore(), path)));
+  await assertSucceeds(getDoc(doc(consultant.firestore(), path)));
+  await assertFails(getDoc(doc(bob.firestore(), path)));
+  await assertFails(setDoc(doc(consultant.firestore(), `${ownBusiness}/mriReports/scan2`), {
+    ...data, id: "scan2", createdBy: "consultant"
+  }));
+  await assertFails(setDoc(doc(alice.firestore(), path), {...data, businessName:"overwritten"}));
+  await assertFails(getDoc(doc(consultant.firestore(), `${ownBusiness}/modules/finance`)));
+  await assertFails(getDoc(doc(consultant.firestore(), `${ownBusiness}/finance/private`)));
+  await assertFails(getDoc(doc(consultant.firestore(), `${ownBusiness}/records/example`)));
+});
