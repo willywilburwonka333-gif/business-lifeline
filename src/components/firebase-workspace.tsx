@@ -12,7 +12,7 @@ import {
   signInWithPopup,
   signOut,
 } from "firebase/auth";
-import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc, type DocumentSnapshot } from "firebase/firestore";
 import { firebaseAuth, firebaseConfigured, firebaseDb } from "@/lib/firebase-client";
 
 const CLOUD_KEYS = [
@@ -142,7 +142,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
     // read a document that doesn't yet exist under the restrictive Firestore rules.
     // Treat ONLY permission-denied during this bootstrap read as "not yet
     // initialised"; the subsequent create still has to pass Firestore rules.
-    let existingBusiness: Awaited<ReturnType<typeof getDoc>> | null = null;
+    let existingBusiness: DocumentSnapshot | null = null;
     try {
       existingBusiness = await getDoc(businessRef);
     } catch (error) {
