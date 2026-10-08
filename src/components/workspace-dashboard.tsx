@@ -125,7 +125,7 @@ export function WorkspaceDashboard({ saved, openTab }: { saved: SavedReport; ope
 
       <div className="workspace-metric-grid stage9-metrics">
         <article>
-          <span>Monthly result</span>
+          <span>Estimated monthly cash result</span>
           <strong className={metrics.monthlyOperatingResult < 0 ? "negative" : "positive"}>{money(metrics.monthlyOperatingResult, data.country)}</strong>
           <small>{metrics.monthlyOperatingResult < 0 ? "Loss at current settings" : "Positive at current settings"}</small>
         </article>
