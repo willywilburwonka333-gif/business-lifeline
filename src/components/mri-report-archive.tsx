@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase-client";
+import { clientBusinessId } from "@/lib/mri-cloud-archive";
 import { listMriReportsForOwner, type ArchivedMri } from "@/lib/mri-cloud-archive";
 import type { SavedReport } from "@/lib/saved-report";
 
 export function MriReportArchive({ onOpen }: { onOpen: (saved: SavedReport) => void }) {
   const [uid, setUid] = useState("");
+  const [businessId, setBusinessId] = useState("");
   const [reports, setReports] = useState<ArchivedMri[]>([]);
   const [expanded, setExpanded] = useState(false);
   const [status, setStatus] = useState("");
@@ -17,26 +19,36 @@ export function MriReportArchive({ onOpen }: { onOpen: (saved: SavedReport) => v
     if (!firebaseAuth?.currentUser) return;
     setBusy(true);
     try {
-      setReports(await listMriReportsForOwner());
+      setReports(await listMriReportsForOwner(businessId));
       setStatus("");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Could not load the report archive.");
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [businessId]);
 
   useEffect(() => {
     if (!firebaseAuth) return;
     return onAuthStateChanged(firebaseAuth, user => {
       setUid(user?.uid ?? "");
+      setBusinessId(user ? (localStorage.getItem("business-lifeline-active-business-v1") || clientBusinessId(user.uid)) : "");
       setReports([]);
     });
   }, []);
 
   useEffect(() => {
-    if (uid && expanded) void load();
-  }, [uid, expanded, load]);
+    const onSwitch = (event: Event) => {
+      const id = (event as CustomEvent<{ businessId: string }>).detail?.businessId;
+      if (id) { setBusinessId(id); setReports([]); }
+    };
+    window.addEventListener("business-lifeline-business-switched", onSwitch);
+    return () => window.removeEventListener("business-lifeline-business-switched", onSwitch);
+  }, []);
+
+  useEffect(() => {
+    if (uid && expanded && businessId) void load();
+  }, [uid, businessId, expanded, load]);
 
   if (!uid) return null;
   return <section className="panel no-print" aria-label="Client-owned MRI archive">
@@ -47,7 +59,7 @@ export function MriReportArchive({ onOpen }: { onOpen: (saved: SavedReport) => v
       </button>
     </div>
     {expanded && <>
-      <p>Historical reports are saved under this signed-in client's business account. They stay available after a new MRI or local device clear. Up to 100 recent reports are listed here.</p>
+      <p>Historical reports are saved under the selected client's business account. They stay available after a new MRI or local device clear. Up to 100 recent reports are listed here.</p>
       <button type="button" className="button ghost" disabled={busy} onClick={() => void load()}>{busy ? "Loading reports…" : "Refresh reports"}</button>
       {status && <p role="alert">{status}</p>}
       {reports.length === 0 && !busy && !status && <p>No cloud-archived MRIs for this account yet. Finish a new MRI while signed in.</p>}

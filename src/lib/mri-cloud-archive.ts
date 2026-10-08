@@ -38,14 +38,16 @@ export async function archiveMriForSignedInOwner(saved: SavedReport): Promise<"s
   };
   // One immutable historical snapshot per completed MRI. We do not overwrite
   // previous reports when the owner runs another diagnosis.
-  await addDoc(collection(firebaseDb, "businesses", businessId, "mriReports"), entry);
+  await addDoc(collection(firebaseDb, "businesses", businessId, "mriReports"), JSON.parse(JSON.stringify(entry)));
   return "saved";
 }
 
-export async function listMriReportsForOwner(): Promise<ArchivedMri[]> {
+export async function listMriReportsForOwner(businessId?: string): Promise<ArchivedMri[]> {
   const owner = firebaseAuth?.currentUser;
   if (!owner || !firebaseDb) return [];
-  const ref = collection(firebaseDb, "businesses", clientBusinessId(owner.uid), "mriReports");
+  // A caller cannot bypass membership by specifying another businessId;
+  // deployed Firestore rules authorise every list against its business.
+  const ref = collection(firebaseDb, "businesses", businessId || clientBusinessId(owner.uid), "mriReports");
   const page = await getDocs(query(ref, orderBy("createdAt", "desc"), limit(100)));
   return page.docs.map(x => x.data()).filter(isArchivedMri);
 }
