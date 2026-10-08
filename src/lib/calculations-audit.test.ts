@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { calculateHealth } from "./calculations.ts";
+import { validateMriInput } from "./mri-validation.ts";
 import { emptyBusiness } from "./demo.ts";
 import type { BusinessData } from "./types.ts";
 
@@ -80,4 +81,29 @@ test("all published metrics remain finite for valid non-negative inputs", () => 
   for (const value of Object.values(metrics)) {
     if (typeof value === "number") assert.ok(Number.isFinite(value));
   }
+});
+
+test("separates actual cash receipts and payments from accrual operating surplus", () => {
+  const data = base({ monthlyRevenue: 50000, fixedExpenses: 18000, variableExpenses: 12000,
+    ownerDrawings: 5000, loanRepayments: 2000, cashAvailable: 30000,
+    monthlyCashReceipts: 4000, monthlyCashPayments: 25000 });
+  const result = calculateHealth(data);
+  assert.equal(result.cashFlowBasis, "cash-receipts-payments");
+  assert.equal(result.operatingSurplusEstimate, 20000);
+  assert.equal(result.monthlyOperatingResult, -21000);
+  assert.equal(result.runwayMonths, 1.4);
+  assert.match(result.scoreExplanation[0], /actual cash receipts/i);
+});
+test("without actual collections, cash runway is explicitly provisional", () => {
+  const result = calculateHealth(base());
+  assert.equal(result.cashFlowBasis, "revenue-proxy");
+  assert.equal(result.operatingSurplusEstimate, 20000);
+  assert.ok(result.dataConfidence <= 65);
+  assert.match(result.scoreExplanation.join(" "), /proxy/i);
+});
+test("actual cash values must be paired and finite", () => {
+  assert.equal(validateMriInput(base({ monthlyCashReceipts: 5000 })).valid, false);
+  assert.equal(validateMriInput(base({ monthlyCashReceipts: -1, monthlyCashPayments: 5000 })).valid, false);
+  assert.equal(validateMriInput(base({ monthlyCashReceipts: 5000, monthlyCashPayments: Number.NaN })).valid, false);
+  assert.equal(validateMriInput(base({ monthlyCashReceipts: 0, monthlyCashPayments: 5000 })).valid, true);
 });

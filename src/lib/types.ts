@@ -7,6 +7,10 @@ export type BusinessData = {
   yearsOperating: number;
   employees: number;
   monthlyRevenue: number;
+  /** Optional actual cash collected in the same month, not invoiced sales. */
+  monthlyCashReceipts?: number | null;
+  /** Optional total cash paid in that month (including tax, debt and drawings paid). */
+  monthlyCashPayments?: number | null;
   fixedExpenses: number;
   variableExpenses: number;
   ownerDrawings: number;
@@ -27,6 +31,10 @@ export type BusinessData = {
 export type PressureLevel = "Stable" | "Watch" | "High" | "Severe" | "Critical";
 
 export type HealthMetrics = {
+  /** Actual owner-reported cash data, or a provisional revenue-based proxy. */
+  cashFlowBasis: "cash-receipts-payments" | "revenue-proxy";
+  /** Revenue less stated operating expenses (not audited accounting profit). */
+  operatingSurplusEstimate: number;
   monthlyOperatingResult: number;
   operatingMargin: number;
   expenseRatio: number;

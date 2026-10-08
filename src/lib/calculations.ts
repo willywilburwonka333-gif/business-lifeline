@@ -17,7 +17,20 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
   const operatingExpenses = data.fixedExpenses + data.variableExpenses;
   const operatingResult = data.monthlyRevenue - operatingExpenses;
   const totalMonthlyCashOutgoings = operatingExpenses + data.ownerDrawings + data.loanRepayments;
-  const cashResult = data.monthlyRevenue - totalMonthlyCashOutgoings;
+  const hasCashMovements =
+    typeof data.monthlyCashReceipts === "number" &&
+    Number.isFinite(data.monthlyCashReceipts) &&
+    data.monthlyCashReceipts >= 0 &&
+    typeof data.monthlyCashPayments === "number" &&
+    Number.isFinite(data.monthlyCashPayments) &&
+    data.monthlyCashPayments >= 0;
+  // Invoice-based revenue is not cash collected. If actual movements are absent
+  // the cash result and runway remain explicitly provisional screening estimates.
+  // Total cash payments already include operating, debt, tax and owner cash outlays.
+  const cashFlowBasis = hasCashMovements ? "cash-receipts-payments" : "revenue-proxy";
+  const cashResult = hasCashMovements
+    ? data.monthlyCashReceipts! - data.monthlyCashPayments!
+    : data.monthlyRevenue - totalMonthlyCashOutgoings;
   const operatingMargin = data.monthlyRevenue ? (operatingResult / data.monthlyRevenue) * 100 : -100;
   const expenseRatio = data.monthlyRevenue ? (operatingExpenses / data.monthlyRevenue) * 100 : 200;
   const monthlyBurn = Math.max(0, -cashResult);
@@ -75,8 +88,10 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
     data.industry.trim().length >= 2,
     data.country.trim().length >= 2,
   ];
-  const dataConfidence = Math.round(
-    confidenceChecks.filter(Boolean).length / confidenceChecks.length * 100,
+  // This is input completeness, not independent verification or accuracy.
+  const dataConfidence = Math.min(
+    hasCashMovements ? 80 : 65,
+    Math.round(confidenceChecks.filter(Boolean).length / confidenceChecks.length * 100),
   );
 
   let overallScore = Math.round(
@@ -115,12 +130,12 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
   else if (criticalTriggers.length === 1) overallScore = Math.min(overallScore, 39);
 
   const scoreExplanation = [
-    cashResult < 0
-      ? `Supplied cash inflows are currently ${Math.abs(round(cashResult, 2))} per month below supplied operating costs, drawings and loan repayments.`
-      : `Supplied cash inflows are currently ${round(cashResult, 2)} per month above supplied operating costs, drawings and loan repayments.`,
+    hasCashMovements
+      ? `Owner-reported actual cash receipts less total cash payments yield ${round(cashResult, 2)} for the month. Reconcile these figures against records.`
+      : `Indicative monthly cash result is ${round(cashResult, 2)} using invoiced revenue as a proxy for money collected. Unpaid invoices and payment dates may materially change this estimate.`,
     runwayMonths === null
-      ? "The supplied monthly figures are cash-positive, so loss-based runway is not applicable."
-      : `Cash runway is approximately ${round(runwayMonths)} months at the current monthly loss.`,
+      ? "No monthly burn is estimated from these inputs; that does not establish ability to pay upcoming obligations."
+      : `${hasCashMovements ? "Owner-reported cash" : "Revenue-proxy"} runway estimate is ${round(runwayMonths)} months; verify with a dated 13-week forecast.`,
     urgentArrears > 0
       ? `${round(urgentArrears, 2)} of tax and supplier obligations are overdue.`
       : "No overdue tax or supplier obligations were supplied.",
@@ -130,6 +145,8 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
   ];
 
   return {
+    cashFlowBasis,
+    operatingSurplusEstimate: round(operatingResult, 2),
     monthlyOperatingResult: round(cashResult, 2),
     operatingMargin: round(operatingMargin),
     expenseRatio: round(expenseRatio),
