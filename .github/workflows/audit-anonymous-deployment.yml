@@ -23,3 +23,13 @@ jobs:
             grep -Ei '^(HTTP/|location:|x-vercel-id:|x-vercel-error:)' /tmp/probe-headers || true
             echo "protection_page=$(grep -Eioc 'Authentication Required|Vercel Authentication|Log in to Vercel|Deployment Protection' /tmp/probe-body || true)"
           done
+          echo "===== Public configuration API (GET, response body redacted) ====="
+          curl -sS --max-time 12 -o /dev/null -w 'config_http_code=%{http_code}\n' https://business-lifeline.vercel.app/api/integrations/config || true
+          echo "===== Anonymous AI analyse request with invalid data (should be rejected before invoking provider) ====="
+          curl -sS --max-time 12 -o /dev/null -w 'analyse_invalid_http_code=%{http_code}\n' \
+            -X POST -H 'Content-Type: application/json' -H 'x-business-lifeline-ai-consent: true' \
+            --data '{"consent":true}' https://business-lifeline.vercel.app/api/analyse || true
+          echo "===== Anonymous document reader with no uploaded file (should be rejected before invoking provider) ====="
+          curl -sS --max-time 12 -o /dev/null -w 'reader_no_file_http_code=%{http_code}\n' \
+            -X POST -H 'x-business-lifeline-ai-consent: true' -F 'empty=1' \
+            https://business-lifeline.vercel.app/api/read-business-record || true
