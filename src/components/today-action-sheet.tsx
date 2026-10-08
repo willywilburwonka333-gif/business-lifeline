@@ -34,7 +34,7 @@ export function TodayActionSheet({ data, report }: { data: BusinessData; report:
 
         <section className="sheet-metrics">
           <div><small>Health score</small><strong>{m.overallScore}/100</strong></div>
-          <div><small>Monthly result</small><strong>{money(m.monthlyOperatingResult, data.country)}</strong></div>
+          <div><small>Est. monthly cash result</small><strong>{money(m.monthlyOperatingResult, data.country)}</strong></div>
           <div><small>Cash runway</small><strong>{m.runwayMonths === null ? "Cash positive" : `${m.runwayMonths} months`}</strong></div>
           <div><small>Overdue pressure</small><strong>{money(overdue, data.country)}</strong></div>
         </section>
@@ -51,7 +51,7 @@ export function TodayActionSheet({ data, report }: { data: BusinessData; report:
         </section>
 
         {report.urgentHelp && <aside><strong>Professional help recommended today.</strong> Current answers indicate serious tax, payroll, legal, debt, or closure pressure. Contact a qualified accountant, lawyer, turnaround adviser, or licensed insolvency professional.</aside>}
-        <footer>Decision-support only. This sheet does not replace accounting, legal, financial, employment, tax, or insolvency advice.</footer>
+        <footer>Estimated monthly cash result includes owner drawings and loan repayments and is not accounting profit. Decision-support only; not accounting, legal, financial, employment, tax or insolvency advice.</footer>
       </article>
     </section>
   );
