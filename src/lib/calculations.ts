@@ -48,13 +48,19 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
   const uncoveredArrearsPressure = data.monthlyRevenue
     ? (uncoveredArrears / data.monthlyRevenue) * 100
     : uncoveredArrears > 0 ? 100 : 0;
-  const liquidResources = data.cashAvailable + Math.max(0, data.overdueInvoices * 0.5);
-  const nearTermPressure = urgentArrears + Math.max(0, monthlyBurn) + Math.max(0, data.loanRepayments);
+  // Overdue customer invoices are NOT immediately available funds and should never
+  // be counted as liquid cash without collection evidence.
+  const liquidResources = data.cashAvailable;
+  const nearTermPressure = urgentArrears + monthlyBurn +
+    (hasCashMovements ? 0 : Math.max(0, data.loanRepayments));
 
   const trendScores = { growing: 100, stable: 78, volatile: 42, declining: 22 };
   const revenueStability = trendScores[data.revenueTrend];
   const cashFlowScore = clamp(
-    50 + operatingMargin * 2 - Math.min(receivablesPressure, 50) * 0.35,
+    (hasCashMovements
+      ? 50 + (cashResult / Math.max(1, data.monthlyCashPayments!)) * 100
+      : 50 + operatingMargin * 2) -
+      Math.min(receivablesPressure, 50) * 0.35,
   );
   const runwayScore = runwayMonths === null
     ? (cashResult >= 0 ? 100 : 0)
@@ -104,7 +110,13 @@ export function calculateHealth(data: BusinessData): HealthMetrics {
   );
 
   const criticalTriggers: string[] = [];
-  if (data.overdueTax > 0) criticalTriggers.push("Tax obligations are overdue");
+  // Any tax arrears appear as a warning; only material overdue tax (or an
+  // explicitly urgent owner concern) is escalated to a severe critical trigger.
+  if (data.overdueTax > 0 &&
+      (data.overdueTax >= Math.max(1000, data.monthlyRevenue * 0.1) ||
+       data.urgentConcerns.some(x => x.toLowerCase() === "tax"))) {
+    criticalTriggers.push("Material or urgent tax obligations are overdue");
+  }
   if (data.overdueSuppliers > 0 && uncoveredArrears > 0) {
     criticalTriggers.push("Available cash does not cover overdue supplier and tax obligations");
   }

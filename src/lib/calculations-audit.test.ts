@@ -107,3 +107,23 @@ test("actual cash values must be paired and finite", () => {
   assert.equal(validateMriInput(base({ monthlyCashReceipts: 5000, monthlyCashPayments: Number.NaN })).valid, false);
   assert.equal(validateMriInput(base({ monthlyCashReceipts: 0, monthlyCashPayments: 5000 })).valid, true);
 });
+
+test("actual cash collection shocks lower the score even when revenue appears healthy", () => {
+  const revenueProxy = calculateHealth(base({ cashAvailable: 30000 }));
+  const cashPoor = calculateHealth(base({ cashAvailable: 30000,
+    monthlyCashReceipts: 2000, monthlyCashPayments: 50000 }));
+  assert.equal(cashPoor.operatingSurplusEstimate, revenueProxy.operatingSurplusEstimate);
+  assert.ok(cashPoor.cashFlowScore < revenueProxy.cashFlowScore);
+  assert.ok(cashPoor.overallScore < revenueProxy.overallScore);
+});
+test("overdue customer invoices do not count as spendable cash", () => {
+  const m = calculateHealth(base({ monthlyRevenue: 10000, cashAvailable: 0,
+    loanRepayments: 0, accountsReceivable: 9000, overdueInvoices: 9000,
+    overdueTax: 5000, overdueSuppliers: 0 }));
+  assert.equal(m.liquidityScore, 0);
+});
+test("a nominal tax balance is not automatically a severe crisis", () => {
+  const m = calculateHealth(base({ overdueTax: 1, overdueSuppliers: 0 }));
+  assert.ok(!m.criticalTriggers.some(x => /tax obligations are overdue/i.test(x)));
+  assert.notEqual(m.pressureLevel, "Severe");
+});
