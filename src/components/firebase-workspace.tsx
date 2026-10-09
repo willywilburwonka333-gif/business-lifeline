@@ -222,6 +222,14 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
 
   const syncWorkspace = useCallback(async (activeUser: User, mode: "auto" | "restore" | "push" = "auto"): Promise<boolean> => {
     if (!firebaseDb || firebaseAuth?.currentUser?.uid !== activeUser.uid) return false;
+    // Fail closed even if a UI action bypasses the normal authentication
+    // transition. Never push an earlier client's browser snapshot to a new uid.
+    const deviceOwner = window.localStorage.getItem(DEVICE_OWNER_KEY);
+    if (deviceOwner && deviceOwner !== "guest" && deviceOwner !== activeUser.uid) {
+      setSyncState("error");
+      setSyncMessage("Another client's files remain on this device. Sign back into that client's account and safely back up their files before switching.");
+      return false;
+    }
     if (syncing.current) return false;
     syncing.current = true;
     setSyncState("syncing");
@@ -593,7 +601,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
               {notice && <p className="cloud-account-notice" role="status">{notice}</p>}
               {error && <p className="cloud-account-error" role="alert">{error}</p>}
               <div className="cloud-account-panel-actions">
-                <button type="button" className="button primary" onClick={() => { if (window.confirm("Replace the cloud workspace with this device’s copy? Download your data first if you are unsure.")) void syncWorkspace(user, "push"); }}>Sync this device</button>
+                <button type="button" className="button primary" onClick={() => { if (window.confirm("Overwrite this account’s cloud workspace with this device’s local copy? This can replace newer cloud changes. Only proceed if this device belongs to this account.")) void syncWorkspace(user, "push").then(ok => { if (ok && !authReady) { setAuthReady(true); window.location.reload(); } }); }}>Sync this device</button>
                 <button type="button" className="button ghost" onClick={() => void syncWorkspace(user, "restore").then(ok => { if (ok) window.location.reload(); })}>Restore cloud copy</button>
                 <button type="button" className="button ghost" onClick={() => void exportWorkspace()}>Download my data</button>
                 <button type="button" className="button ghost" onClick={() => void clearThisDevice()}>Clear this device</button>
@@ -621,7 +629,9 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
         </section>
       )}
 
-      {!authReady && <div className="cloud-auth-loading no-print" role="status">Checking and isolating account data… {user && <button type="button" onClick={() => void syncWorkspace(user, "restore").then(ok => { if (ok) { setAuthReady(true); window.location.reload(); } })}>Retry from cloud</button>}</div>}
+      {!authReady && <div className="cloud-auth-loading no-print" role="status">Checking and isolating account data… {user && <button type="button" onClick={() => void syncWorkspace(user, "restore").then(ok => { if (ok) { setAuthReady(true); window.location.reload(); } })}>Retry from cloud</button>}
+        {user && typeof window !== "undefined" && window.localStorage.getItem(DEVICE_OWNER_KEY) !== user.uid && <button type="button" onClick={() => void signOut(firebaseAuth!).catch(() => setError("Could not sign out safely. Try reloading this tab."))}>Sign out without deleting earlier client files</button>}
+        </div>}
       {authReady ? children : null}
     </>
   );
