@@ -120,11 +120,16 @@ function restoreLocalPayload(payload: Partial<CloudPayload>) {
   });
 }
 
-async function clearLocalPayload(): Promise<void> {
+const UNBACKED_VAULT_NOTICE = "Local business documents are not yet backed up. Return to Lifeline Vault and confirm every file is backed up before switching accounts or restoring data.";
+async function clearLocalPayload(options: { allowUnbackedFiles?: boolean } = {}): Promise<void> {
+  // Guard every caller: authentication switching and automatic cloud restoration
+  // must not bypass the sign-out screen\u0027s unbacked-file check.
+  if (!options.allowUnbackedFiles && hasUnbackedVaultFiles()) throw new Error(UNBACKED_VAULT_NOTICE);
   await purgeBrowserClientData();
 }
 
 function messageForError(error: unknown) {
+  if (error instanceof Error && error.message === UNBACKED_VAULT_NOTICE) return UNBACKED_VAULT_NOTICE;
   const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
   if (code.includes("email-already-in-use")) return "That email already has an account. Choose Sign in instead.";
   if (code.includes("invalid-credential")) return "The email or password is incorrect.";
@@ -334,10 +339,10 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
           .then(value => value && setBilling(value))
           .catch(() => setBilling({ plan: "free" }));
       };
-      void init().catch(() => {
+      void init().catch((error: unknown) => {
         // Fail closed: do not render another account over uncleared local documents.
         if (epoch === authEpoch.current) {
-          setError("Client data could not be safely cleared. Close other Business Lifeline tabs, then reload and retry.");
+          setError(error instanceof Error && error.message === UNBACKED_VAULT_NOTICE ? UNBACKED_VAULT_NOTICE : "Client data could not be safely cleared. Close other Business Lifeline tabs, then reload and retry.");
           setPanelOpen(true);
           setAuthReady(false);
         }
@@ -514,7 +519,9 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
       const response = await fetch("/api/account/delete", { method: "DELETE", headers: { Authorization: `Bearer ${await user.getIdToken()}` } });
       const payload = await response.json() as { deleted?: boolean; error?: string };
       if (!response.ok || !payload.deleted) throw new Error(payload.error || "Account deletion failed.");
-      await clearLocalPayload();
+      // Permanent deletion was explicitly confirmed; local-only documents are
+      // intentionally wiped along with the account after server deletion succeeds.
+      await clearLocalPayload({ allowUnbackedFiles: true });
       window.localStorage.removeItem("business-lifeline-active-business-v1");
       setNotice("Account deleted.");
       window.location.reload();
