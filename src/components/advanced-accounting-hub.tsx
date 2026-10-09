@@ -2,9 +2,7 @@
 
 import { escapePrintHtml } from "@/lib/escape-print-html";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { escapePrintHtml } from "@/lib/escape-print-html";
 import { appendJournal, postCreditNote, postCustomerPayment, postInvoice, postSupplierBill, postSupplierPayment, readBooksStore, saveBooksStore, type BooksStore, type LedgerJournal, type SalesDocument, type SupplierBill } from "@/lib/lifeline-books-engine";
-import { escapePrintHtml } from "@/lib/escape-print-html";
 import { booksIntegrity, validateCustomerPayment, validateSupplierPayment } from "@/lib/money-integrity";
 
 type Side="debit"|"credit";
