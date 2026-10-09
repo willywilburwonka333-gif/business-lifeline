@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { calculateHealth } from "@/lib/calculations";
-import { enforceRateLimit, hasExplicitAiConsent, privateResponseHeaders, rejectCrossSiteRequest } from "@/lib/api-security";
+import { requireAuthenticatedAiRequest, enforceRateLimit, hasExplicitAiConsent, privateResponseHeaders, rejectCrossSiteRequest } from "@/lib/api-security";
 import type { BusinessData } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -68,6 +68,7 @@ async function analyseWithGemini(input: unknown) {
 export async function POST(request: Request) {
   try {
     const crossSite = rejectCrossSiteRequest(request); if (crossSite) return crossSite;
+    const authFailure = await requireAuthenticatedAiRequest(request); if (authFailure) return authFailure;
     const limited = enforceRateLimit(request, "analyse"); if (limited) return limited;
     const contentLength = Number(request.headers.get("content-length") || "0");
     if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) return NextResponse.json({ error: "Business analysis request is too large." }, { status: 413, headers: privateResponseHeaders() });

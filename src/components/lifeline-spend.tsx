@@ -1,5 +1,6 @@
 "use client";
 
+import { authenticatedAiHeaders } from "@/lib/authenticated-ai-request";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import {
   appendJournal,
@@ -121,7 +122,7 @@ export function LifelineSpend() {
     try {
       const body = new FormData();
       body.append("file", file);
-      const response = await fetch("/api/read-spend-record", { method: "POST", headers: { "X-Business-Lifeline-AI-Consent": "true" }, body });
+      const response = await fetch("/api/read-spend-record", { method: "POST", headers: { ...(await authenticatedAiHeaders()), "X-Business-Lifeline-AI-Consent": "true" }, body });
       const payload = await response.json() as { extraction?: { supplier?: string; invoiceNumber?: string; date?: string; dueDate?: string; total?: number; gst?: number; description?: string; suggestedAccount?: string; confidence?: string; warnings?: string[] }; source?: string; error?: string };
       if (!response.ok || !payload.extraction) throw new Error(payload.error || "Document capture failed.");
       const value = payload.extraction;

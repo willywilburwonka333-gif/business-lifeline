@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { enforceRateLimit, privateResponseHeaders, rejectCrossSiteRequest } from "@/lib/api-security";
+import { requireAuthenticatedAiRequest, enforceRateLimit, privateResponseHeaders, rejectCrossSiteRequest } from "@/lib/api-security";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -89,6 +89,7 @@ async function gemini(file: File, base64: string, mime: string) {
 export async function POST(request: Request) {
   const crossSite = rejectCrossSiteRequest(request);
   if (crossSite) return crossSite;
+  const authFailure = await requireAuthenticatedAiRequest(request); if (authFailure) return authFailure;
   const limited = enforceRateLimit(request, "spend-capture");
   if (limited) return limited;
   if (request.headers.get("x-business-lifeline-ai-consent") !== "true") {

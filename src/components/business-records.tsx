@@ -1,5 +1,6 @@
 "use client";
 
+import { authenticatedAiHeaders } from "@/lib/authenticated-ai-request";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { extractFieldsFromText, mergeImportDraft, readSmartImport, writeSmartImport, type DiagnosticSignal, type ImportedField } from "@/lib/mri-smart-import";
 import type { BusinessData } from "@/lib/types";
@@ -73,7 +74,7 @@ async function readWithAi(file: File): Promise<ReaderExtraction> {
   form.append("file", file);
   const response = await fetch("/api/read-business-record", {
     method: "POST",
-    headers: { "x-business-lifeline-ai-consent": "true" },
+    headers: { ...(await authenticatedAiHeaders()), "x-business-lifeline-ai-consent": "true" },
     body: form,
   });
   const result = await response.json() as { extraction?: ReaderExtraction; error?: string };

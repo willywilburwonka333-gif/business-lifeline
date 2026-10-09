@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { enforceRateLimit, privateResponseHeaders, rejectCrossSiteRequest } from "@/lib/api-security";
+import { requireAuthenticatedAiRequest, enforceRateLimit, privateResponseHeaders, rejectCrossSiteRequest } from "@/lib/api-security";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -50,6 +50,7 @@ async function readWithGemini(file: File, base64: string, mime: string) {
 export async function POST(request: Request) {
   try {
     const crossSite = rejectCrossSiteRequest(request); if (crossSite) return crossSite;
+    const authFailure = await requireAuthenticatedAiRequest(request); if (authFailure) return authFailure;
     const limited = enforceRateLimit(request, "record-reader"); if (limited) return limited;
     if (request.headers.get("x-business-lifeline-ai-consent") !== "true") return NextResponse.json({ error: "AI document-reading consent is required." }, { status: 403, headers: privateResponseHeaders() });
     if (!process.env.OPENAI_API_KEY && !process.env.GEMINI_API_KEY) return NextResponse.json({ error: "AI document reading is not configured." }, { status: 503, headers: privateResponseHeaders() });

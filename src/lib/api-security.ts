@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireFirebaseUser } from "@/lib/firebase-admin";
 
 type Bucket = { count: number; resetAt: number };
 
@@ -85,4 +86,19 @@ export function privateResponseHeaders() {
     Pragma: "no-cache",
     "X-Robots-Tag": "noindex, nofollow",
   };
+}
+
+// Public website does not imply public access to billable AI services.
+// Validate the Firebase ID token server-side before parsing confidential uploads
+// or making a provider request. The rules-only MRI needs no AI access.
+export async function requireAuthenticatedAiRequest(request: Request): Promise<NextResponse | null> {
+  if (!request.headers.get("authorization")?.startsWith("Bearer ")) {
+    return NextResponse.json({ error: "Sign in to use AI services. The rules-based MRI remains available without AI." }, { status: 401, headers: privateResponseHeaders() });
+  }
+  try {
+    await requireFirebaseUser(request);
+    return null;
+  } catch {
+    return NextResponse.json({ error: "AI access requires a valid signed-in account." }, { status: 401, headers: privateResponseHeaders() });
+  }
 }

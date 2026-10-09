@@ -1,5 +1,6 @@
 "use client";
 
+import { authenticatedAiHeaders } from "@/lib/authenticated-ai-request";
 import { FormEvent, useMemo, useRef, useState } from "react";
 import { AnalysisProvenance } from "@/components/analysis-provenance";
 import { assessMriAccuracyProfile, emptyMriAccuracyProfile, type MriAccuracyProfile } from "@/lib/mri-accuracy-profile";
@@ -206,7 +207,7 @@ export function BusinessBrain({ saved }: { saved: SavedReport }) {
     try {
       const response = await fetch("/api/brain", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-Business-Lifeline-AI-Consent": "true" },
+        headers: { ...(await authenticatedAiHeaders()), "Content-Type": "application/json", "X-Business-Lifeline-AI-Consent": "true" },
         body: JSON.stringify({ question: cleaned, context, consent: true }),
       });
       const payload = (await response.json()) as { answer?: BrainAnswer; provider?: "openai" | "gemini"; error?: string; detail?: string };
