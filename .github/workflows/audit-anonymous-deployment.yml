@@ -1,5 +1,5 @@
 name: Anonymous deployment access audit
-# Second independent check after owner confirmed publishing Firebase rules.
+# Production security verification after PR #74 deployment, 9 October 2026.
 on:
   push:
     branches:
@@ -34,3 +34,15 @@ jobs:
           curl -sS --max-time 12 -o /dev/null -w 'reader_no_file_http_code=%{http_code}\n' \
             -X POST -H 'x-business-lifeline-ai-consent: true' -F 'empty=1' \
             https://business-lifeline.vercel.app/api/read-business-record || true
+          echo "===== Assert public homepage and health endpoint still work ====="
+          homepage=$(curl -sS --max-time 12 -o /dev/null -w '%{http_code}' https://business-lifeline.vercel.app/)
+          health=$(curl -sS --max-time 12 -o /dev/null -w '%{http_code}' https://business-lifeline.vercel.app/api/health)
+          echo "homepage_status=$homepage health_status=$health"
+          test "$homepage" = "200" && test "$health" = "200" || { echo "Public site health check failed"; exit 1; }
+          echo "===== Assert billable AI routes deny anonymous access before reading content ====="
+          analyse=$(curl -sS --max-time 12 -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -H 'x-business-lifeline-ai-consent: true' --data '{"consent":true}' https://business-lifeline.vercel.app/api/analyse)
+          brain=$(curl -sS --max-time 12 -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -H 'x-business-lifeline-ai-consent: true' --data '{"consent":true}' https://business-lifeline.vercel.app/api/brain)
+          record=$(curl -sS --max-time 12 -o /dev/null -w '%{http_code}' -X POST -H 'x-business-lifeline-ai-consent: true' -F 'empty=1' https://business-lifeline.vercel.app/api/read-business-record)
+          spend=$(curl -sS --max-time 12 -o /dev/null -w '%{http_code}' -X POST -H 'x-business-lifeline-ai-consent: true' -F 'empty=1' https://business-lifeline.vercel.app/api/read-spend-record)
+          echo "anonymous_ai_statuses=analyse:$analyse brain:$brain records:$record spend:$spend"
+          test "$analyse" = "401" && test "$brain" = "401" && test "$record" = "401" && test "$spend" = "401" || { echo "At least one AI endpoint was not authenticated"; exit 1; }
