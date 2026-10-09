@@ -55,6 +55,7 @@ const CLOUD_PREFIXES = [
   "business-lifeline-13-week-v1:",
   "business-lifeline-accuracy-profile-v1:",
   "business-lifeline-cashflow-v2:",
+  "business-lifeline-repair-projects-v1:",
 ] as const;
 
 const businessIdFor = (uid: string) => `business-${uid}`;
