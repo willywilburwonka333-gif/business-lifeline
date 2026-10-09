@@ -71,7 +71,7 @@ test("synthetic MRI can create and restore a measurable quoting repair project",
   const recover = page.getByRole("navigation", { name: "Business Lifeline main areas" }).getByRole("button", { name: /Business Lifeline/i });
   await recover.click();
   await page.getByRole("tab", { name: /Repair Centre/i }).click();
-  await expect(page.getByRole("heading", { name: "Repair Centre" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Repair Centre", level: 2 })).toBeVisible();
   await page.getByLabel(/Show all improvement templates/i).check();
   await page.getByRole("button", { name: /Create repair project/i }).first().click();
   await expect(page.getByRole("heading", { name: "Projects and progress" })).toBeVisible();
