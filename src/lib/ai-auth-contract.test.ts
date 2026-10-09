@@ -19,3 +19,14 @@ test("AI endpoints require verified Firebase tokens and client callers supply th
     assert.match(read(`src/components/${path}.tsx`), /await authenticatedAiHeaders\(\)/, path);
   }
 });
+
+test("switching clients awaits IndexedDB deletion and refuses unbacked file loss", () => {
+  const code = read("src/components/firebase-workspace.tsx");
+  assert.match(code, /await clearVaultCache\(\)/);
+  assert.match(code, /request\.onblocked = \(\) => reject/);
+  assert.match(code, /if \(hasUnbackedVaultFiles\(\)\)/);
+  const clear = code.slice(code.indexOf("const clearThisDevice = async"));
+  assert.ok(clear.indexOf("await syncWorkspace(user)") < clear.indexOf("await clearLocalPayload()"));
+  assert.match(clear, /await signOut\(firebaseAuth\)/);
+  assert.match(code, /if \(!belongsToAccount\) await clearLocalPayload\(\)/);
+});
