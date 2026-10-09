@@ -67,14 +67,29 @@ const payloadFingerprint = (payload: CloudPayload): string => {
   for (let i = 0; i < serial.length; i += 1) hash = Math.imul(hash ^ serial.charCodeAt(i), 16777619);
   return String(hash >>> 0);
 };
-function clearVaultCache() {
-  if (typeof indexedDB !== "undefined") indexedDB.deleteDatabase("business-lifeline-vault");
+async function clearVaultCache(): Promise<void> {
+  if (typeof indexedDB === "undefined") return;
+  await new Promise<void>((resolve, reject) => {
+    const request = indexedDB.deleteDatabase("business-lifeline-vault");
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error || new Error("Could not clear the local document vault."));
+    request.onblocked = () => reject(new Error("Local document vault is open in another tab. Close Business Lifeline in other tabs and retry."));
+  });
 }
-function purgeBrowserClientData() {
-  // Include modules that are local-only, reports, imported files and the active business pointer.
+function hasUnbackedVaultFiles(): boolean {
+  try {
+    const records: unknown = JSON.parse(localStorage.getItem("business-lifeline-document-vault-v1") || "[]");
+    return Array.isArray(records) && records.some((record) => (
+      record && typeof record === "object" && record.status === "stored" &&
+      (record.cloudStatus !== "backed-up" || !record.cloudPath)
+    ));
+  } catch { return true; }
+}
+async function purgeBrowserClientData(): Promise<void> {
+  // Wait for IndexedDB deletion before discarding the metadata needed to recover it.
+  await clearVaultCache();
   const keys = Object.keys(localStorage).filter(key => key.startsWith("business-lifeline-"));
   keys.forEach(key => localStorage.removeItem(key));
-  clearVaultCache();
 }
 type SyncState = "local" | "syncing" | "synced" | "error";
 type CloudPayload = Record<string, string | null>;
@@ -104,8 +119,8 @@ function restoreLocalPayload(payload: Partial<CloudPayload>) {
   });
 }
 
-function clearLocalPayload() {
-  purgeBrowserClientData();
+async function clearLocalPayload(): Promise<void> {
+  await purgeBrowserClientData();
 }
 
 function messageForError(error: unknown) {
@@ -224,7 +239,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
         (mode === "auto" && previousFingerprint === localFingerprint && remoteFingerprint !== previousFingerprint)
       );
       if (shouldRestore && cloudPayload) {
-        clearLocalPayload();
+        await clearLocalPayload();
         restoreLocalPayload(cloudPayload);
         localStorage.setItem(baselineKey, remoteFingerprint);
         localStorage.setItem(DEVICE_OWNER_KEY, activeUser.uid);
@@ -286,7 +301,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
       const init = async () => {
         const previousOwner = localStorage.getItem(DEVICE_OWNER_KEY);
         if (!nextUser) {
-          if (previousOwner && previousOwner !== "guest") clearLocalPayload();
+          if (previousOwner && previousOwner !== "guest") await clearLocalPayload();
           localStorage.setItem(DEVICE_OWNER_KEY, "guest");
           if (epoch === authEpoch.current) {
             setSyncState("local");
@@ -300,10 +315,10 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
           if (!previousOwner && hasUsefulLocalData(readLocalPayload())) {
             // Legacy unassigned browser data must never silently attach to a new client.
             const belongsToAccount = window.confirm("This browser contains data without an assigned account. Only import it if it belongs to this account. OK to keep it here for this owner, Cancel to clear it.");
-            if (!belongsToAccount) clearLocalPayload();
+            if (!belongsToAccount) await clearLocalPayload();
           } else {
             // Switching clients MUST remove all previous locally cached client information.
-            clearLocalPayload();
+            await clearLocalPayload();
           }
           localStorage.setItem(DEVICE_OWNER_KEY, nextUser.uid);
           // A new account always treats the cloud as authoritative when it exists.
@@ -318,7 +333,14 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
           .then(value => value && setBilling(value))
           .catch(() => setBilling({ plan: "free" }));
       };
-      void init();
+      void init().catch(() => {
+        // Fail closed: do not render another account over uncleared local documents.
+        if (epoch === authEpoch.current) {
+          setError("Client data could not be safely cleared. Close other Business Lifeline tabs, then reload and retry.");
+          setPanelOpen(true);
+          setAuthReady(false);
+        }
+      });
     });
   }, [syncWorkspace]);
 
@@ -417,12 +439,32 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
   };
 
   const clearThisDevice = async () => {
-    const confirmed = window.confirm("Clear Business Lifeline data from this device? Your cloud copy is not deleted.");
+    const confirmed = window.confirm("Sign out and clear Business Lifeline client data from this device? Cloud reports are preserved only when their backup has succeeded.");
     if (!confirmed) return;
-    if (user) await writeAudit(user, "workspace.local_clear", "Cleared Business Lifeline data from one device.");
-    clearLocalPayload();
-    localStorage.setItem(DEVICE_OWNER_KEY, user?.uid ?? "guest");
-    window.location.reload();
+    if (hasUnbackedVaultFiles()) {
+      setError("Some document uploads are not backed up. Open Lifeline Vault and back up the local files before clearing.");
+      setPanelOpen(true);
+      return;
+    }
+    if (user && !(await syncWorkspace(user))) {
+      setError("Cloud sync did not complete. Do not clear this device until the signed-in owner's backup is verified.");
+      setPanelOpen(true);
+      return;
+    }
+    setBusy(true);
+    try {
+      setAuthReady(false);
+      await clearLocalPayload();
+      if (user) await writeAudit(user, "workspace.local_clear", "Signed out and cleared this device after a successful workspace sync.");
+      if (firebaseAuth?.currentUser) await signOut(firebaseAuth);
+      localStorage.setItem(DEVICE_OWNER_KEY, "guest");
+      window.location.reload();
+    } catch (error) {
+      setAuthReady(true);
+      setError(error instanceof Error ? error.message : "Could not safely clear this device.");
+      setPanelOpen(true);
+      setBusy(false);
+    }
   };
 
   const startCheckout = async (plan: "pro" | "rescue") => {
@@ -471,7 +513,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
       const response = await fetch("/api/account/delete", { method: "DELETE", headers: { Authorization: `Bearer ${await user.getIdToken()}` } });
       const payload = await response.json() as { deleted?: boolean; error?: string };
       if (!response.ok || !payload.deleted) throw new Error(payload.error || "Account deletion failed.");
-      clearLocalPayload();
+      await clearLocalPayload();
       window.localStorage.removeItem("business-lifeline-active-business-v1");
       setNotice("Account deleted.");
       window.location.reload();
@@ -483,6 +525,11 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
 
   const logOut = async () => {
     if (!firebaseAuth || !user || !authReady) return;
+    if (hasUnbackedVaultFiles()) {
+      setError("Some uploaded documents are only on this device. Back them up from Lifeline Vault before signing out.");
+      setPanelOpen(true);
+      return;
+    }
     const synced = await syncWorkspace(user);
     if (!synced) {
       setError("Cloud saving is incomplete. Download your data or resolve the sync warning before signing out.");
@@ -490,11 +537,17 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
       return;
     }
     setAuthReady(false);
-    clearLocalPayload();
-    localStorage.setItem(DEVICE_OWNER_KEY, "guest");
-    await signOut(firebaseAuth);
-    setPanelOpen(false);
-    window.location.reload();
+    try {
+      await clearLocalPayload();
+      localStorage.setItem(DEVICE_OWNER_KEY, "guest");
+      await signOut(firebaseAuth);
+      setPanelOpen(false);
+      window.location.reload();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not safely sign out.");
+      setAuthReady(true);
+      setPanelOpen(true);
+    }
   };
 
   return (
