@@ -12,3 +12,12 @@ test("all cache-clearing paths reject unbacked client documents by default", () 
   assert.match(code, /await clearLocalPayload\(\{ allowUnbackedFiles: true \}\)/);
   assert.match(code, /error.message === UNBACKED_VAULT_NOTICE/);
 });
+
+test("workspace sync refuses requests from an account different from local device owner", () => {
+  const from = code.indexOf("const syncWorkspace = useCallback");
+  const guard = code.indexOf('deviceOwner !== activeUser.uid', from);
+  const remoteWrite = code.indexOf('await setDoc(workspaceRef', from);
+  assert.ok(from >= 0 && guard > from && remoteWrite > guard, "uid guard must precede cloud write");
+  assert.match(code, /Sign out without deleting earlier client files/);
+  assert.match(code, /Only proceed if this device belongs to this account/);
+});
