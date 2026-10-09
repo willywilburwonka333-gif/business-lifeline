@@ -45,7 +45,7 @@ export function JudgeLanding({
           <p className="judge-pill">AI-assisted small-business recovery operating system</p>
           <h1>Know what is wrong.<br/><em>Know what to do next.</em></h1>
           <p className="judge-lead">
-            Business Lifeline combines tested financial calculations with GPT-5.6 interpretation to diagnose pressure, model recovery options and turn advice into an executable turnaround plan.
+            Business Lifeline combines rules-based financial screening, optional AI interpretation when configured, recovery scenarios and practical improvement plans. Findings depend on the supplied evidence and are not a certified audit.
           </p>
           <div className="judge-actions">
             <button type="button" className="button primary large" onClick={onStart}>Run My Business MRI <span>→</span></button>
@@ -53,7 +53,7 @@ export function JudgeLanding({
           </div>
           <div className="judge-proof-row" aria-label="Product principles">
             <span><b>Deterministic figures</b><small>Scores and cashflow are calculated by tested rules.</small></span>
-            <span><b>GPT-5.6 interpretation</b><small>AI explains causes, priorities and trade-offs.</small></span>
+            <span><b>Optional AI interpretation</b><small>Available only when configured and expressly authorised.</small></span>
             <span><b>Safe escalation</b><small>Serious warning signs point to qualified help.</small></span>
           </div>
         </div>
@@ -69,7 +69,7 @@ export function JudgeLanding({
         </div>
         <div className="judge-story-grid">
           <article><b>01</b><h3>Diagnose</h3><p>Turn revenue, costs, cash, debt and overdue obligations into a clear Business MRI.</p></article>
-          <article><b>02</b><h3>Prioritise</h3><p>Use GPT-5.6 to interpret the context, explain root causes and order the next moves.</p></article>
+          <article><b>02</b><h3>Prioritise</h3><p>Use rules-based findings to set priorities; optionally request AI interpretation when enabled and authorised. Verify suggested causes against records.</p></article>
           <article><b>03</b><h3>Simulate</h3><p>Test price, sales, costs, collections and repayment changes before acting.</p></article>
           <article><b>04</b><h3>Execute</h3><p>Move the chosen recovery into playbooks, weekly coaching and the Business OS.</p></article>
         </div>
