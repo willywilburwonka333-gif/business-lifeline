@@ -1,5 +1,6 @@
 "use client";
 
+import { authenticatedAiHeaders } from "@/lib/authenticated-ai-request";
 import { useEffect, useState } from "react";
 import { demoBusiness, emptyBusiness } from "@/lib/demo";
 import { generateReport } from "@/lib/planner";
@@ -49,7 +50,7 @@ function ReportView({ data, report, onReset, saveNotice }: { data: BusinessData;
   </main>;
 }
 
-async function buildCompleteReport(data: BusinessData, aiEnabled = false): Promise<BusinessReport> { const base = generateReport(data); const fallback: BusinessReport = { ...base, aiStatus: "fallback" }; if (!aiEnabled) return fallback; try { const draft=readSmartImport(); const response = await fetch("/api/analyse", { method: "POST", headers: { "Content-Type": "application/json", "X-Business-Lifeline-AI-Consent": "true" }, body: JSON.stringify({ data, aiConsent:true, documentContext:draft?{fields:draft.fields,signals:draft.signals??[],warnings:draft.warnings??[]}:undefined }) }); if (response.ok) { const result = await response.json() as { analysis?: AiAnalysis }; if (result.analysis) return { ...base, aiAnalysis: result.analysis, aiStatus: "ready" }; } } catch { /* deterministic report remains available */ } return fallback; }
+async function buildCompleteReport(data: BusinessData, aiEnabled = false): Promise<BusinessReport> { const base = generateReport(data); const fallback: BusinessReport = { ...base, aiStatus: "fallback" }; if (!aiEnabled) return fallback; try { const draft=readSmartImport(); const response = await fetch("/api/analyse", { method: "POST", headers: { ...(await authenticatedAiHeaders()), "Content-Type": "application/json", "X-Business-Lifeline-AI-Consent": "true" }, body: JSON.stringify({ data, aiConsent:true, documentContext:draft?{fields:draft.fields,signals:draft.signals??[],warnings:draft.warnings??[]}:undefined }) }); if (response.ok) { const result = await response.json() as { analysis?: AiAnalysis }; if (result.analysis) return { ...base, aiAnalysis: result.analysis, aiStatus: "ready" }; } } catch { /* deterministic report remains available */ } return fallback; }
 
 export function BusinessLifeline({ aiEnabled = false }: { aiEnabled?: boolean }) {
   const [view, setView] = useState<"landing" | "form" | "report">("landing"); const [step, setStep] = useState(0); const [data, setData] = useState<BusinessData>(emptyBusiness); const [report, setReport] = useState<BusinessReport | null>(null); const [error, setError] = useState(""); const [loaded, setLoaded] = useState(false); const [saveNotice, setSaveNotice] = useState(""); const [analysing, setAnalysing] = useState(false); const [importDraft, setImportDraft] = useState<SmartImportDraft | null>(null); const demoReport = generateReport(demoBusiness);

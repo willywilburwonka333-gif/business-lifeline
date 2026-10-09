@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { enforceRateLimit, hasExplicitAiConsent, privateResponseHeaders, rejectCrossSiteRequest } from "@/lib/api-security";
+import { requireAuthenticatedAiRequest, enforceRateLimit, hasExplicitAiConsent, privateResponseHeaders, rejectCrossSiteRequest } from "@/lib/api-security";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -152,6 +152,7 @@ export async function POST(request: Request) {
   try {
     const crossSite = rejectCrossSiteRequest(request);
     if (crossSite) return crossSite;
+    const authFailure = await requireAuthenticatedAiRequest(request); if (authFailure) return authFailure;
     const limited = enforceRateLimit(request, "brain");
     if (limited) return limited;
 
