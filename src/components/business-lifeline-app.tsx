@@ -29,7 +29,7 @@ const tutorialSteps: Record<TutorialId, TutorialStep[]> = {
     { title: "Decision support, not a verdict", body: "The system helps you understand pressure and prepare for professional help. It does not declare insolvency, value the business or guarantee recovery." },
   ],
   "mri-setup": [
-    { title: "Choose your privacy level", body: "Private calculation-only mode keeps the MRI figures in this browser. AI-enhanced mode uses the same deterministic calculations, then sends approved information for explanation and prioritisation.", target: ".mri-mode-options" },
+    { title: "Choose your privacy level", body: "Calculation-only mode does not send your information to an AI provider. Guest records remain on this device, while records entered under a signed-in account can also sync to the account's Firebase workspace. AI-enhanced mode sends explicitly approved information to an AI provider for interpretation.", target: ".mri-mode-options" },
     { title: "Documents are optional", body: "Upload records only when they will improve the facts. Never upload passwords, banking credentials, identity documents, card details or confidential customer information.", target: ".mri-mode-panel" },
     { title: "Continue into the real MRI", body: "The next three sections ask about the business, the numbers and urgent pressure. Honest estimates are more useful than figures chosen to make the business look healthier.", target: ".mri-mode-actions" },
   ],
@@ -182,7 +182,7 @@ export function BusinessLifelineApp() {
         <section className="mri-mode-panel" aria-labelledby="mri-setup-title">
           <p className="eyebrow">PRIVACY &amp; DOCUMENTS</p>
           <h1 id="mri-setup-title">Choose how your MRI is prepared.</h1>
-          <p className="mri-mode-lead">Keep the MRI calculation-only in this browser or allow optional AI prioritisation and document reading. Uploaded facts pre-fill Step 3, while supported operating signals strengthen the final diagnosis.</p>
+          <p className="mri-mode-lead">Choose a calculation-only report without AI-provider analysis, or explicitly authorise optional AI prioritisation and document reading. Uploaded facts pre-fill Step 3, while supported operating signals strengthen the final diagnosis.</p>
           <div className="mri-mode-options" role="radiogroup" aria-label="Report preparation choice">
             <label className={`mri-mode-card ${reportMode === "private" ? "selected" : ""}`}>
               <input type="radio" name="report-mode" checked={reportMode === "private"} onChange={() => { setReportMode("private"); setAiConsent(false); }} />

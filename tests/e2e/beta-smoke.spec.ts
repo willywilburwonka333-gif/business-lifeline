@@ -54,3 +54,38 @@ test("weekly pilot outcome checkpoint persists", async ({ page }) => {
   await page.getByRole("button", { name: /pilot outcomes/i }).click();
   await expect(page.getByLabel(/actions completed/i)).toHaveValue("3");
 });
+
+test("synthetic MRI can create and restore a measurable quoting repair project", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("business-lifeline-tutorial-welcome-v1", "complete");
+    window.localStorage.setItem("business-lifeline-tutorial-overview-v1", "complete");
+    window.localStorage.setItem("business-lifeline-tutorial-lifeline-v1", "complete");
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: /Choose a Demo MRI/i }).click();
+  const chooser = page.getByRole("dialog", { name: /Choose the business you want to test/i });
+  await expect(chooser).toBeVisible();
+  await chooser.getByRole("button", { name: /Family Table Cafe/i }).click();
+  await expect(page.locator(".product-brand")).toContainText("Family Table Cafe");
+
+  const recover = page.getByRole("navigation", { name: "Business Lifeline main areas" }).getByRole("button", { name: /Business Lifeline/i });
+  await recover.click();
+  await page.getByRole("tab", { name: /Repair Centre/i }).click();
+  await expect(page.getByRole("heading", { name: "Repair Centre", level: 2 })).toBeVisible();
+  await page.getByLabel(/Show all improvement templates/i).check();
+  await page.getByRole("button", { name: /Create repair project/i }).first().click();
+  await expect(page.getByRole("heading", { name: "Projects and progress" })).toBeVisible();
+  await expect(page.getByText(/Repair project created/i)).toBeVisible();
+
+  const projectsBefore = await page.evaluate(() => {
+    const key = Object.keys(localStorage).find(key => key.startsWith("business-lifeline-repair-projects-v1:"));
+    return key ? JSON.parse(localStorage.getItem(key) || "{}").projects?.length : 0;
+  });
+  expect(projectsBefore).toBe(1);
+
+  await page.reload();
+  await recover.click();
+  await page.getByRole("tab", { name: /Repair Centre/i }).click();
+  await expect(page.getByRole("heading", { name: "Projects and progress" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Planning.*0%/i }).first()).toBeVisible();
+});
