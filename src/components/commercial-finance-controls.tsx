@@ -1,5 +1,6 @@
 "use client";
 
+import { escapePrintHtml } from "@/lib/escape-print-html";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { appendJournal, readBooksStore, saveBooksStore, type LedgerJournal } from "@/lib/lifeline-books-engine";
 
@@ -287,7 +288,7 @@ export function CommercialFinanceControls({ initialTab = "banking" }: { initialT
     const invoiceTotal = invoiceRows.reduce((sum, item) => sum + item.balance, 0);
     const win = window.open("", "_blank", "width=850,height=900");
     if (!win) return;
-    win.document.write(`<html><head><title>Statement - ${customer}</title><style>body{font-family:Arial;padding:48px;color:#173244}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #ccd8de;text-align:left}.right{text-align:right}</style></head><body><h1>Lifeline Pay · Customer statement</h1><h2>${customer}</h2><p>Date ${new Date().toLocaleDateString("en-AU")}</p><table><tr><th>Reference</th><th>Date</th><th>Due</th><th>Total</th><th>Paid</th><th>Balance</th></tr>${invoiceRows.map((item) => `<tr><td>${item.reference}</td><td>${item.date}</td><td>${item.due}</td><td>${money(item.total)}</td><td>${money(item.paid)}</td><td>${money(item.balance)}</td></tr>`).join("")}${plans.map((item) => `<tr><td>${item.reference}</td><td></td><td>${item.dueDate}</td><td>${money(item.total)}</td><td>${money(item.paid)}</td><td>${money(item.total-item.paid)}</td></tr>`).join("")}</table><h3 class="right">Total owing ${money(invoiceTotal+planTotal)}</h3><p>Recurring arrangements: ${recurringRules.length}</p><script>window.print()</script></body></html>`);
+    win.document.write(`<html><head><title>Statement - ${escapePrintHtml(customer)}</title><style>body{font-family:Arial;padding:48px;color:#173244}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #ccd8de;text-align:left}.right{text-align:right}</style></head><body><h1>Lifeline Pay · Customer statement</h1><h2>${escapePrintHtml(customer)}</h2><p>Date ${new Date().toLocaleDateString("en-AU")}</p><table><tr><th>Reference</th><th>Date</th><th>Due</th><th>Total</th><th>Paid</th><th>Balance</th></tr>${invoiceRows.map((item) => `<tr><td>${escapePrintHtml(item.reference)}</td><td>${escapePrintHtml(item.date)}</td><td>${escapePrintHtml(item.due)}</td><td>${money(item.total)}</td><td>${money(item.paid)}</td><td>${money(item.balance)}</td></tr>`).join("")}${plans.map((item) => `<tr><td>${escapePrintHtml(item.reference)}</td><td></td><td>${escapePrintHtml(item.dueDate)}</td><td>${money(item.total)}</td><td>${money(item.paid)}</td><td>${money(item.total-item.paid)}</td></tr>`).join("")}</table><h3 class="right">Total owing ${money(invoiceTotal+planTotal)}</h3><p>Recurring arrangements: ${recurringRules.length}</p><script>window.print()</script></body></html>`);
     win.document.close();
   };
 
