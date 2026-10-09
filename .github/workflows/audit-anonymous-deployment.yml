@@ -46,3 +46,5 @@ jobs:
           spend=$(curl -sS --max-time 12 -o /dev/null -w '%{http_code}' -X POST -H 'x-business-lifeline-ai-consent: true' -F 'empty=1' https://business-lifeline.vercel.app/api/read-spend-record)
           echo "anonymous_ai_statuses=analyse:$analyse brain:$brain records:$record spend:$spend"
           test "$analyse" = "401" && test "$brain" = "401" && test "$record" = "401" && test "$spend" = "401" || { echo "At least one AI endpoint was not authenticated"; exit 1; }
+
+# Pilot final production check after merged commit f1cceea1f549df5b3be71f128a05878a436f6643.
