@@ -2,7 +2,6 @@
 
 import { escapePrintHtml } from "@/lib/escape-print-html";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
-import { escapePrintHtml } from "@/lib/escape-print-html";
 import { appendJournal, readBooksStore, saveBooksStore, type LedgerJournal } from "@/lib/lifeline-books-engine";
 
 const KEY = "business-lifeline-commercial-finance-controls-v1";
