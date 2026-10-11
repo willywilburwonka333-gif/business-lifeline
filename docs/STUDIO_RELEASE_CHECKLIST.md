@@ -41,7 +41,7 @@ No production merge is complete until every required item below is confirmed or 
 
 ## 5. Support and commercial operations
 
-- [ ] `businesslifeline.au@gmail.com` is monitored.
+- [ ] `businesslifelinesupport@gmail.com` is monitored.
 - [ ] Support, refund, complaint and security-report wording is current.
 - [ ] Release notes explain meaningful customer changes.
 - [ ] Known limitations are recorded before launch.

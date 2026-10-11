@@ -20,7 +20,7 @@ const today=()=>new Date().toISOString().slice(0,10);
 const nextNumber=()=>{const rows=read<InvoiceRecord[]>(HISTORY_KEY,[]);const max=rows.reduce((m,r)=>Math.max(m,Number(r.number.replace(/\D/g,""))||0),0);return `BL-${String(max+1).padStart(4,"0")}`};
 
 export function CustomerInvoice({onClose}:{onClose:()=>void}){
- const [settings,setSettings]=useState<Settings>(()=>read(SETTINGS_KEY,defaultSettings));
+ const [settings,setSettings]=useState<Settings>(()=>{const saved=read(SETTINGS_KEY,defaultSettings);return ["businesslifeline@gmail.com","businesslifeline.au@gmail.com"].includes(saved.email.trim().toLowerCase())?{...saved,email:BUSINESS.supportEmail}:saved;});
  const [customer,setCustomer]=useState<Customer>(emptyCustomer);
  const [offer,setOffer]=useState("Lifeline MRI");
  const selected=DIAGNOSTIC_OFFERS.find(x=>x.name===offer)??DIAGNOSTIC_OFFERS[1];

@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Please report suspected security issues privately to **businesslifeline.au@gmail.com** with the subject line `Security report — Business Lifeline`.
+Please report suspected security issues privately to **businesslifelinesupport@gmail.com** with the subject line `Security report — Business Lifeline`.
 
 Include:
 
