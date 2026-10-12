@@ -2,11 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { buildForecastFromMRI, calculateCashflowForecast, type CashflowForecast, type ForecastWeekInput } from "@/lib/cashflow-forecast";
+import { RecoveryForecast } from "@/components/recovery-forecast";
 import { assessMriAccuracyProfile, readMriAccuracyProfile, type MriAccuracyProfile } from "@/lib/mri-accuracy-profile";
 import type { BusinessData } from "@/lib/types";
 
 const currencyFor = (country: string) => country.toLowerCase().includes("australia") ? "AUD" : country.toLowerCase().includes("new zealand") ? "NZD" : country.toLowerCase().includes("united kingdom") ? "GBP" : country.toLowerCase().includes("canada") ? "CAD" : "USD";
 const money = (value: number, country: string) => new Intl.NumberFormat("en", { style: "currency", currency: currencyFor(country), maximumFractionDigits: 0 }).format(value);
+
+const signedMoney = (value: number, country: string) => new Intl.NumberFormat("en-AU", { style: "currency", currency: currencyFor(country), maximumFractionDigits: 0, signDisplay: "exceptZero" }).format(value);
 
 const editableFields: Array<{ key: keyof Omit<ForecastWeekInput, "week">; label: string }> = [
   { key: "customerReceipts", label: "Customer receipts" },
@@ -91,7 +94,7 @@ export function AccuracyBoost({ data }: { data: BusinessData }) {
   return (
     <section className="panel accuracy-boost no-print" aria-labelledby="accuracy-boost-title">
       <div className="section-heading"><span>Accuracy Boost · 13-week cashflow</span><h3 id="accuracy-boost-title">See when cash pressure is likely to hit</h3></div>
-      <p className="template-note">Your MRI and saved Accuracy Inputs pre-fill a weekly starting point. Edit only what is different, then save the forecast.</p>
+      <p className="template-note">Your MRI and saved Accuracy Inputs pre-fill the current-course forecast. Opening cash is money available today; a negative monthly cash result is the recurring loss, not a negative starting bank balance. Edit the weekly cash movements before relying on the result.</p>
 
       {profileAssessment && <aside className="analysis-status ready"><span>Accuracy Inputs connected</span><small>{profileAssessment.confidence}% profile completion · payroll, PAYG, creditors, facilities and one-off items are included where supplied.</small></aside>}
 
@@ -99,19 +102,22 @@ export function AccuracyBoost({ data }: { data: BusinessData }) {
         <article><span>First cash shortfall</span><strong>{result.firstShortfallWeek === null ? "No shortfall" : `Week ${result.firstShortfallWeek}`}</strong><small>Within the next 13 weeks</small></article>
         <article><span>Lowest cash balance</span><strong className={result.lowestClosingCash < 0 ? "negative" : "positive"}>{money(result.lowestClosingCash, data.country)}</strong><small>Lowest projected closing cash</small></article>
         <article><span>Funding gap</span><strong className={result.fundingGap > 0 ? "negative" : "positive"}>{money(result.fundingGap, data.country)}</strong><small>Minimum extra cash or relief needed</small></article>
-        <article><span>Forecast confidence</span><strong>{result.confidence}%</strong><small>Based on completed weekly fields</small></article>
+        <article><span>Fields filled in</span><strong>{result.confidence}%</strong><small>Field completion, not independently verified accuracy</small></article>
       </div>
 
-      <label className="field"><span>Opening cash and confirmed facilities</span><div className="money-input"><span>$</span><input type="number" min="0" step="any" value={forecast.openingCash} onChange={(event) => setForecast((current) => ({ ...current, openingCash: Math.max(0, Number(event.target.value) || 0) }))} /></div><small>Cash actually available plus any undrawn facilities you have confirmed can be used.</small></label>
+      <label className="field"><span>Opening cash actually available</span><div className="money-input"><span>$</span><input type="number" min="0" step="any" value={forecast.openingCash} onChange={(event) => setForecast((current) => ({ ...current, openingCash: Math.max(0, Number(event.target.value) || 0) }))} /></div><small>Use actual available cash. Undrawn facilities are excluded unless modelled as a separate confirmed cash receipt.</small></label>
 
+      <RecoveryForecast baseline={forecast} businessName={data.businessName} country={data.country} />
+
+      <h4 className="forecast-week-list-heading">Current course · edit weekly receipts and payments</h4>
       <div className="forecast-week-list">
         {result.weeks.map((week, index) => {
           const open = expandedWeek === week.week;
           return <article className="panel" key={week.week}>
             <button type="button" className="button-reset forecast-week-summary" onClick={() => setExpandedWeek(open ? 0 : week.week)} aria-expanded={open}>
-              <span><small>Week {week.week}</small><strong>{money(week.closingCash, data.country)} closing cash</strong></span>
-              <span><small>Cash in {money(week.totalCashIn, data.country)}</small><small>Cash out {money(week.totalCashOut, data.country)}</small></span>
-              <b>{open ? "−" : "+"}</b>
+              <span className="forecast-week-main"><small>Week {week.week} · closing cash</small><strong className={week.closingCash < 0 ? "negative" : "positive"}>{signedMoney(week.closingCash, data.country)}</strong><small>{week.closingCash < 0 ? "Cash shortfall" : "Cash remaining"}</small></span>
+              <span className="forecast-week-movements"><small>In: {money(week.totalCashIn, data.country)}</small><small>Out: {money(week.totalCashOut, data.country)}</small></span>
+              <span className="forecast-week-toggle">{open ? "Hide details ↑" : "Edit week ↓"}</span>
             </button>
             {open && <div className="fields money-fields">
               {editableFields.map((field) => <label className="field" key={field.key}><span>{field.label}</span><div className="money-input"><span>$</span><input type="number" min="0" step="any" value={forecast.weeks[index][field.key]} onChange={(event) => updateWeek(index, field.key, Number(event.target.value) || 0)} /></div></label>)}
