@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { BUSINESS } from "@/lib/legal-content";
 
 export const metadata: Metadata = {
   title: "Service Status",
@@ -45,7 +46,7 @@ export default function StatusPage() {
 
         <article className="service-status-card">
           <h2>Support and incident reports</h2>
-          <p>Email <a href="mailto:businesslifelinesupport@gmail.com">businesslifelinesupport@gmail.com</a> with the page you were using, what you expected, what happened and the device/browser involved.</p>
+          <p>Email <a href={`mailto:${BUSINESS.supportEmail}`}>{BUSINESS.supportEmail}</a> with the page you were using, what you expected, what happened and the device/browser involved.</p>
           <p>Do not email passwords, banking credentials, tax file numbers, identity documents, customer records or confidential contracts.</p>
         </article>
 
