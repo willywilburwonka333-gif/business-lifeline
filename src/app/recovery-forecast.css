@@ -1,0 +1,74 @@
+/* Recovery comparisons and readable 13-week balances on small screens. */
+.accuracy-boost .forecast-week-list-heading{font-size:1.05rem;margin:28px 0 14px;color:#173047}
+.accuracy-boost .forecast-week-list{display:grid;gap:10px}
+.accuracy-boost .forecast-week-list>article.panel{margin:0;padding:0;min-width:0;overflow:hidden;border:1px solid #dce4e8;border-radius:14px}
+.accuracy-boost .forecast-week-summary{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto;gap:16px;align-items:center;width:100%;min-height:82px;padding:15px 17px;text-align:left;color:#173047;overflow-wrap:anywhere}
+.accuracy-boost .forecast-week-summary:focus-visible{outline:3px solid #f47b3f;outline-offset:-3px}
+.accuracy-boost .forecast-week-summary small{display:block;font-size:.75rem;color:#657382;line-height:1.4}
+.accuracy-boost .forecast-week-summary .forecast-week-main{display:grid;gap:3px;min-width:0}
+.accuracy-boost .forecast-week-main strong{display:block;font-size:clamp(1.25rem,3vw,1.65rem);line-height:1.25;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.accuracy-boost .forecast-week-main strong.positive{color:#176b4d}
+.accuracy-boost .forecast-week-main strong.negative{color:#ac302b}
+.accuracy-boost .forecast-week-movements{display:grid;gap:4px;min-width:0}
+.accuracy-boost .forecast-week-toggle{font-size:.77rem;color:#174a5e;font-weight:800;text-align:right;white-space:normal}
+.accuracy-boost .forecast-week-list>article .fields{padding:16px;border-top:1px solid #dce4e8}
+.recovery-forecast{display:grid;gap:20px;margin:26px 0;padding:22px;border:1px solid #ccdce1;border-radius:18px;background:#f7fafb;min-width:0}
+.recovery-forecast>*{min-width:0}
+.recovery-forecast-head h4{font-size:clamp(1.25rem,2.8vw,1.65rem);margin:5px 0 10px;color:#173047}
+.recovery-forecast-head p:last-child{color:#536b77;line-height:1.55;font-size:.9rem;margin:0}
+.recovery-forecast-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.recovery-forecast-kpis article{display:grid;align-content:start;gap:7px;background:#fff;border:1px solid #dbe5e8;padding:17px;border-radius:14px;min-width:0}
+.recovery-forecast-kpis small,.recovery-forecast-kpis span{font-size:.75rem;color:#576d7b;line-height:1.45}
+.recovery-forecast-kpis strong{font-size:clamp(1.25rem,2.8vw,1.8rem);line-height:1.25;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.recovery-forecast .positive{color:#176b4d}
+.recovery-forecast .negative{color:#ac302b}
+.recovery-forecast-chart{border:1px solid #dbe5e8;border-radius:14px;background:white;padding:13px 15px}
+.recovery-forecast-chart svg{display:block;width:100%;height:auto;max-height:230px}
+.recovery-forecast-chart svg text{font:12px Arial,sans-serif;fill:#657382}
+.recovery-forecast-zero{stroke:#98a6ae;stroke-width:1.5;stroke-dasharray:7 7}
+.recovery-forecast-line-original,.recovery-forecast-line-proposed{fill:none;stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.recovery-forecast-line-original{stroke:#ad4d35}
+.recovery-forecast-line-proposed{stroke:#087b71}
+.recovery-forecast-legend{display:flex;gap:15px;flex-wrap:wrap;font-size:.76rem;color:#506572}
+.recovery-forecast-legend span{display:inline-flex;align-items:center;gap:6px}
+.recovery-forecast-legend i{display:inline-block;width:20px;height:3px;border-radius:3px}
+.recovery-forecast-legend i.current{background:#ad4d35}.recovery-forecast-legend i.proposed{background:#087b71}
+.recovery-forecast-target{background:#eef4f6;padding:14px 16px;border-left:4px solid #174a5e;font-size:.87rem;line-height:1.55;margin:0}
+.recovery-forecast-controls{background:#fff;border:1px solid #dbe5e8;padding:20px;border-radius:14px;min-width:0}
+.recovery-forecast-controls h5{font-size:1.08rem;margin:0 0 6px}
+.recovery-forecast-controls>p{color:#576d7b;line-height:1.5;font-size:.86rem;margin:0 0 18px}
+.recovery-forecast-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.recovery-forecast-fields label,.recovery-forecast-action{display:grid;align-content:start;gap:6px;font-size:.8rem;font-weight:750;color:#173047;min-width:0}
+.recovery-forecast-fields input,.recovery-forecast-fields select,.recovery-forecast-action textarea{width:100%;min-width:0;min-height:44px;padding:10px 12px;background:#fff;border:1px solid #cbd9de;border-radius:9px;color:#142638;font-size:1rem}
+.recovery-forecast-fields small{font-size:.73rem;font-weight:400;color:#657382;line-height:1.5}
+.recovery-forecast-action{margin-top:16px}
+.recovery-forecast-action textarea{resize:vertical;line-height:1.5}
+.recovery-forecast-confirm{display:flex;align-items:flex-start;gap:9px;margin:16px 0;font-size:.82rem;line-height:1.5}
+.recovery-forecast-confirm input{flex:0 0 auto;margin-top:3px;width:17px;height:17px}
+.recovery-forecast-notice{font-size:.8rem;color:#8d492b;background:#fff4e9;border-radius:8px;padding:10px!important}
+.recovery-forecast-warnings{padding:14px 16px;margin:14px 0;border:1px solid #efddc6;border-radius:10px;background:#fffbf5;font-size:.8rem;line-height:1.5}
+.recovery-forecast-warnings ul{padding-left:18px;margin:7px 0 0}
+.recovery-forecast-controls .scenario-buttons{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.recovery-forecast-details{border:1px solid #dbe5e8;border-radius:12px;background:#fff;overflow:hidden}
+.recovery-forecast-details summary{cursor:pointer;padding:15px 18px;font-weight:750;color:#173047}
+.recovery-forecast-table-scroll{overflow-x:auto;width:100%;padding:0 10px 12px}
+.recovery-forecast-table-scroll table{border-collapse:collapse;width:100%;min-width:510px;font-size:.82rem}
+.recovery-forecast-table-scroll th,.recovery-forecast-table-scroll td{padding:10px;text-align:right;border-bottom:1px solid #e8eff1;font-variant-numeric:tabular-nums;white-space:nowrap}
+.recovery-forecast-table-scroll th:first-child{text-align:left}
+.recovery-forecast-table-scroll thead th{color:#536b77;background:#f5f9fa}
+.recovery-forecast-disclaimer{font-size:.74rem;color:#657382;line-height:1.5;margin:0}
+@media(max-width:720px){
+ .recovery-forecast{padding:14px;margin:20px 0;gap:15px;border-radius:14px}
+ .recovery-forecast-kpis{grid-template-columns:minmax(0,1fr)}
+ .recovery-forecast-kpis article{padding:14px}
+ .recovery-forecast-kpis strong{font-size:1.55rem}
+ .recovery-forecast-chart{padding:12px 8px}
+ .recovery-forecast-fields{grid-template-columns:minmax(0,1fr)}
+ .recovery-forecast-controls{padding:14px}
+ .accuracy-boost .forecast-week-summary{grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;padding:14px 12px}
+ .accuracy-boost .forecast-week-main{grid-column:1}
+ .accuracy-boost .forecast-week-main strong{font-size:1.45rem}
+ .accuracy-boost .forecast-week-movements{grid-column:1;grid-row:2;display:flex;gap:10px;flex-wrap:wrap}
+ .accuracy-boost .forecast-week-toggle{grid-column:2;grid-row:1 / span 2;max-width:74px}
+ .accuracy-boost .forecast-week-list>article .fields.money-fields{grid-template-columns:minmax(0,1fr)}
+}

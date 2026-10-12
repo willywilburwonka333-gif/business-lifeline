@@ -48,6 +48,7 @@ import "./stage8-guide.css";
 import "./stage9-polish.css";
 import "./stage10-transparency.css";
 import "./recovery-mobile-fix.css";
+import "./recovery-forecast.css";
 import "./final-submission-polish.css";
 import "./final-submission-details.css";
 import "./legal.css";
