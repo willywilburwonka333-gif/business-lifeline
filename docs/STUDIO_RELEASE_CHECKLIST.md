@@ -41,7 +41,9 @@ No production merge is complete until every required item below is confirmed or 
 
 ## 5. Support and commercial operations
 
-- [ ] `businesslifelinesupport@gmail.com` is monitored.
+- [ ] `support@businesslifeline.com.au` is monitored in iCloud Mail for support, privacy, refunds, complaints and security reports.
+- [ ] `dylan@businesslifeline.com.au` is available as the owner-facing business address.
+- [ ] The legacy `businesslifelinesupport@gmail.com` outreach mailbox is monitored during the transition; it is a separate account and is not an iCloud sending alias.
 - [ ] Support, refund, complaint and security-report wording is current.
 - [ ] Release notes explain meaningful customer changes.
 - [ ] Known limitations are recorded before launch.
