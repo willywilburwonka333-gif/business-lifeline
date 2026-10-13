@@ -23,6 +23,14 @@ test("public register action opens the account creation panel", async ({ page })
     await expect(panel).toContainText("NEXT_PUBLIC_FIREBASE");
   } else {
     await expect(page.getByRole("heading", { name: /Create your account/i })).toBeVisible();
+    const actions = panel.getByRole("group", { name: "Choose account action" });
+    const signInTab = actions.getByRole("button", { name: "Sign in" });
+    await expect(signInTab).toBeVisible();
+    await signInTab.click();
+    await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Forgot password?" })).toBeVisible();
+    await actions.getByRole("button", { name: "Create account" }).click();
+    await expect(page.getByRole("heading", { name: /Create your account/i })).toBeVisible();
     await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
     await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
   }
