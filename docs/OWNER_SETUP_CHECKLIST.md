@@ -129,6 +129,31 @@ Subscribe it to at least:
 
 The repository contains checkout, customer portal, entitlement status and webhook lifecycle code. The exact price amounts remain an owner decision.
 
+## 7A. Creator-controlled pilot registration
+
+The real pilot workflow is implemented in `src/components/pilot-centre.tsx` and server routes `/api/pilots` and `/api/pilots/join`. Creator-only privileges are checked using the Firebase signed-in user's **verified email** against a **server-side production** environment variable:
+
+- `BUSINESS_LIFELINE_CREATOR_EMAIL` — the Firebase-verified login email belonging to the sole-trader owner (never a `NEXT_PUBLIC_` variable).
+- `BUSINESS_LIFELINE_CREATOR_UID` — optional but strongly recommended, pins creator rights to the exact Firebase Authentication account UID. Configure before sharing real client data.
+
+If no creator email is configured, the app intentionally denies creator privileges. A customer cannot make themselves an administrator by editing Firestore. The `pilotProjects` and `pilotPaymentEvents` collections are accessible **only via verified server routes**, not through direct client Firestore writes. Existing Firestore rules deny both collections.
+
+On the account screen, a configured creator can: create a pilot with the customer's exact email, name, business, service and payment method; share a one-time unique join link; rotate an unclaimed invitation; track invitations, claimed/active pilots, payments and opt-in shared summaries; mark paid manual transactions with a confirmed receipt reference; verify and reconcile a Stripe Checkout Session directly against Stripe; close a pilot.
+
+Client flow: open unique link → sign in/create Firebase account and verify the invited email → explicitly accept pilot terms/privacy → join → select payment preference → pay via app once Stripe is activated (or arrange/manual payments) → complete MRI → explicitly share the summary.
+
+Self-service flow (no owner present): sign in/create and verify a Firebase account → open **Create / join pilot** → choose service, business name and preferred payment method → accept terms/privacy → create a pending paid pilot → pay via authenticated Stripe checkout once it is activated, or arrange PayID/cash/transfer for creator approval. Complimentary access is invitation-only. Creator dashboard automatically lists these self-service registrations. Direct shareable Stripe links still require creator-side `cs_live_...` reconciliation, not merely a receipt screenshot.
+
+No paid pilot is automatically granted service access for pending/unpaid transactions. Cash, PayID and bank transfers require actual funds and a creator's explicit verified acknowledgement. Free pilot access is intentionally marked `waived`, not paid.
+
+**Before a first customer**:
+- Test creator and guest identities in separate browsers; an unrelated email and an unverified email must not claim an invitation.
+- Test zero-cost trial, Stripe account-linked purchase, direct Stripe payment reconciliation and cash/PayID receipt confirmation separately.
+- Check pilot service scope/consent, customer report-sharing, and closing/revoking a pilot.
+- Configure and test Stripe live endpoint events and the `STRIPE_SERVICE_CHECKOUT_ENABLED` switch; do **not** enable until Vercel environment access and webhook verification work.
+- Do not upload client-identifiable payroll, bank credentials, card data, TFNs or identity documents without clearance.
+- Obtain a privacy/security and appropriate professional review before inviting real businesses to upload confidential data.
+
 ## 8. Production checks you must personally verify
 
 Before a paid public launch:

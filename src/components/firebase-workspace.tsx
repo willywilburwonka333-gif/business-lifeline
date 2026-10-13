@@ -15,6 +15,7 @@ import {
 import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc, type DocumentSnapshot } from "firebase/firestore";
 import { firebaseAuth, firebaseConfigured, firebaseDb } from "@/lib/firebase-client";
 import { SERVICE_CATALOG, type ServiceKey } from "@/lib/service-payments";
+import { PilotCentre } from "@/components/pilot-centre";
 
 const CLOUD_KEYS = [
   "business-lifeline-mri-v2",
@@ -148,6 +149,8 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
   const authEpoch = useRef(0);
   const syncing = useRef(false);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [pilotInvitePending, setPilotInvitePending] = useState(false);
+  useEffect(() => { const url = new URLSearchParams(window.location.search); if (url.get("pilot") && url.get("invite")) { setPanelOpen(true); setPilotInvitePending(true); } }, []);
   const [createMode, setCreateMode] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -591,6 +594,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
         </div>
         <div className="cloud-account-actions">
           {user && <button type="button" onClick={() => void syncWorkspace(user)}>Sync now</button>}
+          <button type="button" onClick={() => setPanelOpen(true)}>Create / join pilot</button>
           <button type="button" onClick={() => setPanelOpen((open) => !open)}>{user ? "Account" : "Sign in / create account"}</button>
         </div>
       </aside>
@@ -608,6 +612,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
                 <strong>{usesPassword ? (user.emailVerified ? "Email verified" : "Email verification required") : "Verified Google account"}</strong>
                 <span>Role: Owner · Workspace: Active beta · Plan: {billing.plan === "pro" ? "Pro" : billing.rescuePurchased ? "Rescue access" : "Free"}</span>
               </div>
+              <PilotCentre user={user} servicesConfigured={Boolean(billing.servicesConfigured)} onOpenMri={() => setPanelOpen(false)} />
               {usesPassword && !user.emailVerified && <button className="cloud-mode-switch" type="button" onClick={() => void resendVerification()} disabled={busy}>Resend verification email</button>}
               {billing.configured && <div className="cloud-account-panel-actions">
                 {billing.plan !== "pro" && <button type="button" className="button primary" onClick={() => void startCheckout({ plan: "pro" })} disabled={busy}>Upgrade to Pro</button>}
@@ -623,7 +628,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
                     return <article key={service.key} className="cloud-service-offer">
                       <div><strong>{service.offer.name}</strong><span> — ${service.offer.price} AUD</span>
                         <p>{service.offer.for}</p></div>
-                      <button type="button" className="button ghost" disabled={!billing.servicesConfigured || busy} onClick={() => void startCheckout({ service: service.key })}>Purchase</button>
+                      <small>Choose this service in the Pilot centre above to register and pay.</small>
                       {paid && <small>Payment verified · service purchased</small>}
                     </article>;
                   })}
@@ -652,6 +657,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
                 <button type="button" className={createMode ? "active" : ""} aria-pressed={createMode} onClick={() => { setCreateMode(true); setError(""); setNotice(""); }}>Create account</button>
               </div>
               <h2>{createMode ? "Create your account" : "Sign in"}</h2>
+              {pilotInvitePending && <p role="status"><strong>Customer pilot invitation:</strong> Sign in or create an account using the email address that received your invitation. After email verification you can accept the pilot, choose how to pay and begin.</p>}
               <p>You can keep using Business Lifeline privately on this device. An account adds secure cloud backup and access across devices.</p>
               <label>Email<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
               <label>Password<input type="password" autoComplete={createMode ? "new-password" : "current-password"} value={password} onChange={(event) => setPassword(event.target.value)} minLength={6} required /></label>

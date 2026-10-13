@@ -3,6 +3,7 @@ import { getFirebaseAdmin } from "@/lib/firebase-admin";
 import { privateResponseHeaders } from "@/lib/api-security";
 import { verifyStripeWebhook } from "@/lib/stripe-billing";
 import { verifiedServicePayment } from "@/lib/service-payments";
+import type { Pilot } from "@/lib/pilot-project";
 
 export const runtime = "nodejs";
 
@@ -18,7 +19,7 @@ type StripeObject = {
   payment_status?: string;
   status?: string;
   customer_details?: { email?: string; name?: string };
-  metadata?: { uid?: string; plan?: string; service_key?: string };
+  metadata?: { uid?: string; plan?: string; service_key?: string; pilot_id?: string };
 };
 
 type StripeEvent = {
@@ -77,6 +78,27 @@ export async function POST(request: Request) {
           source: object.payment_link ? "payment_link" : "app_checkout",
         };
         await db.collection("serviceOrders").doc(object.id!).set(order, { merge: true });
+        if (accountUid && object.metadata?.pilot_id) {
+          const pilotRef = db.collection("pilotProjects").doc(object.metadata.pilot_id);
+          await db.runTransaction(async tx => {
+            const existing = await tx.get(pilotRef);
+            if (!existing.exists) throw new Error("Paid pilot has no matching project.");
+            const pilot = existing.data() as Pilot;
+            if (pilot.clientUid !== accountUid || pilot.serviceKey !== service.key ||
+                pilot.paymentMethod !== "stripe" || !pilot.consentAt || pilot.status !== "active")
+              throw new Error("Paid pilot does not match authorised service account.");
+            if (pilot.paymentStatus === "paid") {
+              if (pilot.stripeCheckoutSessionId !== object.id) throw new Error("A different session paid this pilot.");
+              return;
+            }
+            if (pilot.paymentStatus !== "pending") throw new Error("Pilot payment is not pending.");
+            tx.update(pilotRef, {
+              paymentStatus: "paid", paidAt: now, stripeCheckoutSessionId: object.id,
+              updatedAt: now,
+            });
+          });
+          await db.collection("serviceOrders").doc(object.id!).set({ pilotId: object.metadata.pilot_id }, { merge: true });
+        }
         if (accountUid) {
           // Verify the Firebase user still exists before assigning entitlements.
           try {
