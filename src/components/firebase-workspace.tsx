@@ -594,6 +594,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
         </div>
         <div className="cloud-account-actions">
           {user && <button type="button" onClick={() => void syncWorkspace(user)}>Sync now</button>}
+          <button type="button" onClick={() => setPanelOpen(true)}>Create / join pilot</button>
           <button type="button" onClick={() => setPanelOpen((open) => !open)}>{user ? "Account" : "Sign in / create account"}</button>
         </div>
       </aside>
