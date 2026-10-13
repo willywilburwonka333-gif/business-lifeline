@@ -627,7 +627,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
                     return <article key={service.key} className="cloud-service-offer">
                       <div><strong>{service.offer.name}</strong><span> — ${service.offer.price} AUD</span>
                         <p>{service.offer.for}</p></div>
-                      <button type="button" className="button ghost" disabled={!billing.servicesConfigured || busy} onClick={() => setPanelOpen(true)}>Select in Pilot centre below</button>
+                      <small>Choose this service in the Pilot centre below to register and pay.</small>
                       {paid && <small>Payment verified · service purchased</small>}
                     </article>;
                   })}
