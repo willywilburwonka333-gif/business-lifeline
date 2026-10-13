@@ -49,7 +49,7 @@ export function PilotWorkspaceGate() {
 
   if (!user) return <PilotPublicLanding />;
   if (checking || !status) return <main className="cloud-auth-loading" role="status">{checking ? "Checking your account permissions…" : error || "Access temporarily unavailable."}<button type="button" className="button ghost" onClick={() => setRetry(n => n + 1)}>Retry</button></main>;
-  if (!status.isStudioOwner && !status.emailVerified) return <main className="cloud-auth-loading"><h1>Verify your email to start your pilot.</h1><p>Open the verification link sent during registration. Use Account above to resend it if necessary.</p><button type="button" className="button primary" onClick={() => void reload(user).then(() => { setRetry(n => n + 1); })}>I've verified my email</button></main>;
+  if (!status.isStudioOwner && !status.emailVerified) return <main className="cloud-auth-loading"><h1>Verify your email to start your pilot.</h1><p>Open the verification link sent during registration. Use Account above to resend it if necessary.</p><button type="button" className="button primary" onClick={() => void reload(user).then(() => user.getIdToken(true)).then(() => { setRetry(n => n + 1); })}>I've verified my email</button></main>;
 
   const full = status.tier === "full";
   return <>
