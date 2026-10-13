@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     const data = snapshot.data() || {};
     return NextResponse.json({
       configured: stripeConfigured() && Boolean(process.env.STRIPE_PRO_PRICE_ID && process.env.STRIPE_RESCUE_PRICE_ID && process.env.STRIPE_WEBHOOK_SECRET),
-      servicesConfigured: stripeConfigured() && Boolean(process.env.STRIPE_WEBHOOK_SECRET),
+      servicesConfigured: stripeConfigured() && Boolean(process.env.STRIPE_WEBHOOK_SECRET) && process.env.STRIPE_SERVICE_CHECKOUT_ENABLED === "true",
       plan: data.billingPlan || "free",
       subscriptionStatus: data.subscriptionStatus || null,
       rescuePurchased: Boolean(data.rescuePurchased),
