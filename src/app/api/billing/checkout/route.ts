@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     if (!service && body.plan !== "pro" && body.plan !== "rescue") {
       return NextResponse.json({ error: "Choose a valid paid plan or service." }, { status: 400, headers: privateResponseHeaders() });
     }
-    if (service && !process.env.STRIPE_WEBHOOK_SECRET) {
+    if (service && (!process.env.STRIPE_WEBHOOK_SECRET || process.env.STRIPE_SERVICE_CHECKOUT_ENABLED !== "true")) {
       return NextResponse.json({ error: "Service payments are not ready for automatic confirmation. Contact Business Lifeline support." }, { status: 503, headers: privateResponseHeaders() });
     }
     const priceId = service ? service.priceId : priceFor(body.plan as "pro" | "rescue");
