@@ -3,6 +3,7 @@ import { getFirebaseAdmin, requireFirebaseUser } from "@/lib/firebase-admin";
 import { privateResponseHeaders, rejectCrossSiteRequest } from "@/lib/api-security";
 import { priceFor, stripePost, type BillingPlan } from "@/lib/stripe-billing";
 import { serviceByKey, type ServiceKey } from "@/lib/service-payments";
+import { type Pilot } from "@/lib/pilot-project";
 
 export const runtime = "nodejs";
 
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = await request.json() as { plan?: BillingPlan; service?: ServiceKey };
+    const body = await request.json() as { plan?: BillingPlan; service?: ServiceKey; pilotId?: string };
     const service = serviceByKey(body.service);
     if ((body.service !== undefined && !service) || (service && body.plan !== undefined)) {
       return NextResponse.json({ error: "Choose a valid service." }, { status: 400, headers: privateResponseHeaders() });
@@ -32,6 +33,20 @@ export async function POST(request: Request) {
     if (!priceId) return NextResponse.json({ error: "Stripe price is not configured." }, { status: 503, headers: privateResponseHeaders() });
 
     const { db } = getFirebaseAdmin();
+    let pilot: Pilot | null = null;
+    if (body.pilotId) {
+      if (!service || !/^[0-9a-f-]{36}$/.test(body.pilotId)) {
+        return NextResponse.json({ error: "A pilot requires a valid service." }, { status: 400, headers: privateResponseHeaders() });
+      }
+      const pilotDoc = await db.collection("pilotProjects").doc(body.pilotId).get();
+      if (!pilotDoc.exists) return NextResponse.json({ error: "Pilot not found." }, { status: 404, headers: privateResponseHeaders() });
+      pilot = pilotDoc.data() as Pilot;
+      if (pilot.clientUid !== user.uid || pilot.clientEmail !== user.email?.toLowerCase() || !user.email_verified ||
+          pilot.serviceKey !== service.key || !pilot.consentAt || pilot.status !== "active" ||
+          pilot.paymentMethod !== "stripe" || pilot.paymentStatus !== "pending") {
+        return NextResponse.json({ error: "This pilot cannot start a card payment." }, { status: 403, headers: privateResponseHeaders() });
+      }
+    }
     const userRef = db.collection("users").doc(user.uid);
     const userSnapshot = await userRef.get();
     const customerId = userSnapshot.data()?.stripeCustomerId as string | undefined;
@@ -47,6 +62,10 @@ export async function POST(request: Request) {
     params.set("metadata[uid]", user.uid);
     if (service) {
       params.set("metadata[service_key]", service.key);
+      if (pilot) {
+        params.set("metadata[pilot_id]", pilot.id);
+        params.set("payment_intent_data[metadata][pilot_id]", pilot.id);
+      }
       params.set("payment_intent_data[metadata][service_key]", service.key);
       params.set("payment_intent_data[metadata][uid]", user.uid);
       params.set("customer_creation", "always");
