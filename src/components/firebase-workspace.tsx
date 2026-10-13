@@ -648,6 +648,10 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
           ) : (
             <form onSubmit={submitEmail}>
               <small>BUSINESS LIFELINE PILOT ACCOUNT</small>
+              <div className="cloud-account-mode-tabs" role="group" aria-label="Choose account action">
+                <button type="button" className={!createMode ? "active" : ""} aria-pressed={!createMode} onClick={() => { setCreateMode(false); setError(""); setNotice(""); }}>Sign in</button>
+                <button type="button" className={createMode ? "active" : ""} aria-pressed={createMode} onClick={() => { setCreateMode(true); setError(""); setNotice(""); }}>Create account</button>
+              </div>
               <h2>{createMode ? "Create your account" : "Sign in"}</h2>
               <p>Creating an account gives your business access to the guided MRI and recovery pilot. Studio-only features require separate approval.</p>
               <label>Email<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
@@ -659,7 +663,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
                 <button className="button ghost" type="button" onClick={submitGoogle} disabled={busy}>Continue with Google</button>
               </div>
               {!createMode && <button className="cloud-mode-switch" type="button" onClick={() => void resetPassword()} disabled={busy}>Forgot password?</button>}
-              <button className="cloud-mode-switch" type="button" onClick={() => { setCreateMode((mode) => !mode); setError(""); setNotice(""); }}>{createMode ? "Already have an account? Sign in" : "New here? Create an account"}</button>
+
             </form>
           )}
         </section>
