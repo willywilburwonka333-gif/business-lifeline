@@ -612,6 +612,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
                 <strong>{usesPassword ? (user.emailVerified ? "Email verified" : "Email verification required") : "Verified Google account"}</strong>
                 <span>Role: Owner · Workspace: Active beta · Plan: {billing.plan === "pro" ? "Pro" : billing.rescuePurchased ? "Rescue access" : "Free"}</span>
               </div>
+              <PilotCentre user={user} servicesConfigured={Boolean(billing.servicesConfigured)} onOpenMri={() => setPanelOpen(false)} />
               {usesPassword && !user.emailVerified && <button className="cloud-mode-switch" type="button" onClick={() => void resendVerification()} disabled={busy}>Resend verification email</button>}
               {billing.configured && <div className="cloud-account-panel-actions">
                 {billing.plan !== "pro" && <button type="button" className="button primary" onClick={() => void startCheckout({ plan: "pro" })} disabled={busy}>Upgrade to Pro</button>}
@@ -627,7 +628,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
                     return <article key={service.key} className="cloud-service-offer">
                       <div><strong>{service.offer.name}</strong><span> — ${service.offer.price} AUD</span>
                         <p>{service.offer.for}</p></div>
-                      <small>Choose this service in the Pilot centre below to register and pay.</small>
+                      <small>Choose this service in the Pilot centre above to register and pay.</small>
                       {paid && <small>Payment verified · service purchased</small>}
                     </article>;
                   })}
@@ -637,7 +638,6 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
                 {billing.purchases?.length ? <ul>{billing.purchases.map(p => <li key={p.id}>{p.serviceName} — {p.paymentStatus === "paid" ? "Paid" : "Pending"} · {p.purchasedAt.slice(0, 10)}</li>)}</ul> : <p>No verified diagnostic purchases on this account yet.</p>}
                 <button className="button ghost" type="button" onClick={() => void refreshBilling()}>Refresh payment status</button>
               </section>
-              <PilotCentre user={user} servicesConfigured={Boolean(billing.servicesConfigured)} onOpenMri={() => setPanelOpen(false)} />
               {notice && <p className="cloud-account-notice" role="status">{notice}</p>}
               {error && <p className="cloud-account-error" role="alert">{error}</p>}
               <div className="cloud-account-panel-actions">
