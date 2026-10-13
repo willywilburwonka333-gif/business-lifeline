@@ -149,7 +149,8 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
   const authEpoch = useRef(0);
   const syncing = useRef(false);
   const [panelOpen, setPanelOpen] = useState(false);
-  useEffect(() => { const url = new URLSearchParams(window.location.search); if (url.get("pilot") && url.get("invite")) setPanelOpen(true); }, []);
+  const [pilotInvitePending, setPilotInvitePending] = useState(false);
+  useEffect(() => { const url = new URLSearchParams(window.location.search); if (url.get("pilot") && url.get("invite")) { setPanelOpen(true); setPilotInvitePending(true); } }, []);
   const [createMode, setCreateMode] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -655,7 +656,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
                 <button type="button" className={createMode ? "active" : ""} aria-pressed={createMode} onClick={() => { setCreateMode(true); setError(""); setNotice(""); }}>Create account</button>
               </div>
               <h2>{createMode ? "Create your account" : "Sign in"}</h2>
-              {typeof window !== "undefined" && new URLSearchParams(window.location.search).get("pilot") && <p role="status"><strong>Customer pilot invitation:</strong> Sign in or create an account using the email address that received your invitation. After email verification you can accept the pilot, choose how to pay and begin.</p>}
+              {pilotInvitePending && <p role="status"><strong>Customer pilot invitation:</strong> Sign in or create an account using the email address that received your invitation. After email verification you can accept the pilot, choose how to pay and begin.</p>}
               <p>You can keep using Business Lifeline privately on this device. An account adds secure cloud backup and access across devices.</p>
               <label>Email<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
               <label>Password<input type="password" autoComplete={createMode ? "new-password" : "current-password"} value={password} onChange={(event) => setPassword(event.target.value)} minLength={6} required /></label>
