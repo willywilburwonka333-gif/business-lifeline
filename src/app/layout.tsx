@@ -1,13 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { BetaSafetyCentre } from "@/components/beta-safety-centre";
-import { BusinessOsScrollAssist } from "@/components/business-os-scroll-assist";
-import { CommercialCloudBridge } from "@/components/commercial-cloud-bridge";
 import { ConnectionStatus } from "@/components/connection-status";
-import { OperatingLedgerSync } from "@/components/operating-ledger-sync";
-import { StructuredCoreRecordSync } from "@/components/structured-core-record-sync";
-import { SharedPlatformShell } from "@/components/shared-platform-shell";
-import { NativeBooksMriSync } from "@/components/native-books-mri-sync";
-import { TeamWorkspaceManager } from "@/components/team-workspace-manager";
 import "./globals.css";
 import "./tools.css";
 import "./print.css";
@@ -71,5 +63,5 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#071b2d" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body><a className="skip-link" href="#main-content">Skip to main content</a><ConnectionStatus /><CommercialCloudBridge /><OperatingLedgerSync /><NativeBooksMriSync /><TeamWorkspaceManager /><StructuredCoreRecordSync /><SharedPlatformShell /><BetaSafetyCentre /><BusinessOsScrollAssist />{children}</body></html>;
+  return <html lang="en"><body><a className="skip-link" href="#main-content">Skip to main content</a><ConnectionStatus />{children}</body></html>;
 }
