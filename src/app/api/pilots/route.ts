@@ -41,8 +41,41 @@ export async function POST(request: Request) {
   const limit = enforceRateLimit(request, "pilot-create"); if (limit) return limit;
   try {
     const user = await requirePilotUser(request);
-    requireCreator(user);
     const body = await request.json() as Record<string, unknown>;
+
+    // Authenticated self-service starts a paid pilot without needing the owner online.
+    // Creating a free/comped pilot still requires a creator invitation.
+    if (body.selfServe === true) {
+      const serviceKey = pilotServiceKey(body.serviceKey);
+      const businessName = clean(body.businessName, 120);
+      const clientName = clean(body.clientName, 100);
+      const paymentMethod = body.paymentMethod as PilotPaymentMethod;
+      if (!serviceKey || !businessName || !clientName || body.confirmConsent !== true ||
+          !["stripe","payid","cash","bank-transfer"].includes(paymentMethod))
+        return fail("Choose a service, business details, payment preference and accept the pilot terms.");
+      const creatorEmail = normalizePilotEmail(process.env.BUSINESS_LIFELINE_CREATOR_EMAIL);
+      if (!creatorEmail) return fail("Self-service registration is not configured yet.", 503);
+      const { auth, db } = getFirebaseAdmin();
+      const creatorAccount = await auth.getUserByEmail(creatorEmail);
+      if (!creatorAccount.emailVerified) return fail("Pilot creator has not verified their account.", 503);
+      const existing = await db.collection("pilotProjects").where("clientUid", "==", user.uid).limit(30).get();
+      const duplicate = existing.docs.map(doc => doc.data() as Pilot)
+        .find(p => p.serviceKey === serviceKey && p.status === "active" && p.paymentStatus === "pending");
+      if (duplicate) return NextResponse.json({ pilot: publicPilot(duplicate), reused: true }, { headers });
+      const now = new Date().toISOString();
+      const service = serviceByKey(serviceKey)!;
+      const pilot: Pilot = {
+        id: crypto.randomUUID(), creatorUid: creatorAccount.uid,
+        clientEmail: normalizePilotEmail(user.email)!, clientName, businessName,
+        clientUid: user.uid, serviceKey, paymentMethod, paymentStatus: "pending",
+        status: "active", inviteHash: makeInvite().hash, joinedAt: now, consentAt: now,
+        amountCents: service.offer.price * 100, currency: "aud",
+        createdAt: now, updatedAt: now, notes: "",
+      };
+      await db.collection("pilotProjects").doc(pilot.id).create(pilot);
+      return NextResponse.json({ pilot: publicPilot(pilot) }, { status: 201, headers });
+    }
+    requireCreator(user);
     const clientEmail = normalizePilotEmail(body.clientEmail);
     const clientName = clean(body.clientName, 100);
     const businessName = clean(body.businessName, 120);
