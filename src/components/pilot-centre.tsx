@@ -144,7 +144,7 @@ export function PilotCentre({ user, onOpenMri, servicesConfigured }: { user: Use
         <label>Optional scope notes<textarea maxLength={500} value={newPilot.notes} onChange={e=>setNewPilot({...newPilot,notes:e.target.value})}/></label>
         <button className="button primary" type="submit" disabled={busy}>Create pilot invitation</button>
       </form>
-      {inviteUrl&&<div className="pilot-invite-link"><label>Customer's unique invitation link<input readOnly value={inviteUrl}/></label><button type="button" className="button ghost" onClick={()=>void copy()}>Copy invitation</button><p>Share only with the invited customer. It expires when replaced; it only works with their verified email.</p></div>}
+      {inviteUrl&&<div className="pilot-invite-link"><label>Customer&apos;s unique invitation link<input readOnly value={inviteUrl}/></label><button type="button" className="button ghost" onClick={()=>void copy()}>Copy invitation</button><p>Share only with the invited customer. It expires when replaced; it only works with their verified email.</p></div>}
     </section>}
     <h4>{role==="creator" ? "Customer pilots" : "Joined pilots"}</h4>
     {!pilots.length&&<p>No pilots listed yet. {role==="creator"?"Create your first pilot above.":"Use the unique invitation link provided by the owner."}</p>}
