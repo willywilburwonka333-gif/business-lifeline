@@ -25,6 +25,7 @@ export function PilotCentre({ user, onOpenMri, servicesConfigured }: { user: Use
   const [inviteUrl,setInviteUrl] = useState("");
   const [newPilot,setNewPilot] = useState({ clientName:"",clientEmail:"",businessName:"",serviceKey:SERVICE_CATALOG[1].key as string,paymentMethod:"free" as PilotPaymentMethod,notes:"" });
   const [invite,setInvite] = useState<{ pilotId:string; invite:string } | null>(null);
+  const [invitePreview,setInvitePreview] = useState<PublicPilot | null>(null);
   const [joinMethod,setJoinMethod] = useState<PilotPaymentMethod>("stripe");
   const [accept,setAccept] = useState(false);
   const [paymentReferences,setPaymentReferences] = useState<Record<string,string>>({});
@@ -51,9 +52,14 @@ export function PilotCentre({ user, onOpenMri, servicesConfigured }: { user: Use
     const params = new URLSearchParams(window.location.search);
     const pilotId = params.get("pilot") || "";
     const code = params.get("invite") || "";
-    if (pilotId && code) setInvite({ pilotId, invite:code });
+    if (pilotId && code) {
+      setInvite({ pilotId, invite:code });
+      void request("/api/pilots/join?pilotId="+encodeURIComponent(pilotId)+"&invite="+encodeURIComponent(code))
+        .then(value => {setInvitePreview(value.pilot as PublicPilot); setJoinMethod(value.pilot.paymentMethod as PilotPaymentMethod);})
+        .catch(e => setError(e instanceof Error ? e.message : "Invitation could not be validated."));
+    }
     void refresh().catch(e => setError(e instanceof Error ? e.message : "Pilot services are unavailable."));
-  },[refresh]);
+  },[refresh,request]);
 
   const create = async (event:FormEvent<HTMLFormElement>) => {
     event.preventDefault();setBusy(true);setError("");setNotice("");
@@ -70,7 +76,7 @@ export function PilotCentre({ user, onOpenMri, servicesConfigured }: { user: Use
     setBusy(true);setError("");
     try {
       await request("/api/pilots/join","POST",{...invite,consent:accept,paymentMethod:joinMethod});
-      setInvite(null);setNotice("Pilot joined. Your account is now linked to this pilot.");
+      setInvite(null);setInvitePreview(null);setNotice("Pilot joined. Your account is now linked to this pilot.");
       const url = new URL(window.location.href); url.searchParams.delete("pilot");url.searchParams.delete("invite");
       window.history.replaceState(null,"",url.toString());
       await refresh();
@@ -120,11 +126,11 @@ export function PilotCentre({ user, onOpenMri, servicesConfigured }: { user: Use
     {notice&&<p role="status" className="cloud-account-notice">{notice}</p>}
     {invite&&<section className="pilot-join-panel">
       <h4>You have a pilot invitation</h4>
+      {invitePreview&&<p><strong>{invitePreview.businessName}</strong> · {SERVICE_CATALOG.find(s=>s.key===invitePreview.serviceKey)?.offer.name} · {invitePreview.paymentStatus==="waived"?"Complimentary pilot":money(invitePreview.amountCents)+" list price"}. Invited contact: {invitePreview.clientEmail}.</p>}
       <p>Sign in using the exact email the business owner invited. Only use your own business information. You can start with fictional data while privacy and professional checks are pending.</p>
       <label>Payment preference
         <select value={joinMethod} onChange={e=>setJoinMethod(e.target.value as PilotPaymentMethod)}>
-          {paymentOptions.filter(option=>option.value!=="free").map(x=><option key={x.value} value={x.value}>{x.label}</option>)}
-          <option value="free">Free pilot, only if approved by creator</option>
+          {paymentOptions.filter(option=>invitePreview?.paymentStatus==="waived" ? option.value==="free" : option.value!=="free").map(x=><option key={x.value} value={x.value}>{x.label}</option>)}
         </select>
       </label>
       <label><input type="checkbox" checked={accept} onChange={e=>setAccept(e.target.checked)}/> I am authorised to represent the business and agree to the <a href="/legal/terms" target="_blank" rel="noopener noreferrer">terms</a> and <a href="/legal/privacy" target="_blank" rel="noopener noreferrer">privacy policy</a>. I understand the MRI is not professional advice.</label>
