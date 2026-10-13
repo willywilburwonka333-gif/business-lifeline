@@ -398,7 +398,9 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
       } else {
         await signInWithEmailAndPassword(firebaseAuth, email.trim(), password);
       }
-      setPanelOpen(false);
+      // Keep the account panel open after registration so the owner sees the
+      // verification status. Sign-in can close it as before.
+      if (!createMode) setPanelOpen(false);
       setEmail("");
       setPassword("");
     } catch (authError) {
