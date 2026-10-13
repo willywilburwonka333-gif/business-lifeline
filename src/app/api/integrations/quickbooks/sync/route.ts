@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { decryptSecret, encryptSecret } from "@/lib/accounting-token-vault";
 import { getFirebaseAdmin, requireFirebaseUser } from "@/lib/firebase-admin";
-import { privateResponseHeaders } from "@/lib/api-security";
+import { privateResponseHeaders, requireFullPlatformRequest } from "@/lib/api-security";
 import { combineQuickBooksFacts, type QuickBooksReport } from "@/lib/quickbooks-normalizer";
 
 export const runtime = "nodejs";
@@ -26,6 +26,8 @@ async function refresh(tokens: Tokens) {
 }
 
 export async function POST(request: Request) {
+  const restricted = await requireFullPlatformRequest(request);
+  if (restricted) return restricted;
   try {
     const user = await requireFirebaseUser(request);
     const { db } = getFirebaseAdmin();
