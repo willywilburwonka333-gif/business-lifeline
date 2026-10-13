@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { firebaseAuth } from "@/lib/firebase-client";
 import { DIAGNOSTIC_OFFERS } from "@/lib/diagnostic-offers";
 import { PILOT_PAYMENT_METHODS, paymentMethodLabel, pilotPaymentInstructions, type PilotPaymentMethod } from "@/lib/pilot-service-payments";
