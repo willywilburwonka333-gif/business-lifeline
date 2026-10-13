@@ -1,6 +1,6 @@
 "use client";
 
-import { DIAGNOSTIC_OFFERS } from "@/lib/diagnostic-offers";
+import { PilotServiceSelection } from "@/components/pilot-service-selection";
 
 export function PilotAccountLanding({ onStart, onDemo, demoLoading }: { onStart: () => void; onDemo: (index?: number) => void; demoLoading: boolean }) {
   return <main id="main-content" className="judge-landing">
@@ -14,10 +14,7 @@ export function PilotAccountLanding({ onStart, onDemo, demoLoading }: { onStart:
       </div>
       <p>Use estimates only when clearly labelled. Do not upload personal identifiers, bank passwords, tax file numbers or customer records. High-risk accounting, tax and insolvency matters require qualified advice.</p>
     </div></section>
-    <section className="judge-story"><div className="judge-story-heading"><p>Discuss your pilot service</p><h2>Five diagnostic and repair options</h2><span>Indicative one-off service fees; selecting a level here does not purchase or unlock a plan. Scope and pricing must be agreed before any paid work.</span></div>
-      <div className="judge-story-grid">
-        {DIAGNOSTIC_OFFERS.map(offer => <article key={offer.name}><b>A${offer.price}</b><h3>{offer.name}</h3><p>{offer.for}</p><p>{offer.includes.join(" · ")}</p><a href={`mailto:dylan@businesslifeline.com.au?subject=${encodeURIComponent("Guided pilot: " + offer.name)}`}>Discuss this option →</a></article>)}
-      </div>
-    </section>
+    <PilotServiceSelection />
+
   </main>;
 }
