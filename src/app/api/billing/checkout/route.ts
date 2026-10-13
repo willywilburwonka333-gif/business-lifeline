@@ -20,6 +20,9 @@ export async function POST(request: Request) {
   try {
     const body = await request.json() as { plan?: BillingPlan; service?: ServiceKey; pilotId?: string };
     const service = serviceByKey(body.service);
+    if (service && !body.pilotId) {
+      return NextResponse.json({ error: "Create or join a customer pilot before purchasing this diagnostic service." }, { status: 400, headers: privateResponseHeaders() });
+    }
     if ((body.service !== undefined && !service) || (service && body.plan !== undefined)) {
       return NextResponse.json({ error: "Choose a valid service." }, { status: 400, headers: privateResponseHeaders() });
     }
