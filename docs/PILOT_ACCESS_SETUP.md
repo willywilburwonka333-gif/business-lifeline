@@ -11,9 +11,9 @@
 
 ## Required rollout sequence
 
-- Identify the studio operator's **existing Firebase Authentication UID** from Firebase Console → Authentication → Users, under the Business Lifeline Firebase project. Verify this is the account used for signing into the app. Do not create a second owner accidentally.
+- Use the existing studio operator's confirmed Firebase Authentication UID for the Creator login. Do not create a duplicate account; the server must compare the ID token's UID with `BUSINESS_LIFELINE_OWNER_UID`.
 - Set **`BUSINESS_LIFELINE_OWNER_UID`** as a server-only environment variable in Vercel for Production (and the intended Preview environment), with the exact UID. **Never use a `NEXT_PUBLIC_` prefix.** It is an identity selector, not an API key.
-- Ensure Firebase Admin service account variables remain configured. Check Firebase Authentication email/password and verification mail work.
+- Ensure Firebase Admin service account variables (`FIREBASE_ADMIN_PROJECT_ID`, `FIREBASE_ADMIN_CLIENT_EMAIL`, `FIREBASE_ADMIN_PRIVATE_KEY`) are configured in Vercel server-side production/preview environments. **They are not configured as of 13 October 2026.** Obtain these only through secure Firebase project access; never paste private keys in chat or commit them to GitHub. Check Firebase Authentication email/password and verification mail work.
 - Deploy reviewed application code with green CI. Sign in with the intended owner and verify `GET /api/pilot/access` yields full access and studio owner; verify it bootstraps `pilotAccess/<ownerUid>` to `tier=full`.
 - **Only then** publish the newly reviewed `firestore.rules` in the correct production Firebase project, and run two-account production tests: a fresh verified test account must be pilot, cannot access full-only Firestore collections or API endpoints, cannot change `pilotAccess`; studio owner must still be full and retain all previous data.
 - Review account creation, Firebase rules, cloud sync, vault uploads/exports, sign-out, report archive, and business-to-business isolation. Test on two browsers/devices and a real iPhone.
