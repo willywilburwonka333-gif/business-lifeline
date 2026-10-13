@@ -104,6 +104,17 @@ Create Stripe products/prices for the plans you decide to launch, then add:
 - `STRIPE_PRO_PRICE_ID`
 - `STRIPE_RESCUE_PRICE_ID`
 
+The five fixed-price diagnostic offers have already been created in the connected live Stripe account (one-time AUD prices). Their price IDs and hosted payment links are kept in `src/lib/service-payments.ts`. They are deliberately separate from the existing Pro subscription and Rescue package.
+
+For the five authenticated service checkouts, also configure and verify:
+- `STRIPE_WEBHOOK_SECRET` from **the Business Lifeline webhook endpoint**, not another app's webhook.
+- `STRIPE_SERVICE_CHECKOUT_ENABLED=true` **only after** the endpoint is connected, delivery tested, and authenticated purchase records are verified. Without this flag, app account-linked checkouts remain disabled to prevent customers paying without reliable fulfilment.
+- `STRIPE_SECRET_KEY` must belong to the same live Stripe account as these five price IDs.
+
+A different Stripe webhook currently targets a Cloud Run address for another service; it does **not** deliver these payments to Business Lifeline. Create an independent endpoint at `https://business-lifeline.vercel.app/api/billing/webhook` and store that endpoint's unique signing secret in production Vercel. Never put signing secrets in client code.
+
+Direct existing Stripe payment links can be shared manually without the app integration, but they do not automatically grant a Firebase account entitlement and must be manually reconciled with the paying customer. Cash and PayID still use the separately saved owner invoice workflow; they must not automatically mark a customer paid.
+
 Create a webhook endpoint:
 
 `https://business-lifeline.vercel.app/api/billing/webhook`
@@ -111,6 +122,7 @@ Create a webhook endpoint:
 Subscribe it to at least:
 
 - `checkout.session.completed`
+- `checkout.session.async_payment_succeeded`
 - `customer.subscription.updated`
 - `customer.subscription.deleted`
 - `invoice.payment_failed`
@@ -128,7 +140,7 @@ Before a paid public launch:
 5. Run a complete native business cycle: customer → quote → job → invoice → payment → bank reconciliation → Books.
 6. Test Lifeline Spend purchase orders/claims, Lifeline People pay run, Lifeline Tax workpaper, Lifeline Assets depreciation, Lifeline Plan variance and Lifeline FX settlement.
 7. Compare Lifeline Books P&L, Balance Sheet, Trial Balance, AR/AP aging and GST against an accountant-reviewed sample file.
-8. Complete Stripe test-mode checkout, cancellation, billing-portal and failed-payment flows for Business Lifeline subscription billing.
+8. Complete Stripe test-mode checkout, cancellation, billing-portal and failed-payment flows for Business Lifeline subscription billing. Verify all five diagnostic services (correct AUD price, invoice, signature, duplicate webhook idempotency, private Firebase entitlement, unpaid/delayed payment refusal, and a direct-link purchase needing manual reconciliation).
 9. Run one healthy, one distressed, one overdue-tax and one payroll-risk MRI.
 10. Test the full app on iPhone-width and desktop layouts.
 11. Confirm the production Vercel deployment and all GitHub checks are green.
