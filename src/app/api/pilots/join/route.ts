@@ -5,6 +5,26 @@ import { normalizePilotEmail, publicPilot, requirePilotUser, validInvite, type P
 
 export const runtime = "nodejs";
 const headers = privateResponseHeaders();
+export async function GET(request: Request) {
+  try {
+    const user = await requirePilotUser(request);
+    const url = new URL(request.url);
+    const id = url.searchParams.get("pilotId") || "";
+    const code = url.searchParams.get("invite");
+    if (!/^[0-9a-f-]{36}$/.test(id)) throw new Error("Invalid invitation.");
+    const snap = await getFirebaseAdmin().db.collection("pilotProjects").doc(id).get();
+    if (!snap.exists) throw new Error("Invitation not found.");
+    const pilot = snap.data() as Pilot;
+    if (!validInvite(code, pilot.inviteHash) || pilot.clientEmail !== normalizePilotEmail(user.email))
+      throw new Error("This invitation does not match your verified account email.");
+    if (pilot.clientUid && pilot.clientUid !== user.uid) throw new Error("Invitation already claimed.");
+    if (pilot.status !== "invited" && pilot.status !== "active") throw new Error("This pilot is closed.");
+    return NextResponse.json({ pilot: publicPilot(pilot) }, { headers });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid pilot invitation." }, { status: 403, headers });
+  }
+}
+
 export async function POST(request: Request) {
   const cross = rejectCrossSiteRequest(request); if (cross) return cross;
   const limit = enforceRateLimit(request, "pilot-claim"); if (limit) return limit;
