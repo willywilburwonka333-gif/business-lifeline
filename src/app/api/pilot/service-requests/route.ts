@@ -41,3 +41,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Could not save this request. Check your account and try again later." }, { status: 401, headers: responseHeaders });
   }
 }
+
+export async function GET(request: Request) {
+  try {
+    if (!studioOwnerUid()) throw new Error("Pilot intake not activated.");
+    const actor = await requireFirebaseUser(request);
+    const { db } = getFirebaseAdmin();
+    const requests = await db.collection("pilotServiceRequests").where("uid", "==", actor.uid).limit(30).get();
+    return NextResponse.json({
+      requests: requests.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort(
+        (a, b) => String(b.createdAt).localeCompare(String(a.createdAt))
+      ),
+    }, { headers: responseHeaders });
+  } catch {
+    return NextResponse.json({ error: "Sign in to view your service requests." }, { status: 401, headers: responseHeaders });
+  }
+}
