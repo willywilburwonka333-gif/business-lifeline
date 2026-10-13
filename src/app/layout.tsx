@@ -59,6 +59,7 @@ import "./firebase-workspace.css";
 import "./product-tutorial.css";
 import "./mobile-fixes.css";
 import "./accounting-connections.css";
+import "./pilot-centre.css";
 
 export const metadata: Metadata = {
   title: { default: "Business Lifeline", template: "%s | Business Lifeline" },
