@@ -7,6 +7,7 @@ import type { PilotEntitlement } from "@/lib/pilot-access";
 import { BusinessLifelineApp } from "@/components/business-lifeline-app";
 import { PilotPublicLanding } from "@/components/pilot-public-landing";
 import { PilotAdministration } from "@/components/pilot-administration";
+import { PilotServiceRequestAdmin } from "@/components/pilot-service-request-admin";
 import { BetaSafetyCentre } from "@/components/beta-safety-centre";
 import { BusinessOsScrollAssist } from "@/components/business-os-scroll-assist";
 import { CommercialCloudBridge } from "@/components/commercial-cloud-bridge";
@@ -55,7 +56,7 @@ export function PilotWorkspaceGate() {
   return <>
     {full && <FullPlatformServices />}
     <BusinessLifelineApp pilotMode={!full} />
-    {status.isStudioOwner && <PilotAdministration />}
+    {status.isStudioOwner && <><PilotAdministration /><PilotServiceRequestAdmin /></>}
     <BetaSafetyCentre />
   </>;
 }
