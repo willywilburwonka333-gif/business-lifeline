@@ -30,6 +30,7 @@ export function PilotCentre({ user, onOpenMri, servicesConfigured }: { user: Use
   const [accept,setAccept] = useState(false);
   const [paymentReferences,setPaymentReferences] = useState<Record<string,string>>({});
   const [shareConsent,setShareConsent] = useState(false);
+  const [selfServeConsent,setSelfServeConsent] = useState(false);
 
   const request = useCallback(async (path:string, method:"GET"|"POST"|"PATCH"="GET", payload?:object) => {
     const response = await fetch(path, {
@@ -46,6 +47,7 @@ export function PilotCentre({ user, onOpenMri, servicesConfigured }: { user: Use
     const value = await request("/api/pilots") as PilotResult;
     setRole(value.role);
     setPilots(value.pilots);
+    if (value.role === "client") setNewPilot(prev=>prev.paymentMethod==="free"?{...prev,paymentMethod:"stripe"}:prev);
   },[request]);
 
   useEffect(() => {
@@ -69,6 +71,18 @@ export function PilotCentre({ user, onOpenMri, servicesConfigured }: { user: Use
       setNotice("Pilot created. Copy the invitation link and send it to the customer.");
       await refresh();
     } catch(e) { setError(e instanceof Error ? e.message : "Could not create pilot."); }
+    finally {setBusy(false);}
+  };
+  const selfRegister = async (event:FormEvent<HTMLFormElement>) => {
+    event.preventDefault();setBusy(true);setError("");setNotice("");
+    try {
+      await request("/api/pilots","POST",{
+        selfServe:true,clientName:newPilot.clientName,businessName:newPilot.businessName,
+        serviceKey:newPilot.serviceKey,paymentMethod:newPilot.paymentMethod,confirmConsent:selfServeConsent,
+      });
+      setNotice("Your pilot was created. Select your payment option below to continue.");
+      await refresh();
+    } catch(e){setError(e instanceof Error?e.message:"Self-service pilot registration failed.");}
     finally {setBusy(false);}
   };
   const join = async () => {
@@ -151,6 +165,22 @@ export function PilotCentre({ user, onOpenMri, servicesConfigured }: { user: Use
         <button className="button primary" type="submit" disabled={busy}>Create pilot invitation</button>
       </form>
       {inviteUrl&&<div className="pilot-invite-link"><label>Customer&apos;s unique invitation link<input readOnly value={inviteUrl}/></label><button type="button" className="button ghost" onClick={()=>void copy()}>Copy invitation</button><p>Share only with the invited customer. It expires when replaced; it only works with their verified email.</p></div>}
+    </section>}
+    {role==="client"&&!invite&&<section className="pilot-create">
+      <h4>Start a new pilot yourself</h4>
+      <p>Choose your service and how you want to pay. You can register now even when the creator is unavailable. Free/complimentary pilots are invitation-only.</p>
+      <form onSubmit={e=>void selfRegister(e)}>
+        <label>Your name<input required maxLength={100} value={newPilot.clientName} onChange={e=>setNewPilot({...newPilot,clientName:e.target.value})}/></label>
+        <label>Business name<input required maxLength={120} value={newPilot.businessName} onChange={e=>setNewPilot({...newPilot,businessName:e.target.value})}/></label>
+        <label>Service<select value={newPilot.serviceKey} onChange={e=>setNewPilot({...newPilot,serviceKey:e.target.value})}>
+          {SERVICE_CATALOG.map(service=><option key={service.key} value={service.key}>{service.offer.name} — ${service.offer.price} AUD</option>)}
+        </select></label>
+        <label>How would you like to pay?<select value={newPilot.paymentMethod} onChange={e=>setNewPilot({...newPilot,paymentMethod:e.target.value as PilotPaymentMethod})}>
+          {paymentOptions.filter(x=>x.value!=="free").map(x=><option key={x.value} value={x.value}>{x.label}</option>)}
+        </select></label>
+        <label><input type="checkbox" checked={selfServeConsent} onChange={e=>setSelfServeConsent(e.target.checked)}/> I am authorised to represent this business, accept the <a href="/legal/terms" target="_blank" rel="noopener noreferrer">terms</a> and <a href="/legal/privacy" target="_blank" rel="noopener noreferrer">privacy policy</a>, and understand these are screening and support services, not regulated professional advice.</label>
+        <button type="submit" className="button primary" disabled={busy||!selfServeConsent}>Create my pilot</button>
+      </form>
     </section>}
     <h4>{role==="creator" ? "Customer pilots" : "Joined pilots"}</h4>
     {!pilots.length&&<p>No pilots listed yet. {role==="creator"?"Create your first pilot above.":"Use the unique invitation link provided by the owner."}</p>}
