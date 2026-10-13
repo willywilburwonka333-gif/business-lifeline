@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireFirebaseUser } from "@/lib/firebase-admin";
+import { registeredTier, studioOwnerUid } from "@/lib/pilot-access-server";
 
 type Bucket = { count: number; resetAt: number };
 
@@ -96,9 +97,26 @@ export async function requireAuthenticatedAiRequest(request: Request): Promise<N
     return NextResponse.json({ error: "Sign in to use AI services. The rules-based MRI remains available without AI." }, { status: 401, headers: privateResponseHeaders() });
   }
   try {
-    await requireFirebaseUser(request);
+    const user = await requireFirebaseUser(request);
+    if (!studioOwnerUid() || await registeredTier(user.uid) !== "full") {
+      return NextResponse.json({ error: "AI features are not enabled for guided pilot accounts." }, { status: 403, headers: privateResponseHeaders() });
+    }
     return null;
   } catch {
     return NextResponse.json({ error: "AI access requires a valid signed-in account." }, { status: 401, headers: privateResponseHeaders() });
   }
+}
+
+
+// Use this for premium integrations and other routes outside the MRI/repair pilot.
+// Firestore role 'owner' only owns one customer's data; it is not full platform access.
+export async function requireFullPlatformRequest(request: Request): Promise<NextResponse | null> {
+  try {
+    if (!studioOwnerUid()) throw new Error("Owner identity not configured.");
+    const user = await requireFirebaseUser(request);
+    if (await registeredTier(user.uid) === "full") return null;
+  } catch {
+    // Deliberately fail closed, including on authentication or entitlement outages.
+  }
+  return NextResponse.json({ error: "This module requires studio approval." }, { status: 403, headers: privateResponseHeaders() });
 }
