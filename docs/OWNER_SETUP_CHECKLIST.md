@@ -140,7 +140,9 @@ If no creator email is configured, the app intentionally denies creator privileg
 
 On the account screen, a configured creator can: create a pilot with the customer's exact email, name, business, service and payment method; share a one-time unique join link; rotate an unclaimed invitation; track invitations, claimed/active pilots, payments and opt-in shared summaries; mark paid manual transactions with a confirmed receipt reference; verify and reconcile a Stripe Checkout Session directly against Stripe; close a pilot.
 
-Client flow: open unique link → sign in/create Firebase account and verify the invited email → explicitly accept pilot terms/privacy → join → select payment preference → pay via app once Stripe is activated (or arrange/manual payments) → complete MRI → explicitly share the summary. Direct shareable Stripe links still require creator-side `cs_live_...` reconciliation, not merely a receipt screenshot.
+Client flow: open unique link → sign in/create Firebase account and verify the invited email → explicitly accept pilot terms/privacy → join → select payment preference → pay via app once Stripe is activated (or arrange/manual payments) → complete MRI → explicitly share the summary.
+
+Self-service flow (no owner present): sign in/create and verify a Firebase account → open **Create / join pilot** → choose service, business name and preferred payment method → accept terms/privacy → create a pending paid pilot → pay via authenticated Stripe checkout once it is activated, or arrange PayID/cash/transfer for creator approval. Complimentary access is invitation-only. Creator dashboard automatically lists these self-service registrations. Direct shareable Stripe links still require creator-side `cs_live_...` reconciliation, not merely a receipt screenshot.
 
 No paid pilot is automatically granted service access for pending/unpaid transactions. Cash, PayID and bank transfers require actual funds and a creator's explicit verified acknowledgement. Free pilot access is intentionally marked `waived`, not paid.
 
