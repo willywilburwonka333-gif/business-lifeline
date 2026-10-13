@@ -18,7 +18,17 @@
 - **Only then** publish the newly reviewed `firestore.rules` in the correct production Firebase project, and run two-account production tests: a fresh verified test account must be pilot, cannot access full-only Firestore collections or API endpoints, cannot change `pilotAccess`; studio owner must still be full and retain all previous data.
 - Review account creation, Firebase rules, cloud sync, vault uploads/exports, sign-out, report archive, and business-to-business isolation. Test on two browsers/devices and a real iPhone.
 - Confirm early pilots process only fictional or authorised *minimised* financial data until consent, privacy, legal/commercial and professional reviews are complete (see `docs/MRI_COMMERCIAL_VALIDATION.md` and `docs/PAID_MRI_PILOT_RUNBOOK.md`).
-- Make **`NEXT_PUBLIC_APP_URL=https://businesslifeline.com.au`** and review any earlier Stripe callback/webhook URLs before taking payments. Do not imply an in-app purchase processes the five guided service prices.
+- Configure **`NEXT_PUBLIC_APP_URL=https://businesslifeline.com.au`**. Review legacy Stripe routes separately; the new pilot service request flow never invokes Stripe and never implies payment has already been taken.
+
+## Five guided services and offline payment arrangements
+
+- Pilot members may request one of five published service offers and choose **cash, PayID or card**. There is deliberately **no Stripe checkout** in this pilot workflow.
+- The server calculates each offer's amount; the browser never controls the price. The request is stored in the server-managed `pilotServiceRequests` collection as `pending_arrangement`; the registration alone is not a payment or entitlement.
+- Cash: arrange an in-person payment. PayID: send correct verified payee/PayID details separately, after Business Lifeline verifies the request. Card: use a dedicated compliant card processor, terminal or hosted payment link (provider to be chosen; **not currently connected**). **Do not collect or store card numbers, CVV, banking passwords, or payment screenshots as proof of final settlement.**
+- The Creator reviews requests at **Service requests and payments** and marks `paid_verified` only after independent payment confirmation. A cancelled request can be marked `cancelled`. Every update is auditable. None of these operations opens advanced modules or authorises a regulated financial service.
+- Owner login is keyed to **Firebase Authentication UID**, never an email address or a customer-side claim. Keep the personal login address private, and publish `dylan@businesslifeline.com.au` / `support@businesslifeline.com.au` to customers.
+- Self-serve request intake can run unattended once Firebase Admin is configured, but the app **does not yet automatically charge cards, detect bank transfers, send payment instructions or deliver reviewed consulting work**. Do not advertise it as automatic payment processing.
+- Before any paid service goes live, confirm business ABN/entity and GST settings, written service scope, Terms, refund policy and proof of payment/receipts; bank and card arrangements must be verified separately.
 
 ## Security and limitations
 
