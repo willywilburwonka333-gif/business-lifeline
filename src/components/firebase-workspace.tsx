@@ -351,7 +351,11 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
         // This avoids classifying the studio operator as an ordinary business owner.
         const pilotToken = await nextUser.getIdToken();
         const pilotResponse = await fetch("/api/pilot/access", { headers: { Authorization: `Bearer ${pilotToken}` }, cache: "no-store" });
-        if (!pilotResponse.ok) throw new Error("Unable to verify pilot permissions. Account data was not opened.");
+        if (!pilotResponse.ok) {
+          const status = await pilotResponse.json().catch(() => ({})) as { error?: string };
+          if (pilotResponse.status === 503) throw new Error(status.error || "Pilot accounts are not activated yet.");
+          throw new Error("Unable to verify pilot permissions. Account data was not opened.");
+        }
         const ok = await syncWorkspace(nextUser);
         if (epoch !== authEpoch.current) return;
         setAuthReady(ok);
@@ -364,7 +368,11 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
       void init().catch((error: unknown) => {
         // Fail closed: do not render another account over uncleared local documents.
         if (epoch === authEpoch.current) {
-          setError(error instanceof Error && error.message === UNBACKED_VAULT_NOTICE ? UNBACKED_VAULT_NOTICE : "Client data could not be safely cleared. Close other Business Lifeline tabs, then reload and retry.");
+          setError(error instanceof Error && error.message === UNBACKED_VAULT_NOTICE
+            ? UNBACKED_VAULT_NOTICE
+            : error instanceof Error && (error.message.includes("Pilot accounts are not activated") || error.message.includes("pilot permissions"))
+              ? error.message
+              : "Client data could not be safely cleared. Close other Business Lifeline tabs, then reload and retry.");
           setPanelOpen(true);
           setAuthReady(false);
         }
