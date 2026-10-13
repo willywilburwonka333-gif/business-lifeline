@@ -12,3 +12,16 @@ test("client MRI archive is immutable and restricted to explicit roles",()=>{
  assert.match(rules,/allow read: if hasRole\(businessId, \['owner', 'manager', 'accountant', 'consultant'\]\)/);
  assert.match(rules,/allow update: if false/);
 });
+
+
+test("new pilot accounts cannot write their own full permissions", () => {
+  assert.match(rules, /match \/pilotAccess\/\{userId\}/);
+  assert.match(rules, /allow list, create, update, delete: if false/);
+  assert.match(rules, /function hasPlatformFullAccess\(\)/);
+  for (const kind of ["modules", "records", "finance", "payroll", "crm", "operations"]) {
+    const start = rules.indexOf(`match /${kind}/`);
+    assert.ok(start >= 0, `missing ${kind}`);
+    const end = rules.indexOf("\n      }", start);
+    assert.match(rules.slice(start, end), /hasPlatformFullAccess\(\)/, `missing platform access restriction: ${kind}`);
+  }
+});

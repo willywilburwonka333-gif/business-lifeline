@@ -131,13 +131,22 @@ async function clearLocalPayload(options: { allowUnbackedFiles?: boolean } = {})
 function messageForError(error: unknown) {
   if (error instanceof Error && error.message === UNBACKED_VAULT_NOTICE) return UNBACKED_VAULT_NOTICE;
   const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
-  if (code.includes("email-already-in-use")) return "That email already has an account. Choose Sign in instead.";
-  if (code.includes("invalid-credential")) return "The email or password is incorrect.";
-  if (code.includes("weak-password")) return "Use a password with at least six characters.";
-  if (code.includes("popup-closed")) return "Google sign-in was closed before it finished.";
-  if (code.includes("permission-denied")) return "Cloud access is locked until the secure Firestore rules are published.";
-  if (code.includes("too-many-requests")) return "Too many attempts. Wait briefly and try again.";
-  return "That did not complete. Check the details and try again.";
+  if (code.includes("email-already-in-use")) return "This email already has a Business Lifeline account. Select Sign in, or use Forgot password.";
+  if (code.includes("invalid-email")) return "Enter a valid email address.";
+  if (code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) return "That email/password combination was not accepted. Try Sign in or Forgot password.";
+  if (code.includes("weak-password")) return "Choose a stronger password (at least six characters).";
+  if (code.includes("operation-not-allowed") || code.includes("configuration-not-found")) return "This sign-in method is not enabled in the Firebase project. The studio operator needs to enable it in Firebase Authentication.";
+  if (code.includes("unauthorized-domain")) return "This web address is not authorised for Firebase sign-in. The studio operator needs to approve the domain in Firebase Authentication.";
+  if (code.includes("popup-blocked") || code.includes("popup-closed") || code.includes("cancelled-popup-request")) return "Google sign-in popup was blocked or closed. Try an ordinary Safari/Chrome browser, or use email sign-in.";
+  if (code.includes("network-request-failed")) return "Firebase could not be reached. Check your network and try again.";
+  if (code.includes("invalid-api-key") || code.includes("auth-domain-config-required")) return "Business Lifeline's Firebase sign-in configuration needs to be corrected by the studio operator.";
+  if (code.includes("user-disabled")) return "This account has been disabled. Contact Business Lifeline support.";
+  if (code.includes("permission-denied")) return "The server has not granted access. The studio operator needs to verify Firebase security settings.";
+  if (code.includes("too-many-requests")) return "Too many attempts. Wait a while before trying again.";
+  // Firebase Authentication errors use non-sensitive, documented error codes.
+  // Avoid exposing backend exception messages, credentials, or arbitrary responses.
+  if (/^auth\/[a-z0-9-]+$/.test(code)) return `Firebase sign-in error: ${code}. Contact support@businesslifeline.com.au with this code.`;
+  return "Sign-in could not complete. Contact support@businesslifeline.com.au for help.";
 }
 
 export function FirebaseWorkspace({ children }: { children: ReactNode }) {
@@ -338,6 +347,15 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
           // A new account always treats the cloud as authoritative when it exists.
           localStorage.removeItem(SYNC_BASELINE_KEY(nextUser.uid));
         }
+        // Before syncing, bootstrap/verify the server-owned studio entitlement.
+        // This avoids classifying the studio operator as an ordinary business owner.
+        const pilotToken = await nextUser.getIdToken();
+        const pilotResponse = await fetch("/api/pilot/access", { headers: { Authorization: `Bearer ${pilotToken}` }, cache: "no-store" });
+        if (!pilotResponse.ok) {
+          const status = await pilotResponse.json().catch(() => ({})) as { error?: string };
+          if (pilotResponse.status === 503) throw new Error(status.error || "Pilot accounts are not activated yet.");
+          throw new Error("Unable to verify pilot permissions. Account data was not opened.");
+        }
         const ok = await syncWorkspace(nextUser);
         if (epoch !== authEpoch.current) return;
         setAuthReady(ok);
@@ -350,7 +368,11 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
       void init().catch((error: unknown) => {
         // Fail closed: do not render another account over uncleared local documents.
         if (epoch === authEpoch.current) {
-          setError(error instanceof Error && error.message === UNBACKED_VAULT_NOTICE ? UNBACKED_VAULT_NOTICE : "Client data could not be safely cleared. Close other Business Lifeline tabs, then reload and retry.");
+          setError(error instanceof Error && error.message === UNBACKED_VAULT_NOTICE
+            ? UNBACKED_VAULT_NOTICE
+            : error instanceof Error && (error.message.includes("Pilot accounts are not activated") || error.message.includes("pilot permissions"))
+              ? error.message
+              : "Client data could not be safely cleared. Close other Business Lifeline tabs, then reload and retry.");
           setPanelOpen(true);
           setAuthReady(false);
         }
@@ -373,12 +395,20 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
     try {
       if (createMode) {
         const credential = await createUserWithEmailAndPassword(firebaseAuth, email.trim(), password);
-        await sendEmailVerification(credential.user);
-        setNotice("Account created. Check your email to verify it.");
+        try {
+          await sendEmailVerification(credential.user);
+          setNotice("Account created. Check your inbox for the verification email.");
+        } catch (verificationError) {
+          // Firebase has already created and signed in this account. Never
+          // report that registration failed and invite duplicate registrations.
+          setNotice(`Your account was created, but the verification email could not be sent. ${messageForError(verificationError)} Select Account → Resend verification email after setup is corrected.`);
+        }
       } else {
         await signInWithEmailAndPassword(firebaseAuth, email.trim(), password);
       }
-      setPanelOpen(false);
+      // Keep the account panel open after registration so the owner sees the
+      // verification status. Sign-in can close it as before.
+      if (!createMode) setPanelOpen(false);
       setEmail("");
       setPassword("");
     } catch (authError) {
@@ -566,6 +596,12 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
     }
   };
 
+  useEffect(() => {
+    const onOpenAccount = () => { setCreateMode(true); setPanelOpen(true); };
+    window.addEventListener("business-lifeline-open-account", onOpenAccount);
+    return () => window.removeEventListener("business-lifeline-open-account", onOpenAccount);
+  }, []);
+
   return (
     <>
       <aside className="cloud-account-bar no-print" aria-label="Account and cloud workspace">
@@ -590,7 +626,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
               <p>Your Business Lifeline workspace remains available locally and can be copied to your private cloud workspace.</p>
               <div className="commercial-security-status">
                 <strong>{usesPassword ? (user.emailVerified ? "Email verified" : "Email verification required") : "Verified Google account"}</strong>
-                <span>Role: Owner · Workspace: Active beta · Plan: {billing.plan === "pro" ? "Pro" : billing.rescuePurchased ? "Rescue access" : "Free"}</span>
+                <span>Business workspace: Owner · Studio modules require separate approval · Plan: {billing.plan === "pro" ? "Pro" : billing.rescuePurchased ? "Rescue access" : "Free"}</span>
               </div>
               {usesPassword && !user.emailVerified && <button className="cloud-mode-switch" type="button" onClick={() => void resendVerification()} disabled={busy}>Resend verification email</button>}
               {billing.configured && <div className="cloud-account-panel-actions">
@@ -611,13 +647,13 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
             </div>
           ) : (
             <form onSubmit={submitEmail}>
-              <small>OPTIONAL SECURE CLOUD ACCOUNT</small>
+              <small>BUSINESS LIFELINE PILOT ACCOUNT</small>
               <div className="cloud-account-mode-tabs" role="group" aria-label="Choose account action">
                 <button type="button" className={!createMode ? "active" : ""} aria-pressed={!createMode} onClick={() => { setCreateMode(false); setError(""); setNotice(""); }}>Sign in</button>
                 <button type="button" className={createMode ? "active" : ""} aria-pressed={createMode} onClick={() => { setCreateMode(true); setError(""); setNotice(""); }}>Create account</button>
               </div>
               <h2>{createMode ? "Create your account" : "Sign in"}</h2>
-              <p>You can keep using Business Lifeline privately on this device. An account adds secure cloud backup and access across devices.</p>
+              <p>Creating an account gives your business access to the guided MRI and recovery pilot. Studio-only features require separate approval.</p>
               <label>Email<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
               <label>Password<input type="password" autoComplete={createMode ? "new-password" : "current-password"} value={password} onChange={(event) => setPassword(event.target.value)} minLength={6} required /></label>
               {notice && <p className="cloud-account-notice" role="status">{notice}</p>}

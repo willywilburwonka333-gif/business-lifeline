@@ -1,0 +1,24 @@
+.pilot-services-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:14px;max-width:1240px;margin:32px auto 24px}
+.pilot-service-card{display:flex;flex-direction:column;gap:12px;min-width:0;background:#fff;color:#173448;padding:20px;border:1px solid #dce5e9;border-radius:14px;box-shadow:0 3px 10px #071b2d09}
+.pilot-service-card.selected{border-color:#df7346;box-shadow:0 0 0 2px #df73464d}
+.pilot-service-card h3{margin:0;color:#0b3043;font-size:19px}
+.pilot-service-card strong{color:#0b3043;font-size:27px}
+.pilot-service-card p{margin:0;font-size:13px;line-height:1.6}
+.pilot-service-card ul{padding-left:18px;margin:0 0 12px;display:grid;gap:7px;flex:1;color:#3d5664;font-size:13px;line-height:1.45}
+.pilot-service-card .button{width:100%;justify-content:center;min-height:44px}
+.pilot-service-order{max-width:790px;margin:24px auto 0;padding:24px;background:#fff;color:#163548;border-radius:16px;border:1px solid #dae5e9;scroll-margin-top:6.5rem}
+.pilot-service-order h3{margin:0 0 16px;color:#0b3043}
+.pilot-payment-choice{border:0;padding:0;margin:0;display:grid;gap:10px}
+.pilot-payment-choice legend{font-weight:800;margin-bottom:12px}
+.pilot-payment-choice label{display:flex;gap:11px;align-items:center;border:1px solid #d3e0e6;border-radius:10px;padding:13px;cursor:pointer;min-height:44px}
+.pilot-payment-choice input,.pilot-service-ack input{width:18px;height:18px;flex:none}
+.pilot-payment-choice label:has(input:checked){border-color:#175a71;background:#eef7f9}
+.pilot-service-disclosure{padding:14px;background:#f0f6f8;border:1px solid #d4e5eb;border-radius:10px;color:#2c5060;font-size:13px;line-height:1.6}
+.pilot-service-ack{display:flex;align-items:flex-start;gap:12px;margin:18px 0;font-size:13px;line-height:1.5}
+.pilot-service-error{color:#a02222;font-weight:750}
+.pilot-service-confirmation{border:1px solid #b3d7c8;background:#edf7f1;padding:16px;border-radius:12px}
+.pilot-service-confirmation p{line-height:1.5;overflow-wrap:anywhere}
+.pilot-service-confirmation a{color:#0f5a76;font-weight:750}
+.pilot-account-row{border-top:1px solid #d8e3e7;padding:11px 0;display:grid;gap:6px}
+.pilot-account-row button{justify-self:start}
+@media(max-width:640px){.pilot-services-grid{grid-template-columns:1fr}.pilot-service-order{padding:16px}.pilot-service-section{padding-inline:14px}}

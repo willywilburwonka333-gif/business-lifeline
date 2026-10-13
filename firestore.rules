@@ -35,6 +35,23 @@ service cloud.firestore {
         : '';
     }
 
+    // Studio-level entitlements are server-managed, never authored by a client.
+    // A company's own 'owner' membership is not studio-wide permission.
+    function hasPlatformFullAccess() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/pilotAccess/$(request.auth.uid))
+        && get(/databases/$(database)/documents/pilotAccess/$(request.auth.uid)).data.tier == 'full';
+    }
+
+    match /pilotAccess/{userId} {
+      allow get: if signedIn() && request.auth.uid == userId;
+      allow list, create, update, delete: if false;
+    }
+
+    match /pilotAudit/{auditId} {
+      allow read, write: if false;
+    }
+
     match /userWorkspaces/{userId} {
       allow read, create, update, delete: if signedIn()
         && request.auth.uid == userId;
@@ -43,16 +60,17 @@ service cloud.firestore {
     match /users/{userId}/businessMemberships/{businessId} {
       allow read: if signedIn() && request.auth.uid == userId;
       allow create: if signedIn()
+        && (hasPlatformFullAccess() || (request.auth.uid == userId && businessId == 'business-' + userId))
         && (
           request.auth.uid == userId
           || hasRole(businessId, ['owner', 'manager'])
         );
-      allow update: if signedIn()
+      allow update: if hasPlatformFullAccess() && signedIn()
         && (
           request.auth.uid == userId
           || hasRole(businessId, ['owner', 'manager'])
         );
-      allow delete: if signedIn()
+      allow delete: if hasPlatformFullAccess() && signedIn()
         && (
           request.auth.uid == userId
           || hasRole(businessId, ['owner'])
@@ -60,7 +78,7 @@ service cloud.firestore {
     }
 
     match /businessInvites/{inviteId} {
-      allow create: if signedIn()
+      allow create: if hasPlatformFullAccess() && signedIn()
         && request.resource.data.token == inviteId
         && request.resource.data.status == 'active'
         && request.resource.data.role in ['manager', 'staff', 'accountant', 'consultant']
@@ -75,7 +93,7 @@ service cloud.firestore {
         );
       allow list: if false;
 
-      allow update: if signedIn()
+      allow update: if hasPlatformFullAccess() && signedIn()
         && (
           hasRole(resource.data.businessId, ['owner', 'manager'])
           || (
@@ -91,7 +109,7 @@ service cloud.firestore {
           )
         );
 
-      allow delete: if signedIn()
+      allow delete: if hasPlatformFullAccess() && signedIn()
         && hasRole(resource.data.businessId, ['owner', 'manager']);
     }
 
@@ -118,7 +136,8 @@ service cloud.firestore {
               && getAfter(businessPath(businessId)).data.ownerId == request.auth.uid
             )
             || (
-              memberId == request.auth.uid
+              hasPlatformFullAccess()
+              && memberId == request.auth.uid
               && request.resource.data.inviteId is string
               && exists(invitePath(request.resource.data.inviteId))
               && get(invitePath(request.resource.data.inviteId)).data.businessId == businessId
@@ -130,7 +149,8 @@ service cloud.firestore {
               )
             )
             || (
-              hasRole(businessId, ['owner', 'manager'])
+              hasPlatformFullAccess()
+              && hasRole(businessId, ['owner', 'manager'])
               && request.resource.data.role in ['manager', 'staff', 'accountant', 'consultant']
             )
           );
@@ -138,7 +158,7 @@ service cloud.firestore {
         allow read: if hasMembership(businessId)
           || (signedIn() && memberId == request.auth.uid);
 
-        allow update: if signedIn()
+        allow update: if hasPlatformFullAccess() && signedIn()
           && resource.data.role != 'owner'
           && request.resource.data.role != 'owner'
           && (
@@ -150,25 +170,25 @@ service cloud.firestore {
             )
           );
 
-        allow delete: if hasRole(businessId, ['owner'])
+        allow delete: if hasPlatformFullAccess() && hasRole(businessId, ['owner'])
           && resource.data.role != 'owner';
       }
 
       match /modules/{moduleId} {
-        allow read: if hasRole(businessId, ['owner', 'manager', 'staff', 'accountant']);
-        allow create, update: if hasRole(businessId, ['owner', 'manager', 'staff'])
+        allow read: if hasPlatformFullAccess() && hasRole(businessId, ['owner', 'manager', 'staff', 'accountant']);
+        allow create, update: if hasPlatformFullAccess() && hasRole(businessId, ['owner', 'manager', 'staff'])
           && request.resource.data.module == moduleId
           && request.resource.data.updatedBy == request.auth.uid;
-        allow delete: if hasRole(businessId, ['owner', 'manager']);
+        allow delete: if hasPlatformFullAccess() && hasRole(businessId, ['owner', 'manager']);
       }
 
       match /records/{recordId} {
-        allow read: if hasRole(businessId, ['owner', 'manager', 'staff', 'accountant']);
-        allow create, update: if hasRole(businessId, ['owner', 'manager', 'staff', 'accountant'])
+        allow read: if hasPlatformFullAccess() && hasRole(businessId, ['owner', 'manager', 'staff', 'accountant']);
+        allow create, update: if hasPlatformFullAccess() && hasRole(businessId, ['owner', 'manager', 'staff', 'accountant'])
           && request.resource.data.updatedBy == request.auth.uid
           && request.resource.data.type is string
           && request.resource.data.id is string;
-        allow delete: if hasRole(businessId, ['owner', 'manager']);
+        allow delete: if hasPlatformFullAccess() && hasRole(businessId, ['owner', 'manager']);
       }
 
       match /auditEvents/{eventId} {
@@ -179,14 +199,14 @@ service cloud.firestore {
       }
 
       match /crm/{documentId} {
-        allow read: if hasRole(businessId, ['owner', 'manager', 'staff', 'accountant']);
-        allow create, update: if hasRole(businessId, ['owner', 'manager', 'staff']);
-        allow delete: if hasRole(businessId, ['owner', 'manager']);
+        allow read: if hasPlatformFullAccess() && hasRole(businessId, ['owner', 'manager', 'staff', 'accountant']);
+        allow create, update: if hasPlatformFullAccess() && hasRole(businessId, ['owner', 'manager', 'staff']);
+        allow delete: if hasPlatformFullAccess() && hasRole(businessId, ['owner', 'manager']);
       }
       match /operations/{documentId} {
-        allow read: if hasRole(businessId, ['owner', 'manager', 'staff', 'accountant']);
-        allow create, update: if hasRole(businessId, ['owner', 'manager', 'staff']);
-        allow delete: if hasRole(businessId, ['owner', 'manager']);
+        allow read: if hasPlatformFullAccess() && hasRole(businessId, ['owner', 'manager', 'staff', 'accountant']);
+        allow create, update: if hasPlatformFullAccess() && hasRole(businessId, ['owner', 'manager', 'staff']);
+        allow delete: if hasPlatformFullAccess() && hasRole(businessId, ['owner', 'manager']);
       }
       // MRI history remains the client's property. Consultants see only reports
       // after explicit invitation; they never receive access to operating modules.
@@ -203,13 +223,13 @@ service cloud.firestore {
         allow delete: if hasRole(businessId, ['owner']);
       }
       match /finance/{documentId} {
-        allow read: if hasRole(businessId, ['owner', 'manager', 'accountant']);
-        allow create, update: if hasRole(businessId, ['owner', 'manager', 'accountant']);
-        allow delete: if hasRole(businessId, ['owner']);
+        allow read: if hasPlatformFullAccess() && hasRole(businessId, ['owner', 'manager', 'accountant']);
+        allow create, update: if hasPlatformFullAccess() && hasRole(businessId, ['owner', 'manager', 'accountant']);
+        allow delete: if hasPlatformFullAccess() && hasRole(businessId, ['owner']);
       }
       match /payroll/{documentId} {
-        allow read, create, update: if hasRole(businessId, ['owner', 'manager']);
-        allow delete: if hasRole(businessId, ['owner']);
+        allow read, create, update: if hasPlatformFullAccess() && hasRole(businessId, ['owner', 'manager']);
+        allow delete: if hasPlatformFullAccess() && hasRole(businessId, ['owner']);
       }
       // No broad read fallback: Firestore ORs matching allow rules, so permitting
       // all members here would bypass role checks on finance and payroll.
