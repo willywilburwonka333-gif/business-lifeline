@@ -338,6 +338,11 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
           // A new account always treats the cloud as authoritative when it exists.
           localStorage.removeItem(SYNC_BASELINE_KEY(nextUser.uid));
         }
+        // Before syncing, bootstrap/verify the server-owned studio entitlement.
+        // This avoids classifying the studio operator as an ordinary business owner.
+        const pilotToken = await nextUser.getIdToken();
+        const pilotResponse = await fetch("/api/pilot/access", { headers: { Authorization: `Bearer ${pilotToken}` }, cache: "no-store" });
+        if (!pilotResponse.ok) throw new Error("Unable to verify pilot permissions. Account data was not opened.");
         const ok = await syncWorkspace(nextUser);
         if (epoch !== authEpoch.current) return;
         setAuthReady(ok);
@@ -566,6 +571,12 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
     }
   };
 
+  useEffect(() => {
+    const onOpenAccount = () => { setCreateMode(true); setPanelOpen(true); };
+    window.addEventListener("business-lifeline-open-account", onOpenAccount);
+    return () => window.removeEventListener("business-lifeline-open-account", onOpenAccount);
+  }, []);
+
   return (
     <>
       <aside className="cloud-account-bar no-print" aria-label="Account and cloud workspace">
@@ -590,7 +601,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
               <p>Your Business Lifeline workspace remains available locally and can be copied to your private cloud workspace.</p>
               <div className="commercial-security-status">
                 <strong>{usesPassword ? (user.emailVerified ? "Email verified" : "Email verification required") : "Verified Google account"}</strong>
-                <span>Role: Owner · Workspace: Active beta · Plan: {billing.plan === "pro" ? "Pro" : billing.rescuePurchased ? "Rescue access" : "Free"}</span>
+                <span>Business workspace: Owner · Studio modules require separate approval · Plan: {billing.plan === "pro" ? "Pro" : billing.rescuePurchased ? "Rescue access" : "Free"}</span>
               </div>
               {usesPassword && !user.emailVerified && <button className="cloud-mode-switch" type="button" onClick={() => void resendVerification()} disabled={busy}>Resend verification email</button>}
               {billing.configured && <div className="cloud-account-panel-actions">
@@ -611,9 +622,9 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
             </div>
           ) : (
             <form onSubmit={submitEmail}>
-              <small>OPTIONAL SECURE CLOUD ACCOUNT</small>
+              <small>BUSINESS LIFELINE PILOT ACCOUNT</small>
               <h2>{createMode ? "Create your account" : "Sign in"}</h2>
-              <p>You can keep using Business Lifeline privately on this device. An account adds secure cloud backup and access across devices.</p>
+              <p>Creating an account gives your business access to the guided MRI and recovery pilot. Studio-only features require separate approval.</p>
               <label>Email<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
               <label>Password<input type="password" autoComplete={createMode ? "new-password" : "current-password"} value={password} onChange={(event) => setPassword(event.target.value)} minLength={6} required /></label>
               {notice && <p className="cloud-account-notice" role="status">{notice}</p>}
