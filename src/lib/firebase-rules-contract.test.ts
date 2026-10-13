@@ -21,7 +21,7 @@ test("new pilot accounts cannot write their own full permissions", () => {
   for (const kind of ["modules", "records", "finance", "payroll", "crm", "operations"]) {
     const start = rules.indexOf(`match /${kind}/`);
     assert.ok(start >= 0, `missing ${kind}`);
-    const end = rules.indexOf("\\n      }", start);
+    const end = rules.indexOf("\n      }", start);
     assert.match(rules.slice(start, end), /hasPlatformFullAccess\(\)/, `missing platform access restriction: ${kind}`);
   }
 });
