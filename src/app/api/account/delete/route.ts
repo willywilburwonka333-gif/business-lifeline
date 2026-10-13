@@ -52,7 +52,8 @@ export async function DELETE(request: Request) {
     }
 
     await db.collection("userWorkspaces").doc(user.uid).delete().catch(() => undefined);
-    await db.collection("users").doc(user.uid).delete().catch(() => undefined);
+    // Remove nested servicePurchases as well as the parent user document.
+    await db.recursiveDelete(db.collection("users").doc(user.uid));
 
     const connectionDocs = await db.collection("accountingConnections").where("uid", "==", user.uid).get().catch(() => null);
     if (connectionDocs) await Promise.all(connectionDocs.docs.map((doc) => doc.ref.delete().catch(() => undefined)));

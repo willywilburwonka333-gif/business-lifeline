@@ -14,6 +14,7 @@ import {
 } from "firebase/auth";
 import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc, type DocumentSnapshot } from "firebase/firestore";
 import { firebaseAuth, firebaseConfigured, firebaseDb } from "@/lib/firebase-client";
+import { SERVICE_CATALOG, type ServiceKey } from "@/lib/service-payments";
 
 const CLOUD_KEYS = [
   "business-lifeline-mri-v2",
@@ -94,7 +95,8 @@ async function purgeBrowserClientData(): Promise<void> {
 }
 type SyncState = "local" | "syncing" | "synced" | "error";
 type CloudPayload = Record<string, string | null>;
-type BillingStatus = { configured?: boolean; plan?: "free" | "pro" | "rescue"; subscriptionStatus?: string | null; rescuePurchased?: boolean; customerReady?: boolean };
+type ServicePurchase = { id: string; serviceKey: string; serviceName: string; purchasedAt: string; paymentStatus: string };
+type BillingStatus = { configured?: boolean; servicesConfigured?: boolean; plan?: "free" | "pro" | "rescue"; subscriptionStatus?: string | null; rescuePurchased?: boolean; customerReady?: boolean; purchases?: ServicePurchase[] };
 
 function cloudEligibleKeys() {
   const keys = new Set<string>(CLOUD_KEYS);
@@ -481,7 +483,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
     }
   };
 
-  const startCheckout = async (plan: "pro" | "rescue") => {
+  const startCheckout = async (purchase: { plan?: "pro" | "rescue"; service?: ServiceKey }) => {
     if (!user) return;
     setBusy(true);
     setError("");
@@ -489,7 +491,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
       const response = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { Authorization: `Bearer ${await user.getIdToken()}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify(purchase),
       });
       const payload = await response.json() as { url?: string; error?: string };
       if (!response.ok || !payload.url) throw new Error(payload.error || "Unable to start checkout.");
@@ -497,6 +499,20 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
     } catch (billingError) {
       setError(billingError instanceof Error ? billingError.message : "Unable to start checkout.");
       setBusy(false);
+    }
+  };
+
+  const refreshBilling = async () => {
+    if (!user) return;
+    try {
+      const response = await fetch("/api/billing/status", {
+        headers: { Authorization: `Bearer ${await user.getIdToken()}` }, cache: "no-store",
+      });
+      if (!response.ok) throw new Error("Payment status could not be refreshed.");
+      setBilling(await response.json() as BillingStatus);
+      setNotice("Payment status refreshed.");
+    } catch (billingError) {
+      setError(billingError instanceof Error ? billingError.message : "Unable to refresh purchases.");
     }
   };
 
@@ -594,10 +610,29 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
               </div>
               {usesPassword && !user.emailVerified && <button className="cloud-mode-switch" type="button" onClick={() => void resendVerification()} disabled={busy}>Resend verification email</button>}
               {billing.configured && <div className="cloud-account-panel-actions">
-                {billing.plan !== "pro" && <button type="button" className="button primary" onClick={() => void startCheckout("pro")} disabled={busy}>Upgrade to Pro</button>}
-                {!billing.rescuePurchased && <button type="button" className="button ghost" onClick={() => void startCheckout("rescue")} disabled={busy}>Buy Rescue package</button>}
+                {billing.plan !== "pro" && <button type="button" className="button primary" onClick={() => void startCheckout({ plan: "pro" })} disabled={busy}>Upgrade to Pro</button>}
+                {!billing.rescuePurchased && <button type="button" className="button ghost" onClick={() => void startCheckout({ plan: "rescue" })} disabled={busy}>Buy Rescue package</button>}
                 {billing.customerReady && <button type="button" className="button ghost" onClick={() => void openBillingPortal()} disabled={busy}>Manage billing</button>}
               </div>}
+              <section aria-label="Business Lifeline diagnostic services" className="cloud-service-offers">
+                <h3>Business diagnostic services</h3>
+                <p>One-time payments in AUD. Your purchase is recorded on this account once Stripe confirms payment. Cash and PayID are available through the owner invoice workflow.</p>
+                <div className="cloud-service-offer-list">
+                  {SERVICE_CATALOG.map((service) => {
+                    const paid = billing.purchases?.some(p => p.serviceKey === service.key && p.paymentStatus === "paid");
+                    return <article key={service.key} className="cloud-service-offer">
+                      <div><strong>{service.offer.name}</strong><span> — ${service.offer.price} AUD</span>
+                        <p>{service.offer.for}</p></div>
+                      <button type="button" className="button ghost" disabled={!billing.servicesConfigured || busy} onClick={() => void startCheckout({ service: service.key })}>Purchase</button>
+                      {paid && <small>Payment verified · service purchased</small>}
+                    </article>;
+                  })}
+                </div>
+                {!billing.servicesConfigured && <p role="status">Account-linked card checkout is not available until the secure Stripe webhook is configured. Contact Business Lifeline for a direct payment link; a direct payment will be reconciled separately.</p>}
+                <h4>My purchases</h4>
+                {billing.purchases?.length ? <ul>{billing.purchases.map(p => <li key={p.id}>{p.serviceName} — {p.paymentStatus === "paid" ? "Paid" : "Pending"} · {p.purchasedAt.slice(0, 10)}</li>)}</ul> : <p>No verified diagnostic purchases on this account yet.</p>}
+                <button className="button ghost" type="button" onClick={() => void refreshBilling()}>Refresh payment status</button>
+              </section>
               {notice && <p className="cloud-account-notice" role="status">{notice}</p>}
               {error && <p className="cloud-account-error" role="alert">{error}</p>}
               <div className="cloud-account-panel-actions">

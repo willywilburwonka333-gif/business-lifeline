@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getFirebaseAdmin } from "@/lib/firebase-admin";
 import { privateResponseHeaders } from "@/lib/api-security";
 import { verifyStripeWebhook } from "@/lib/stripe-billing";
+import { verifiedServicePayment } from "@/lib/service-payments";
 
 export const runtime = "nodejs";
 
@@ -9,10 +10,15 @@ type StripeObject = {
   id?: string;
   customer?: string;
   client_reference_id?: string;
+  payment_link?: string | null;
+  payment_intent?: string | null;
   mode?: string;
+  amount_total?: number;
+  currency?: string;
   payment_status?: string;
   status?: string;
-  metadata?: { uid?: string; plan?: string };
+  customer_details?: { email?: string; name?: string };
+  metadata?: { uid?: string; plan?: string; service_key?: string };
 };
 
 type StripeEvent = {
@@ -35,26 +41,73 @@ export async function POST(request: Request) {
   try {
     const event = JSON.parse(raw) as StripeEvent;
     const object = event.data?.object || {};
-    const { db } = getFirebaseAdmin();
+    const { db, auth } = getFirebaseAdmin();
     const now = new Date().toISOString();
     const eventId = event.id || "";
-    if (eventId) {
-      const eventRef = db.collection("stripeWebhookEvents").doc(eventId);
-      try {
-        await eventRef.create({ type: event.type || "unknown", receivedAt: now });
-      } catch (createError) {
-        const code = typeof createError === "object" && createError && "code" in createError ? String((createError as { code?: unknown }).code) : "";
-        if (code === "6" || code.toLowerCase().includes("already-exists")) {
-          return NextResponse.json({ received: true, duplicate: true }, { headers: privateResponseHeaders() });
-        }
-        throw createError;
-      }
+    const eventRef = eventId ? db.collection("stripeWebhookEvents").doc(eventId) : null;
+
+    // Only skip events that were successfully processed. Failed events must
+    // remain retryable; recording them before processing can lose payments.
+    if (eventRef && (await eventRef.get()).data()?.processedAt) {
+      return NextResponse.json({ received: true, duplicate: true }, { headers: privateResponseHeaders() });
     }
 
-    if (event.type === "checkout.session.completed") {
+    if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
       const uid = object.metadata?.uid || object.client_reference_id;
       const plan = object.metadata?.plan;
-      if (uid) {
+      const service = verifiedServicePayment(object);
+      if (service) {
+        // Direct shareable Payment Links don't prove the payer's Firebase uid.
+        // Record them for owner reconciliation, but never grant an account access.
+        const accountUid = object.payment_link ? null : uid;
+        const order = {
+          stripeCheckoutSessionId: object.id,
+          serviceKey: service.key,
+          serviceName: service.offer.name,
+          amountCents: Math.round(service.offer.price * 100),
+          currency: "aud",
+          paymentStatus: "paid",
+          method: "stripe",
+          stripeCustomerId: object.customer || null,
+          stripePaymentIntentId: object.payment_intent || null,
+          customerEmail: object.customer_details?.email || null,
+          customerName: object.customer_details?.name || null,
+          paidAt: now,
+          uid: accountUid || null,
+          source: object.payment_link ? "payment_link" : "app_checkout",
+        };
+        await db.collection("serviceOrders").doc(object.id!).set(order, { merge: true });
+        if (accountUid) {
+          // Verify the Firebase user still exists before assigning entitlements.
+          try {
+            await auth.getUser(accountUid);
+            await db.collection("users").doc(accountUid).collection("servicePurchases").doc(object.id!).set({
+              stripeCheckoutSessionId: object.id,
+              serviceKey: service.key,
+              serviceName: service.offer.name,
+              amountCents: order.amountCents,
+              currency: "aud",
+              paymentStatus: "paid",
+              purchasedAt: now,
+            }, { merge: true });
+            await db.collection("users").doc(accountUid).set({
+              stripeCustomerId: object.customer || null,
+              billingUpdatedAt: now,
+              lastStripeEventId: event.id || null,
+            }, { merge: true });
+          } catch (error) {
+            // Keep the paid order for manual reconciliation. Never silently
+            // allocate the purchase to another uid based on email alone.
+            if (error && typeof error === "object" && "code" in error &&
+                String((error as { code?: unknown }).code).includes("user-not-found")) {
+              await db.collection("serviceOrders").doc(object.id!).set({ uid: null, reconcileReason: "account_not_found" }, { merge: true });
+            } else throw error;
+          }
+        }
+      } else if (object.metadata?.service_key) {
+        // Unexpected amount/currency/unpaid status cannot unlock a service.
+        // An asynchronous pending payment can be resolved by a later success event.
+      } else if (event.type === "checkout.session.completed" && uid) {
         const update: Record<string, unknown> = {
           stripeCustomerId: object.customer || null,
           billingUpdatedAt: now,
@@ -64,7 +117,7 @@ export async function POST(request: Request) {
           update.billingPlan = "pro";
           update.subscriptionStatus = "active";
         }
-        if (plan === "rescue") {
+        if (plan === "rescue" && object.payment_status === "paid") {
           update.rescuePurchased = true;
           update.rescuePurchasedAt = now;
         }
@@ -100,6 +153,7 @@ export async function POST(request: Request) {
       }
     }
 
+    if (eventRef) await eventRef.set({ type: event.type || "unknown", processedAt: now }, { merge: true });
     return NextResponse.json({ received: true }, { headers: privateResponseHeaders() });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Webhook handling failed." }, { status: 500, headers: privateResponseHeaders() });
