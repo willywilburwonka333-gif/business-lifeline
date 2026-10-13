@@ -15,9 +15,17 @@ test("public preview loads cleanly without exposing operating modules", async ({
 test("public register action opens the account creation panel", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: /Create a free pilot account/i }).click();
-  await expect(page.getByRole("heading", { name: /Create your account/i })).toBeVisible();
-  await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
-  await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
+  const panel = page.getByRole("region", { name: "Business Lifeline account" });
+  await expect(panel).toBeVisible();
+  // CI intentionally has no Firebase client configuration: verify a helpful
+  // setup blocker there, and the real registration form when configured.
+  if (await page.getByText("Firebase configuration missing").isVisible()) {
+    await expect(panel).toContainText("NEXT_PUBLIC_FIREBASE");
+  } else {
+    await expect(page.getByRole("heading", { name: /Create your account/i })).toBeVisible();
+    await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
+  }
 });
 
 test("public preview displays all five indicative service offers without checkout", async ({ page }) => {
