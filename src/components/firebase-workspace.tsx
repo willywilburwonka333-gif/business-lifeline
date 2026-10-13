@@ -15,6 +15,7 @@ import {
 import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc, type DocumentSnapshot } from "firebase/firestore";
 import { firebaseAuth, firebaseConfigured, firebaseDb } from "@/lib/firebase-client";
 import { SERVICE_CATALOG, type ServiceKey } from "@/lib/service-payments";
+import { PilotCentre } from "@/components/pilot-centre";
 
 const CLOUD_KEYS = [
   "business-lifeline-mri-v2",
@@ -148,6 +149,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
   const authEpoch = useRef(0);
   const syncing = useRef(false);
   const [panelOpen, setPanelOpen] = useState(false);
+  useEffect(() => { const url = new URLSearchParams(window.location.search); if (url.get("pilot") && url.get("invite")) setPanelOpen(true); }, []);
   const [createMode, setCreateMode] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -633,6 +635,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
                 {billing.purchases?.length ? <ul>{billing.purchases.map(p => <li key={p.id}>{p.serviceName} — {p.paymentStatus === "paid" ? "Paid" : "Pending"} · {p.purchasedAt.slice(0, 10)}</li>)}</ul> : <p>No verified diagnostic purchases on this account yet.</p>}
                 <button className="button ghost" type="button" onClick={() => void refreshBilling()}>Refresh payment status</button>
               </section>
+              <PilotCentre user={user} servicesConfigured={Boolean(billing.servicesConfigured)} onOpenMri={() => setPanelOpen(false)} />
               {notice && <p className="cloud-account-notice" role="status">{notice}</p>}
               {error && <p className="cloud-account-error" role="alert">{error}</p>}
               <div className="cloud-account-panel-actions">
@@ -652,6 +655,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
                 <button type="button" className={createMode ? "active" : ""} aria-pressed={createMode} onClick={() => { setCreateMode(true); setError(""); setNotice(""); }}>Create account</button>
               </div>
               <h2>{createMode ? "Create your account" : "Sign in"}</h2>
+              {typeof window !== "undefined" && new URLSearchParams(window.location.search).get("pilot") && <p role="status"><strong>Customer pilot invitation:</strong> Sign in or create an account using the email address that received your invitation. After email verification you can accept the pilot, choose how to pay and begin.</p>}
               <p>You can keep using Business Lifeline privately on this device. An account adds secure cloud backup and access across devices.</p>
               <label>Email<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
               <label>Password<input type="password" autoComplete={createMode ? "new-password" : "current-password"} value={password} onChange={(event) => setPassword(event.target.value)} minLength={6} required /></label>
