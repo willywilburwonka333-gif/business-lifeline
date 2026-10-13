@@ -131,13 +131,22 @@ async function clearLocalPayload(options: { allowUnbackedFiles?: boolean } = {})
 function messageForError(error: unknown) {
   if (error instanceof Error && error.message === UNBACKED_VAULT_NOTICE) return UNBACKED_VAULT_NOTICE;
   const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
-  if (code.includes("email-already-in-use")) return "That email already has an account. Choose Sign in instead.";
-  if (code.includes("invalid-credential")) return "The email or password is incorrect.";
-  if (code.includes("weak-password")) return "Use a password with at least six characters.";
-  if (code.includes("popup-closed")) return "Google sign-in was closed before it finished.";
-  if (code.includes("permission-denied")) return "Cloud access is locked until the secure Firestore rules are published.";
-  if (code.includes("too-many-requests")) return "Too many attempts. Wait briefly and try again.";
-  return "That did not complete. Check the details and try again.";
+  if (code.includes("email-already-in-use")) return "This email already has a Business Lifeline account. Select Sign in, or use Forgot password.";
+  if (code.includes("invalid-email")) return "Enter a valid email address.";
+  if (code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) return "That email/password combination was not accepted. Try Sign in or Forgot password.";
+  if (code.includes("weak-password")) return "Choose a stronger password (at least six characters).";
+  if (code.includes("operation-not-allowed") || code.includes("configuration-not-found")) return "This sign-in method is not enabled in the Firebase project. The studio operator needs to enable it in Firebase Authentication.";
+  if (code.includes("unauthorized-domain")) return "This web address is not authorised for Firebase sign-in. The studio operator needs to approve the domain in Firebase Authentication.";
+  if (code.includes("popup-blocked") || code.includes("popup-closed") || code.includes("cancelled-popup-request")) return "Google sign-in popup was blocked or closed. Try an ordinary Safari/Chrome browser, or use email sign-in.";
+  if (code.includes("network-request-failed")) return "Firebase could not be reached. Check your network and try again.";
+  if (code.includes("invalid-api-key") || code.includes("auth-domain-config-required")) return "Business Lifeline's Firebase sign-in configuration needs to be corrected by the studio operator.";
+  if (code.includes("user-disabled")) return "This account has been disabled. Contact Business Lifeline support.";
+  if (code.includes("permission-denied")) return "The server has not granted access. The studio operator needs to verify Firebase security settings.";
+  if (code.includes("too-many-requests")) return "Too many attempts. Wait a while before trying again.";
+  // Firebase Authentication errors use non-sensitive, documented error codes.
+  // Avoid exposing backend exception messages, credentials, or arbitrary responses.
+  if (/^auth\/[a-z0-9-]+$/.test(code)) return `Firebase sign-in error: ${code}. Contact support@businesslifeline.com.au with this code.`;
+  return "Sign-in could not complete. Contact support@businesslifeline.com.au for help.";
 }
 
 export function FirebaseWorkspace({ children }: { children: ReactNode }) {
@@ -378,8 +387,14 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
     try {
       if (createMode) {
         const credential = await createUserWithEmailAndPassword(firebaseAuth, email.trim(), password);
-        await sendEmailVerification(credential.user);
-        setNotice("Account created. Check your email to verify it.");
+        try {
+          await sendEmailVerification(credential.user);
+          setNotice("Account created. Check your inbox for the verification email.");
+        } catch (verificationError) {
+          // Firebase has already created and signed in this account. Never
+          // report that registration failed and invite duplicate registrations.
+          setNotice(`Your account was created, but the verification email could not be sent. ${messageForError(verificationError)} Select Account → Resend verification email after setup is corrected.`);
+        }
       } else {
         await signInWithEmailAndPassword(firebaseAuth, email.trim(), password);
       }
