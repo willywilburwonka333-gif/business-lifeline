@@ -12,7 +12,7 @@ export function PilotPublicLanding() {
           <h1>Diagnose the pressure.<br/><em>Make a practical recovery plan.</em></h1>
           <p className="judge-lead">Business Lifeline helps Australian small-business owners understand financial pressure and identify possible operational improvements. Our pilot includes a guided Business MRI and Repair Centre, with results reviewed together.</p>
           <div className="judge-actions">
-            <button className="button primary large" type="button" onClick={openAccount}>Create a free pilot account →</button>
+            <button className="button primary large" type="button" onClick={openAccount}>Create a pilot account →</button>
             <a className="button outline large" href="mailto:businesslifelinesupport@gmail.com?subject=Business%20Lifeline%20pilot%20walkthrough">Book a phone or video walkthrough</a>
           </div>
           <p>Visitors can review the service without entering confidential business information. Create an account to participate in the guided pilot.</p>
