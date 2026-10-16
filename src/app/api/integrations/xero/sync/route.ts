@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { decryptSecret, encryptSecret } from "@/lib/accounting-token-vault";
 import { getFirebaseAdmin, requireFirebaseUser } from "@/lib/firebase-admin";
-import { privateResponseHeaders, rejectCrossSiteRequest } from "@/lib/api-security";
+import { privateResponseHeaders, rejectCrossSiteRequest, requireFullPlatformRequest } from "@/lib/api-security";
 import { combineXeroFacts, type XeroReport } from "@/lib/xero-normalizer";
 
 export const runtime = "nodejs";
@@ -26,6 +26,8 @@ async function refresh(tokens: Tokens) {
 }
 
 export async function POST(request: Request) {
+  const restricted = await requireFullPlatformRequest(request);
+  if (restricted) return restricted;
   const crossSite = rejectCrossSiteRequest(request);
   if (crossSite) return crossSite;
 
