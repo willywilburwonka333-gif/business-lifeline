@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { getFirebaseAdmin, requireFirebaseUser } from "@/lib/firebase-admin";
-import { privateResponseHeaders, rejectCrossSiteRequest } from "@/lib/api-security";
+import { privateResponseHeaders, rejectCrossSiteRequest, requireFullPlatformRequest } from "@/lib/api-security";
 import { stripePost } from "@/lib/stripe-billing";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const restricted = await requireFullPlatformRequest(request);
+  if (restricted) return restricted;
   const crossSite = rejectCrossSiteRequest(request);
   if (crossSite) return crossSite;
   try {
