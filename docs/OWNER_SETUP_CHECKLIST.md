@@ -133,10 +133,11 @@ The repository contains checkout, customer portal, entitlement status and webhoo
 
 The real pilot workflow is implemented in `src/components/pilot-centre.tsx` and server routes `/api/pilots` and `/api/pilots/join`. Creator-only privileges are checked using the Firebase signed-in user's **verified email** against a **server-side production** environment variable:
 
-- `BUSINESS_LIFELINE_CREATOR_EMAIL` — the Firebase-verified login email belonging to the sole-trader owner (never a `NEXT_PUBLIC_` variable).
-- `BUSINESS_LIFELINE_CREATOR_UID` — optional but strongly recommended, pins creator rights to the exact Firebase Authentication account UID. Configure before sharing real client data.
+- `BUSINESS_LIFELINE_OWNER_UID` — the existing studio owner Firebase UID already configured in Vercel; this also identifies the creator account if no dedicated creator UID is configured.
+- `BUSINESS_LIFELINE_CREATOR_EMAIL` — optional additional requirement that the studio UID's Firebase verified login email matches the configured creator email (never `NEXT_PUBLIC_`).
+- `BUSINESS_LIFELINE_CREATOR_UID` — optional override for the studio owner UID if deliberately migrating creator administration to a separate verified Firebase account. Do not set it unless that is intended.
 
-If no creator email is configured, the app intentionally denies creator privileges. A customer cannot make themselves an administrator by editing Firestore. The `pilotProjects` and `pilotPaymentEvents` collections are accessible **only via verified server routes**, not through direct client Firestore writes. Existing Firestore rules deny both collections.
+If no creator UID or studio owner UID is configured, the app intentionally denies creator privileges. A customer cannot make themselves an administrator by editing Firestore. The `pilotProjects` and `pilotPaymentEvents` collections are accessible **only via verified server routes**, not through direct client Firestore writes. Existing Firestore rules deny both collections.
 
 On the account screen, a configured creator can: create a pilot with the customer's exact email, name, business, service and payment method; share a one-time unique join link; rotate an unclaimed invitation; track invitations, claimed/active pilots, payments and opt-in shared summaries; mark paid manual transactions with a confirmed receipt reference; verify and reconcile a Stripe Checkout Session directly against Stripe; close a pilot.
 
@@ -153,6 +154,20 @@ No paid pilot is automatically granted service access for pending/unpaid transac
 - Configure and test Stripe live endpoint events and the `STRIPE_SERVICE_CHECKOUT_ENABLED` switch; do **not** enable until Vercel environment access and webhook verification work.
 - Do not upload client-identifiable payroll, bank credentials, card data, TFNs or identity documents without clearance.
 - Obtain a privacy/security and appropriate professional review before inviting real businesses to upload confidential data.
+
+
+## 7B. Production pilot-only access launch
+
+The customer access release routes public visitors to the non-sensitive landing page, verified Firebase accounts to the MRI/Recover pilot shell, and approved full accounts to advanced modules. The server uses the existing `BUSINESS_LIFELINE_OWNER_UID` as the source of creator/studio access, avoiding guessed email identities. Business owner membership does not automatically grant full platform access.
+
+**Must deploy before inviting clients with actual financial records:**
+1. Confirm Firebase Admin credentials and the configured studio UID belong to the correct Firebase project and owner.
+2. From the owner account, check `GET /api/pilot/access` returns `isStudioOwner: true` and `tier: full`. This bootstraps its admin-managed entitlement document.
+3. Publish the reviewed `firestore.rules` from the same released commit to the **correct production Firebase project**. A GitHub merge does not publish Firestore rules.
+4. Verify two distinct registered customers cannot read one another's workspace, MRI history, uploads or records; pilot account cannot use advanced collections, AI API or QuickBooks/Xero server APIs.
+5. Test the owner's full operating workspace still loads. Check upgrade/downgrade and two-device sign-out flows.
+
+Stripe: A separate live webhook endpoint was created at `https://businesslifeline.com.au/api/billing/webhook`, with its unique signing secret stored in Vercel. **Do not enable** `STRIPE_SERVICE_CHECKOUT_ENABLED` until `STRIPE_SECRET_KEY` is added securely to Vercel from the **same live Stripe account** and authenticated end-to-end checkout plus webhook processing have been verified. The already-created hosted Stripe payment links can be used for manually reconciled payments after commercial/legal readiness is confirmed. Do not send API keys through chat or commit them to GitHub.
 
 ## 8. Production checks you must personally verify
 
