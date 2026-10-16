@@ -1,91 +1,50 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-async function openSafetyCentre(page: Page) {
-  const launcher = page.getByTestId("beta-safety-launcher");
-  await expect(launcher).toBeVisible({ timeout: 15000 });
-  await launcher.click();
-  await expect(page.getByRole("dialog", { name: /controlled beta safety centre/i })).toBeVisible({ timeout: 15000 });
-}
-
-test("home page loads without uncaught browser errors", async ({ page }) => {
+test("public preview loads without exposing customer workspaces or advanced tools", async ({ page }) => {
   const errors: string[] = [];
-  page.on("pageerror", (error) => { errors.push(error.message); console.log("[pageerror]", error.message); });
-  page.on("console", (msg) => { if (msg.type() === "error") console.log("[console-error]", msg.text()); });
-  page.on("requestfailed", (request) => console.log("[request-failed]", request.url(), request.failure()?.errorText));
+  page.on("pageerror", error => errors.push(error.message));
   await page.goto("/");
-  await expect(page).toHaveTitle(/Business Lifeline/i);
-  await expect(page.locator("body")).toBeVisible();
-  await page.waitForTimeout(1500);
-  const launcher = page.getByTestId("beta-safety-launcher");
-  await expect(launcher).toBeVisible({ timeout: 15000 });
+  await expect(page).toHaveTitle(/Business Lifeline/);
+  await expect(page.getByRole("heading", { name: /Diagnose the pressure/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Create a pilot account/i })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: /Business Lifeline main areas/i })).toHaveCount(0);
+  await expect(page.getByText(/fictional/i).first()).toBeVisible();
+  await expect(page.getByTestId("beta-safety-launcher")).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
-test("controlled beta safety centre opens and explains boundaries", async ({ page }) => {
+test("registration CTA makes account access available, including on narrow mobile viewports", async ({ page }) => {
   await page.goto("/");
-  await openSafetyCentre(page);
-  await expect(page.getByRole("dialog", { name: /controlled beta safety centre/i })).toBeVisible();
-  await expect(page.getByText(/do not rely on it for/i)).toBeVisible();
-  await expect(page.getByText(/tax or BAS lodgement/i)).toBeVisible();
+  await page.getByRole("button", { name: /Create a pilot account/i }).click();
+  const panel = page.getByRole("region", { name: "Business Lifeline account" });
+  await expect(panel).toBeVisible();
+  if (await panel.getByText("Firebase configuration missing").isVisible()) {
+    await expect(panel).toContainText("NEXT_PUBLIC_FIREBASE");
+  } else {
+    const actions = panel.getByRole("group", { name: "Choose account action" });
+    await expect(actions.getByRole("button", { name: "Sign in" })).toBeVisible();
+    await actions.getByRole("button", { name: "Create account" }).click();
+    await expect(panel.getByRole("heading", { name: /Create your account/i })).toBeVisible();
+    await expect(panel.getByLabel("Email", { exact: true })).toBeVisible();
+    await expect(panel.getByLabel("Password", { exact: true })).toBeVisible();
+  }
 });
 
-test("feedback can be saved and exported locally", async ({ page }) => {
+test("public preview lists five services without creating a paid charge", async ({ page }) => {
   await page.goto("/");
-  await openSafetyCentre(page);
-  await page.getByRole("button", { name: /report feedback/i }).click();
-  await page.getByLabel(/screen or step/i).fill("Business MRI results");
-  await page.getByLabel(/what happened/i).fill("Automated pilot feedback test");
-  await page.getByRole("button", { name: /save feedback/i }).click();
-  await expect(page.getByText(/feedback saved on this device/i)).toBeVisible();
-  await expect(page.locator(".beta-feedback-history")).toContainText("1");
-  await expect(page.locator(".beta-feedback-history")).toContainText(/saved reports/i);
+  for (const offer of ["Lifeline Pulse", "Lifeline MRI", "Lifeline Deep Scan", "Lifeline Recovery Map", "Lifeline Intensive"]) {
+    await expect(page.getByRole("heading", { name: offer, exact: true })).toBeVisible();
+  }
+  await expect(page.getByRole("button", { name: /checkout|pay now|buy now/i })).toHaveCount(0);
 });
 
-test("weekly pilot outcome checkpoint persists", async ({ page }) => {
-  await page.goto("/");
-  await openSafetyCentre(page);
-  await page.getByRole("button", { name: /pilot outcomes/i }).click();
-  await page.getByLabel(/actions assigned/i).fill("5");
-  await page.getByLabel(/actions completed/i).fill("3");
-  await page.getByRole("button", { name: /save weekly checkpoint/i }).click();
-  await expect(page.getByText(/pilot outcome checkpoint saved/i)).toBeVisible();
-  await page.reload();
-  await openSafetyCentre(page);
-  await page.getByRole("button", { name: /pilot outcomes/i }).click();
-  await expect(page.getByLabel(/actions completed/i)).toHaveValue("3");
-});
-
-test("synthetic MRI can create and restore a measurable quoting repair project", async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem("business-lifeline-tutorial-welcome-v1", "complete");
-    window.localStorage.setItem("business-lifeline-tutorial-overview-v1", "complete");
-    window.localStorage.setItem("business-lifeline-tutorial-lifeline-v1", "complete");
+test("visitor cannot access studio management or pilot entitlements without signing in", async ({ request }) => {
+  const accounts = await request.get("/api/pilot/accounts");
+  expect(accounts.status()).toBe(403);
+  const access = await request.get("/api/pilot/access");
+  expect([401, 503]).toContain(access.status());
+  const createPilot = await request.post("/api/pilots", {
+    data: { selfServe: true, businessName: "Test", clientName: "Test", serviceKey: "lifeline_pulse", paymentMethod: "stripe", confirmConsent: true },
   });
-  await page.goto("/");
-  await page.getByRole("button", { name: /Choose a Demo MRI/i }).click();
-  const chooser = page.getByRole("dialog", { name: /Choose the business you want to test/i });
-  await expect(chooser).toBeVisible();
-  await chooser.getByRole("button", { name: /Family Table Cafe/i }).click();
-  await expect(page.locator(".product-brand")).toContainText("Family Table Cafe");
-
-  const recover = page.getByRole("navigation", { name: "Business Lifeline main areas" }).getByRole("button", { name: /Business Lifeline/i });
-  await recover.click();
-  await page.getByRole("tab", { name: /Repair Centre/i }).click();
-  await expect(page.getByRole("heading", { name: "Repair Centre", level: 2 })).toBeVisible();
-  await page.getByLabel(/Show all improvement templates/i).check();
-  await page.getByRole("button", { name: /Create repair project/i }).first().click();
-  await expect(page.getByRole("heading", { name: "Projects and progress" })).toBeVisible();
-  await expect(page.getByText(/Repair project created/i)).toBeVisible();
-
-  const projectsBefore = await page.evaluate(() => {
-    const key = Object.keys(localStorage).find(key => key.startsWith("business-lifeline-repair-projects-v1:"));
-    return key ? JSON.parse(localStorage.getItem(key) || "{}").projects?.length : 0;
-  });
-  expect(projectsBefore).toBe(1);
-
-  await page.reload();
-  await recover.click();
-  await page.getByRole("tab", { name: /Repair Centre/i }).click();
-  await expect(page.getByRole("heading", { name: "Projects and progress" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Planning.*0%/i }).first()).toBeVisible();
+  expect([401, 403]).toContain(createPilot.status());
 });
