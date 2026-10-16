@@ -12,6 +12,15 @@ const environment = await initializeTestEnvironment({
 });
 test.after(async () => environment.cleanup());
 
+// The studio approval collection can only be changed with admin privileges.
+// Owner/manager membership in a single company must not unlock studio modules.
+await environment.withSecurityRulesDisabled(async context => {
+  const db = context.firestore();
+  for (const uid of ["alice", "staff", "accountant"]) {
+    await setDoc(doc(db, "pilotAccess", uid), { tier: "full" });
+  }
+});
+
 const alice = environment.authenticatedContext("alice");
 const bob = environment.authenticatedContext("bob");
 const staff = environment.authenticatedContext("staff");
@@ -109,4 +118,29 @@ test("client owns immutable MRI history; invited consultant cannot read operatin
   await assertFails(getDoc(doc(consultant.firestore(), `${ownBusiness}/modules/finance`)));
   await assertFails(getDoc(doc(consultant.firestore(), `${ownBusiness}/finance/private`)));
   await assertFails(getDoc(doc(consultant.firestore(), `${ownBusiness}/records/example`)));
+});
+
+
+test("new pilot account cannot self-authorise full access or use advanced modules", async () => {
+  const bobBusiness = "businesses/business-bob";
+  await assertSucceeds(setDoc(doc(bob.firestore(), bobBusiness), {
+    id: "business-bob", ownerId: "bob", name: "New pilot"
+  }));
+  await assertSucceeds(setDoc(doc(bob.firestore(), bobBusiness, "members", "bob"), {
+    userId: "bob", role: "owner", status: "active"
+  }));
+  await assertSucceeds(setDoc(doc(bob.firestore(), "userWorkspaces/bob"), { ownerId: "bob", payload: { mri: "example" } }));
+  await assertSucceeds(setDoc(doc(bob.firestore(), bobBusiness, "mriReports", "scan1"), {
+    id: "scan1", businessId: "business-bob", businessName: "Pilot",
+    createdAt: "2026-10-13T00:00:00Z", createdBy: "bob", saved: { data: {}, report: {} }
+  }));
+  await assertFails(setDoc(doc(bob.firestore(), "pilotAccess", "bob"), { tier: "full" }));
+  await assertFails(setDoc(doc(bob.firestore(), bobBusiness, "modules", "finance"), { module: "finance", updatedBy: "bob" }));
+  await assertFails(setDoc(doc(bob.firestore(), bobBusiness, "finance", "private"), { value: 2 }));
+  await assertFails(setDoc(doc(bob.firestore(), bobBusiness, "payroll", "private"), { value: 2 }));
+  await assertFails(setDoc(doc(bob.firestore(), bobBusiness, "crm", "contact"), { value: 2 }));
+  await assertFails(setDoc(doc(bob.firestore(), bobBusiness, "records", "record"), { id: "record", type: "document", updatedBy: "bob" }));
+  await assertFails(setDoc(doc(bob.firestore(), "businessInvites", "invite123"), {
+    token: "invite123", businessId: "business-bob", role: "manager", status: "active"
+  }));
 });
