@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { encryptSecret, randomState } from "@/lib/accounting-token-vault";
 import { requireFirebaseUser } from "@/lib/firebase-admin";
-import { privateResponseHeaders, rejectCrossSiteRequest } from "@/lib/api-security";
+import { privateResponseHeaders, rejectCrossSiteRequest, requireFullPlatformRequest } from "@/lib/api-security";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const restricted = await requireFullPlatformRequest(request);
+  if (restricted) return restricted;
   try {
     const crossSite = rejectCrossSiteRequest(request);
     if (crossSite) return crossSite;

@@ -151,6 +151,7 @@ export function FirebaseWorkspace({ children }: { children: ReactNode }) {
   const [panelOpen, setPanelOpen] = useState(false);
   const [pilotInvitePending, setPilotInvitePending] = useState(false);
   useEffect(() => { const url = new URLSearchParams(window.location.search); if (url.get("pilot") && url.get("invite")) { setPanelOpen(true); setPilotInvitePending(true); } }, []);
+  useEffect(() => { const open = () => setPanelOpen(true); window.addEventListener("business-lifeline-open-account", open); return () => window.removeEventListener("business-lifeline-open-account", open); }, []);
   const [createMode, setCreateMode] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

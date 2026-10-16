@@ -11,6 +11,8 @@ test("pilot client email requires a valid, normalised email", () => {
 test("creator role requires a VERIFIED account email and optional matching UID", () => {
   const oldEmail = process.env.BUSINESS_LIFELINE_CREATOR_EMAIL;
   const oldUid = process.env.BUSINESS_LIFELINE_CREATOR_UID;
+  const oldOwner = process.env.BUSINESS_LIFELINE_OWNER_UID;
+  delete process.env.BUSINESS_LIFELINE_OWNER_UID;
   try {
     process.env.BUSINESS_LIFELINE_CREATOR_EMAIL="creator@example.com";
     process.env.BUSINESS_LIFELINE_CREATOR_UID="original-creator";
@@ -19,10 +21,16 @@ test("creator role requires a VERIFIED account email and optional matching UID",
     assert.equal(isCreatorUser({ uid:"original-creator",email:"creator@example.com",email_verified:false }), false);
     assert.equal(isCreatorUser({ uid:"original-creator",email:"other@example.com",email_verified:true }), false);
     delete process.env.BUSINESS_LIFELINE_CREATOR_EMAIL;
+    assert.equal(isCreatorUser({ uid:"original-creator",email:"creator@example.com",email_verified:true }), true);
+    delete process.env.BUSINESS_LIFELINE_CREATOR_UID;
     assert.equal(isCreatorUser({ uid:"original-creator",email:"creator@example.com",email_verified:true }), false);
+    process.env.BUSINESS_LIFELINE_OWNER_UID="original-creator";
+    assert.equal(isCreatorUser({ uid:"original-creator",email:"creator@example.com",email_verified:true }), true);
+    assert.equal(isCreatorUser({ uid:"attacker",email:"creator@example.com",email_verified:true }), false);
   } finally {
     if(oldEmail===undefined) delete process.env.BUSINESS_LIFELINE_CREATOR_EMAIL; else process.env.BUSINESS_LIFELINE_CREATOR_EMAIL=oldEmail;
     if(oldUid===undefined) delete process.env.BUSINESS_LIFELINE_CREATOR_UID; else process.env.BUSINESS_LIFELINE_CREATOR_UID=oldUid;
+    if(oldOwner===undefined) delete process.env.BUSINESS_LIFELINE_OWNER_UID; else process.env.BUSINESS_LIFELINE_OWNER_UID=oldOwner;
   }
 });
 test("invite token must be cryptographically valid, no deterministic PIN",()=>{

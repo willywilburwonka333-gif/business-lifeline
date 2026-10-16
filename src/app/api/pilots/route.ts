@@ -54,10 +54,12 @@ export async function POST(request: Request) {
           !["stripe","payid","cash","bank-transfer"].includes(paymentMethod))
         return fail("Choose a service, business details, payment preference and accept the pilot terms.");
       const creatorEmail = normalizePilotEmail(process.env.BUSINESS_LIFELINE_CREATOR_EMAIL);
-      if (!creatorEmail) return fail("Self-service registration is not configured yet.", 503);
+      const creatorUid = (process.env.BUSINESS_LIFELINE_CREATOR_UID || process.env.BUSINESS_LIFELINE_OWNER_UID || "").trim();
+      if (!creatorUid && !creatorEmail) return fail("Pilot registration needs its creator identity configured.", 503);
       const { auth, db } = getFirebaseAdmin();
-      const creatorAccount = await auth.getUserByEmail(creatorEmail);
-      if (!creatorAccount.emailVerified) return fail("Pilot creator has not verified their account.", 503);
+      const creatorAccount = creatorUid ? await auth.getUser(creatorUid) : await auth.getUserByEmail(creatorEmail!);
+      if (!creatorAccount.emailVerified || (creatorEmail && normalizePilotEmail(creatorAccount.email) !== creatorEmail))
+        return fail("Configured pilot creator identity cannot be verified.", 503);
       const existing = await db.collection("pilotProjects").where("clientUid", "==", user.uid).limit(30).get();
       const duplicate = existing.docs.map(doc => doc.data() as Pilot)
         .find(p => p.serviceKey === serviceKey && p.status === "active" && p.paymentStatus === "pending");

@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BusinessLifeline } from "@/components/business-lifeline";
 import { BusinessRecords } from "@/components/business-records";
 import { JudgeLanding } from "@/components/judge-landing";
+import { PilotAccountLanding } from "@/components/pilot-account-landing";
 import { ProductTutorial, tutorialStorageKey, type TutorialStep } from "@/components/product-tutorial";
 import { SavedScenarioPlanner } from "@/components/saved-scenario-planner";
 import { MriReportArchive } from "@/components/mri-report-archive";
@@ -44,12 +45,13 @@ const tutorialSteps: Record<TutorialId, TutorialStep[]> = {
 
 function buildDemoReport(data: (typeof demoBusinesses)[number]): BusinessReport { const base = generateReport(data); return { ...base, aiStatus: "fallback" }; }
 
-export function BusinessLifelineApp() {
+export function BusinessLifelineApp({ pilotMode = false }: { pilotMode?: boolean } = {}) {
   const [saved, setSaved] = useState<AppState>(undefined);
   const [historical, setHistorical] = useState<ArchivedMri | null>(null);
   const [showAssessment, setShowAssessment] = useState(false);
   const [showQuestions, setShowQuestions] = useState(false);
   const [reportMode, setReportMode] = useState<ReportMode>("private");
+  const canUseAi = !pilotMode && reportMode === "ai";
   const [aiConsent, setAiConsent] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
   const [tutorial, setTutorial] = useState<TutorialId | null>(null);
@@ -107,7 +109,7 @@ export function BusinessLifelineApp() {
     window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
       if (!url.endsWith("/api/analyse")) return originalFetch(input, init);
-      if (reportMode !== "ai" || !aiConsent) {
+      if (!canUseAi || !aiConsent) {
         return new Response(JSON.stringify({ error: "Calculation-only report selected." }), { status: 403, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
       }
       let body: Record<string, unknown> = {};
@@ -120,7 +122,7 @@ export function BusinessLifelineApp() {
       return originalFetch(input, { ...init, headers, body: JSON.stringify({ ...body, consent: true, documentContext }) });
     };
     return () => { window.fetch = originalFetch; };
-  }, [showQuestions, reportMode, aiConsent]);
+  }, [showQuestions, canUseAi, aiConsent]);
 
   const openDemo = (demoIndex = 0) => {
     if (demoLoading) return;
@@ -144,8 +146,8 @@ export function BusinessLifelineApp() {
   };
 
   const continueToQuestions = () => {
-    if (reportMode === "ai" && !aiConsent) return;
-    window.localStorage.setItem(MRI_MODE_KEY, reportMode);
+    if (canUseAi && !aiConsent) return;
+    window.localStorage.setItem(MRI_MODE_KEY, pilotMode ? "private" : reportMode);
     setShowQuestions(true);
     if (window.localStorage.getItem(tutorialStorageKey("mri-form")) !== "complete") setTutorial("mri-form");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -172,8 +174,8 @@ export function BusinessLifelineApp() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   if (historical) return <HistoricalMriReport entry={historical} onBack={() => setHistorical(null)} />;
-  if (saved) return <><MriReportArchive onOpen={openArchived} /><SavedScenarioPlanner saved={saved} onReset={reset} /></>;
-  if (showAssessment && showQuestions) return <><BusinessLifeline aiEnabled={reportMode === "ai" && aiConsent} />{helpButton}{tutorialLayer}</>;
+  if (saved) return <><MriReportArchive onOpen={openArchived} /><SavedScenarioPlanner saved={saved} onReset={reset} pilotMode={pilotMode} /></>;
+  if (showAssessment && showQuestions) return <><BusinessLifeline aiEnabled={canUseAi && aiConsent} />{helpButton}{tutorialLayer}</>;
   if (showAssessment) return (
     <>
       <main id="main-content" className="mri-mode-shell">
@@ -182,27 +184,27 @@ export function BusinessLifelineApp() {
         <section className="mri-mode-panel" aria-labelledby="mri-setup-title">
           <p className="eyebrow">PRIVACY &amp; DOCUMENTS</p>
           <h1 id="mri-setup-title">Choose how your MRI is prepared.</h1>
-          <p className="mri-mode-lead">Choose a calculation-only report without AI-provider analysis, or explicitly authorise optional AI prioritisation and document reading. Uploaded facts pre-fill Step 3, while supported operating signals strengthen the final diagnosis.</p>
+          <p className="mri-mode-lead">Choose a calculation-only report without AI-provider analysis. Advanced AI prioritisation is available only to studio-approved full accounts. Uploaded facts pre-fill Step 3, while supported operating signals strengthen the final diagnosis.</p>
           <div className="mri-mode-options" role="radiogroup" aria-label="Report preparation choice">
-            <label className={`mri-mode-card ${reportMode === "private" ? "selected" : ""}`}>
-              <input type="radio" name="report-mode" checked={reportMode === "private"} onChange={() => { setReportMode("private"); setAiConsent(false); }} />
-              <span className="mri-mode-check" aria-hidden="true">{reportMode === "private" ? "✓" : ""}</span>
+            <label className={`mri-mode-card ${!canUseAi ? "selected" : ""}`}>
+              <input type="radio" name="report-mode" checked={!canUseAi} onChange={() => { setReportMode("private"); setAiConsent(false); }} />
+              <span className="mri-mode-check" aria-hidden="true">{!canUseAi ? "✓" : ""}</span>
               <span><strong>Private calculation-only report</strong><small>Recommended default</small><p>Your figures are processed without an AI model. They are stored locally on this device by default; if you are signed into your owner account, supported workspace records can also sync to your private Business Lifeline cloud workspace. CSV and text can be read locally.</p></span>
             </label>
-            <label className={`mri-mode-card ${reportMode === "ai" ? "selected" : ""}`}>
-              <input type="radio" name="report-mode" checked={reportMode === "ai"} onChange={() => setReportMode("ai")} />
-              <span className="mri-mode-check" aria-hidden="true">{reportMode === "ai" ? "✓" : ""}</span>
+            {!pilotMode && <label className={`mri-mode-card ${canUseAi ? "selected" : ""}`}>
+              <input type="radio" name="report-mode" checked={canUseAi} onChange={() => setReportMode("ai")} />
+              <span className="mri-mode-check" aria-hidden="true">{canUseAi ? "✓" : ""}</span>
               <span><strong>AI-enhanced report and document reading</strong><small>Optional deeper extraction and prioritisation</small><p>The same tested calculations are used. Selected files, business details and written answers are sent to the AI provider to read PDFs, spreadsheets, documents and images and add evidence-backed diagnostic signals.</p></span>
-            </label>
+            </label>}
           </div>
-          {reportMode === "ai" && <div className="mri-ai-consent"><label><input type="checkbox" checked={aiConsent} onChange={(event) => setAiConsent(event.target.checked)} /><span>I understand and agree that selected files and MRI information will be sent to the AI provider for document reading and this report.</span></label><p>Do not upload passwords, banking credentials, tax file numbers, identity documents, payment-card details, customer personal information or privileged legal material.</p><a href="/legal/ai">Read the AI Data and Privacy Notice →</a></div>}
-          <BusinessRecords compact aiEnabled={reportMode === "ai" && aiConsent} />
-          <div className="mri-mode-actions"><button type="button" className="button ghost" onClick={() => setShowAssessment(false)}>← Back to home</button><button type="button" className="button primary" onClick={continueToQuestions} disabled={reportMode === "ai" && !aiConsent}>Continue to Your Business <span>→</span></button></div>
-          {reportMode === "ai" && !aiConsent && <p className="mri-consent-hint" role="status">Tick the consent box before uploading files or continuing with AI-enhanced analysis.</p>}
+          {canUseAi && <div className="mri-ai-consent"><label><input type="checkbox" checked={aiConsent} onChange={(event) => setAiConsent(event.target.checked)} /><span>I understand and agree that selected files and MRI information will be sent to the AI provider for document reading and this report.</span></label><p>Do not upload passwords, banking credentials, tax file numbers, identity documents, payment-card details, customer personal information or privileged legal material.</p><a href="/legal/ai">Read the AI Data and Privacy Notice →</a></div>}
+          <BusinessRecords compact aiEnabled={canUseAi && aiConsent} />
+          <div className="mri-mode-actions"><button type="button" className="button ghost" onClick={() => setShowAssessment(false)}>← Back to home</button><button type="button" className="button primary" onClick={continueToQuestions} disabled={canUseAi && !aiConsent}>Continue to Your Business <span>→</span></button></div>
+          {canUseAi && !aiConsent && <p className="mri-consent-hint" role="status">Tick the consent box before uploading files or continuing with AI-enhanced analysis.</p>}
         </section>
       </main>
       {helpButton}{tutorialLayer}
     </>
   );
-  return <><MriReportArchive onOpen={openArchived} /><JudgeLanding onStart={beginAssessment} onDemo={openDemo} demoLoading={demoLoading} />{helpButton}{tutorialLayer}</>;
+  return <><MriReportArchive onOpen={openArchived} />{pilotMode ? <PilotAccountLanding onStart={beginAssessment} onDemo={openDemo} demoLoading={demoLoading} /> : <JudgeLanding onStart={beginAssessment} onDemo={openDemo} demoLoading={demoLoading} />}{helpButton}{tutorialLayer}</>;
 }
