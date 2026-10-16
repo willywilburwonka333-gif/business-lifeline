@@ -50,11 +50,12 @@ export function normalizePilotEmail(value: unknown): string | null {
 }
 export function isCreatorUser(user: Pick<DecodedIdToken, "uid" | "email" | "email_verified">) {
   const creatorEmail = normalizePilotEmail(process.env.BUSINESS_LIFELINE_CREATOR_EMAIL);
-  const creatorUid = process.env.BUSINESS_LIFELINE_CREATOR_UID?.trim();
-  return Boolean(
-    creatorEmail && user.email_verified && normalizePilotEmail(user.email) === creatorEmail &&
-    (!creatorUid || user.uid === creatorUid)
-  );
+  const creatorUid = (process.env.BUSINESS_LIFELINE_CREATOR_UID || process.env.BUSINESS_LIFELINE_OWNER_UID || "").trim();
+  if (!user.email_verified || !normalizePilotEmail(user.email)) return false;
+  // Never infer administrator rights from a public display name or email alone.
+  // Reuse the previously configured, server-only studio Firebase UID.
+  if (creatorUid) return user.uid === creatorUid && (!creatorEmail || normalizePilotEmail(user.email) === creatorEmail);
+  return Boolean(creatorEmail && normalizePilotEmail(user.email) === creatorEmail);
 }
 export async function requirePilotUser(request: Request) {
   const user = await requireFirebaseUser(request);
