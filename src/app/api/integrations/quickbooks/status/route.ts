@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { getFirebaseAdmin, requireFirebaseUser } from "@/lib/firebase-admin";
-import { privateResponseHeaders } from "@/lib/api-security";
+import { privateResponseHeaders, requireFullPlatformRequest } from "@/lib/api-security";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
+  const restricted = await requireFullPlatformRequest(request);
+  if (restricted) return restricted;
   try {
     const user = await requireFirebaseUser(request);
     const { db } = getFirebaseAdmin();
@@ -24,6 +26,8 @@ export async function GET(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const restricted = await requireFullPlatformRequest(request);
+  if (restricted) return restricted;
   try {
     const user = await requireFirebaseUser(request);
     const { db } = getFirebaseAdmin();
