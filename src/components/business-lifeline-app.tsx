@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BusinessLifeline } from "@/components/business-lifeline";
 import { BusinessRecords } from "@/components/business-records";
 import { JudgeLanding } from "@/components/judge-landing";
+import { PilotAccountLanding } from "@/components/pilot-account-landing";
 import { ProductTutorial, tutorialStorageKey, type TutorialStep } from "@/components/product-tutorial";
 import { SavedScenarioPlanner } from "@/components/saved-scenario-planner";
 import { MriReportArchive } from "@/components/mri-report-archive";
@@ -44,7 +45,7 @@ const tutorialSteps: Record<TutorialId, TutorialStep[]> = {
 
 function buildDemoReport(data: (typeof demoBusinesses)[number]): BusinessReport { const base = generateReport(data); return { ...base, aiStatus: "fallback" }; }
 
-export function BusinessLifelineApp() {
+export function BusinessLifelineApp({ pilotMode = false }: { pilotMode?: boolean } = {}) {
   const [saved, setSaved] = useState<AppState>(undefined);
   const [historical, setHistorical] = useState<ArchivedMri | null>(null);
   const [showAssessment, setShowAssessment] = useState(false);
@@ -172,7 +173,7 @@ export function BusinessLifelineApp() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   if (historical) return <HistoricalMriReport entry={historical} onBack={() => setHistorical(null)} />;
-  if (saved) return <><MriReportArchive onOpen={openArchived} /><SavedScenarioPlanner saved={saved} onReset={reset} /></>;
+  if (saved) return <><MriReportArchive onOpen={openArchived} /><SavedScenarioPlanner saved={saved} onReset={reset} pilotMode={pilotMode} /></>;
   if (showAssessment && showQuestions) return <><BusinessLifeline aiEnabled={reportMode === "ai" && aiConsent} />{helpButton}{tutorialLayer}</>;
   if (showAssessment) return (
     <>
@@ -204,5 +205,5 @@ export function BusinessLifelineApp() {
       {helpButton}{tutorialLayer}
     </>
   );
-  return <><MriReportArchive onOpen={openArchived} /><JudgeLanding onStart={beginAssessment} onDemo={openDemo} demoLoading={demoLoading} />{helpButton}{tutorialLayer}</>;
+  return <><MriReportArchive onOpen={openArchived} />{pilotMode ? <PilotAccountLanding onStart={beginAssessment} onDemo={openDemo} demoLoading={demoLoading} /> : <JudgeLanding onStart={beginAssessment} onDemo={openDemo} demoLoading={demoLoading} />}{helpButton}{tutorialLayer}</>;
 }
