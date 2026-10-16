@@ -1,6 +1,5 @@
 "use client";
 
-import { PilotServiceSelection } from "@/components/pilot-service-selection";
 
 export function PilotAccountLanding({ onStart, onDemo, demoLoading }: { onStart: () => void; onDemo: (index?: number) => void; demoLoading: boolean }) {
   return <main id="main-content" className="judge-landing">
@@ -14,7 +13,7 @@ export function PilotAccountLanding({ onStart, onDemo, demoLoading }: { onStart:
       </div>
       <p>Use estimates only when clearly labelled. Do not upload personal identifiers, bank passwords, tax file numbers or customer records. High-risk accounting, tax and insolvency matters require qualified advice.</p>
     </div></section>
-    <PilotServiceSelection />
+    <section className="judge-story"><div className="judge-story-heading"><h2>Choose your service</h2><p>Use Create / join pilot at the top of the page to select a service and payment preference. Free pilot places require an invitation.</p></div></section>
 
   </main>;
 }
