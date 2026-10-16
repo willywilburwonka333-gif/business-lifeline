@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getFirebaseAdmin, requireFirebaseUser } from "@/lib/firebase-admin";
-import { privateResponseHeaders, rejectCrossSiteRequest } from "@/lib/api-security";
+import { privateResponseHeaders, rejectCrossSiteRequest, requireFullPlatformRequest } from "@/lib/api-security";
 import { priceFor, stripePost, type BillingPlan } from "@/lib/stripe-billing";
 import { serviceByKey, type ServiceKey } from "@/lib/service-payments";
 import { type Pilot } from "@/lib/pilot-project";
@@ -20,6 +20,10 @@ export async function POST(request: Request) {
   try {
     const body = await request.json() as { plan?: BillingPlan; service?: ServiceKey; pilotId?: string };
     const service = serviceByKey(body.service);
+    if (!service && (body.plan === "pro" || body.plan === "rescue")) {
+      const denied = await requireFullPlatformRequest(request);
+      if (denied) return denied;
+    }
     if (service && !body.pilotId) {
       return NextResponse.json({ error: "Create or join a customer pilot before purchasing this diagnostic service." }, { status: 400, headers: privateResponseHeaders() });
     }
