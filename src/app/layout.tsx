@@ -52,6 +52,7 @@ import "./product-tutorial.css";
 import "./mobile-fixes.css";
 import "./accounting-connections.css";
 import "./pilot-centre.css";
+import "./public-demo.css";
 
 export const metadata: Metadata = {
   title: { default: "Business Lifeline", template: "%s | Business Lifeline" },
