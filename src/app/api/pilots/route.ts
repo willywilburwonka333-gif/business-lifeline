@@ -6,6 +6,7 @@ import { makeInvite, normalizePilotEmail, pilotPaymentAccess, pilotServiceKey, p
   requireCreator, requirePilotUser, isCreatorUser, isPilotParticipant, sanitizeReport,
   type Pilot, type PilotPaymentMethod } from "@/lib/pilot-project";
 import { serviceByKey, verifiedServicePayment } from "@/lib/service-payments";
+import { registeredTier } from "@/lib/pilot-access-server";
 
 export const runtime = "nodejs";
 const headers = privateResponseHeaders();
@@ -46,6 +47,9 @@ export async function POST(request: Request) {
     // Authenticated self-service starts a paid pilot without needing the owner online.
     // Creating a free/comped pilot still requires a creator invitation.
     if (body.selfServe === true) {
+      if (await registeredTier(user.uid) === "public") {
+        return fail("This is a demonstration-only account. Contact Dylan to arrange an approved business pilot before selecting paid services.", 403);
+      }
       const serviceKey = pilotServiceKey(body.serviceKey);
       const businessName = clean(body.businessName, 120);
       const clientName = clean(body.clientName, 100);
