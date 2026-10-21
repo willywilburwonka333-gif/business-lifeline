@@ -12,10 +12,10 @@ export function PilotPublicLanding() {
           <h1>Diagnose the pressure.<br/><em>Make a practical recovery plan.</em></h1>
           <p className="judge-lead">Business Lifeline helps Australian small-business owners understand financial pressure and identify possible operational improvements. Our pilot includes a guided Business MRI and Repair Centre, with results reviewed together.</p>
           <div className="judge-actions">
-            <button className="button primary large" type="button" onClick={openAccount}>Create a pilot account →</button>
-            <a className="button outline large" href="mailto:businesslifelinesupport@gmail.com?subject=Business%20Lifeline%20pilot%20walkthrough">Book a phone or video walkthrough</a>
+            <a className="button primary large" href="/demo">Try the interactive demo →</a>
+            <a className="button outline large" href="mailto:businesslifelinesupport@gmail.com?subject=Business%20Lifeline%20pilot%20walkthrough">Message Dylan for help</a>
           </div>
-          <p>Visitors can review the service without entering confidential business information. Create an account to participate in the guided pilot.</p>
+          <p>No account, no payment, and no business records required. You can try a read-only demonstration first and contact Dylan if you want help with your own business.</p>
         </div>
         <div className="judge-demo-grid">
           <article className="judge-demo-card"><header><span>EXAMPLE ONLY · FICTIONAL</span><b>What your MRI can show</b></header><div className="judge-demo-metrics">
@@ -29,10 +29,10 @@ export function PilotPublicLanding() {
       <section className="judge-story">
         <div className="judge-story-heading"><p>How the guided pilot works</p><h2>One account. One review. Measurable next steps.</h2></div>
         <div className="judge-story-grid">
-          <article><b>01</b><h3>Create an account</h3><p>Your business gets its own sign-in and pilot workspace.</p></article>
-          <article><b>02</b><h3>Complete the MRI</h3><p>Go through the assessment with our operator over the phone or by video call.</p></article>
-          <article><b>03</b><h3>Repair the problems</h3><p>Review proposed improvements, cash-flow scenarios and action plans.</p></article>
-          <article><b>04</b><h3>Expand with approval</h3><p>Other Business Lifeline modules stay restricted until access is approved.</p></article>
+          <article><b>01</b><h3>Try the demo</h3><p>Explore three fictional business MRI examples on your own, with no registration.</p></article>
+          <article><b>02</b><h3>Contact Dylan</h3><p>Message us if you want a guided review of your own business figures.</p></article>
+          <article><b>03</b><h3>Agree on your review</h3><p>We discuss the scope, access and information needed before beginning any real-business work.</p></article>
+          <article><b>04</b><h3>Get guided support</h3><p>Your private workspace is enabled only when Business Lifeline approves a pilot.</p></article>
         </div>
       </section>
       <section className="judge-story">
@@ -41,7 +41,7 @@ export function PilotPublicLanding() {
           {DIAGNOSTIC_OFFERS.map((offer) => <article key={offer.name}><b>A${offer.price}</b><h3>{offer.name}</h3><p>{offer.for}</p><p>{offer.includes.join(" · ")}</p></article>)}
         </div>
       </section>
-      <section className="judge-final-cta"><h2>Want to see whether Business Lifeline can help?</h2><p>Start with a fictional demonstration; only supply real records after agreed scope, consent and security checks.</p><div className="judge-actions"><button type="button" className="button primary large" onClick={openAccount}>Sign in or register →</button></div></section>
+      <section className="judge-final-cta"><h2>Want to see whether Business Lifeline can help?</h2><p>Start with a fictional demonstration; only supply real records after agreed scope, consent and security checks.</p><div className="judge-actions"><a className="button primary large" href="/demo">Explore the free demo →</a><button type="button" className="button outline large" onClick={openAccount}>Already invited? Sign in →</button></div></section>
     </main>
   );
 }
