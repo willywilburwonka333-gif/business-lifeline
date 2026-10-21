@@ -18,6 +18,7 @@ const paymentOptions: {value: PilotPaymentMethod; label: string}[] = [
 
 export function PilotCentre({ user, onOpenMri, servicesConfigured }: { user: User; onOpenMri: () => void; servicesConfigured: boolean }) {
   const [role, setRole] = useState<"creator" | "client">("client");
+  const [approved, setApproved] = useState(false);
   const [pilots,setPilots] = useState<PublicPilot[]>([]);
   const [busy,setBusy] = useState(false);
   const [error,setError] = useState("");
@@ -44,7 +45,8 @@ export function PilotCentre({ user, onOpenMri, servicesConfigured }: { user: Use
   },[user]);
 
   const refresh = useCallback(async () => {
-    const value = await request("/api/pilots") as PilotResult;
+    const [value, access] = await Promise.all([request("/api/pilots") as Promise<PilotResult>,request("/api/pilot/access") as Promise<{ tier: "public" | "pilot" | "full" }>]);
+    setApproved(access.tier === "pilot" || access.tier === "full");
     setRole(value.role);
     setPilots(value.pilots);
     if (value.role === "client") setNewPilot(prev=>prev.paymentMethod==="free"?{...prev,paymentMethod:"stripe"}:prev);
@@ -132,6 +134,8 @@ export function PilotCentre({ user, onOpenMri, servicesConfigured }: { user: Use
     try { await navigator.clipboard.writeText(inviteUrl);setNotice("Invitation link copied."); }
     catch { setNotice("Select and copy the invitation link below."); }
   };
+
+  if (!approved) return <section className="pilot-centre" aria-label="Business Lifeline pilot centre"><h3>Demonstration access</h3><p>Your account can explore the fictional demonstration. Your own Business MRI, recovery tools and service purchases are only available after Dylan approves a guided pilot.</p><a href="/demo">Explore the free interactive demonstration →</a><p><a href="mailto:businesslifelinesupport@gmail.com?subject=Business%20Lifeline%20guided%20pilot">Message Dylan to request pilot access →</a></p>{error && <p role="alert">{error}</p>}<button type="button" className="button ghost" onClick={() => void refresh().catch(e => setError(String(e)))}>Check access again</button></section>;
 
   return <section className="pilot-centre" aria-label="Business Lifeline pilot centre">
     <h3>{role === "creator" ? "Creator dashboard · Pilot manager" : "My Business Lifeline pilots"}</h3>
