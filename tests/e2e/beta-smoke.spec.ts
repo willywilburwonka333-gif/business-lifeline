@@ -6,7 +6,7 @@ test("public preview loads without exposing customer workspaces or advanced tool
   await page.goto("/");
   await expect(page).toHaveTitle(/Business Lifeline/);
   await expect(page.getByRole("heading", { name: /Diagnose the pressure/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Create a pilot account/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Try the interactive demo/i })).toBeVisible();
   await expect(page.getByRole("navigation", { name: /Business Lifeline main areas/i })).toHaveCount(0);
   await expect(page.getByText(/fictional/i).first()).toBeVisible();
   await expect(page.getByTestId("beta-safety-launcher")).toHaveCount(0);
@@ -15,7 +15,7 @@ test("public preview loads without exposing customer workspaces or advanced tool
 
 test("registration CTA makes account access available, including on narrow mobile viewports", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: /Create a pilot account/i }).click();
+  await page.getByRole("button", { name: /Already invited\? Sign in/i }).click();
   const panel = page.getByRole("region", { name: "Business Lifeline account" });
   await expect(panel).toBeVisible();
   if (await panel.getByText("Firebase configuration missing").isVisible()) {
