@@ -198,3 +198,16 @@ Code alone cannot complete these:
 - refund/support operating process
 
 Do not publish a claimed diagnostic accuracy percentage until professional comparison data supports it.
+
+## Public read-only demonstration (Facebook and local marketing)
+
+Public link: `https://businesslifeline.com.au/demo`
+
+A visitor can access **three fictional business cases** without creating an account. The public demo uses the deterministic rule-based MRI engine, displays the health indicator and warnings, and offers read-only 7/30/90-day recovery previews. It does **not** accept real business figures, sync records, start Stripe checkout, expose tenant data or unlock the operating system.
+
+**Important:** All newly registered, email-verified Firebase customers default to tier `public` (demo-only). The studio owner must manually approve `pilot` for guided MRI/Recover or explicitly grant `full`. Existing `pilotAccess` documents retain their recorded tiers. The `/api/pilots` self-service and `/api/billing/checkout` service routes refuse the demo-only tier. Owner management offers direct demo/pilot/full changes with audit history.
+
+For Facebook, promote the public /demo route instead of suggesting that members can run their own full assessment. The personal, assisted review begins only when Dylan accepts an enquiry and agrees scope and safe data-handling. The public demo requires no signup, payment or confidential data.
+
+Before marketing launch: open the public demo on an unauthenticated phone; switch among all three fictional examples; confirm Diagnose and Recover tabs; test the mailto contact link; create a fresh customer account and confirm only demo access; then approve the account for pilot and confirm only MRI/Recover becomes accessible. Use a separate test account to check cross-tenant access.
+

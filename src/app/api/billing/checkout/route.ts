@@ -4,6 +4,7 @@ import { privateResponseHeaders, rejectCrossSiteRequest, requireFullPlatformRequ
 import { priceFor, stripePost, type BillingPlan } from "@/lib/stripe-billing";
 import { serviceByKey, type ServiceKey } from "@/lib/service-payments";
 import { type Pilot } from "@/lib/pilot-project";
+import { registeredTier } from "@/lib/pilot-access-server";
 
 export const runtime = "nodejs";
 
@@ -20,6 +21,9 @@ export async function POST(request: Request) {
   try {
     const body = await request.json() as { plan?: BillingPlan; service?: ServiceKey; pilotId?: string };
     const service = serviceByKey(body.service);
+    if (service && await registeredTier(user.uid) === "public") {
+      return NextResponse.json({ error: "Demo-only accounts cannot purchase or unlock services. Contact Business Lifeline to arrange a guided pilot." }, { status: 403, headers: privateResponseHeaders() });
+    }
     if (!service && (body.plan === "pro" || body.plan === "rescue")) {
       const denied = await requireFullPlatformRequest(request);
       if (denied) return denied;

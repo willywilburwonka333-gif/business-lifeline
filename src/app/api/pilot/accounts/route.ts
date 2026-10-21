@@ -24,7 +24,7 @@ export async function GET(request: Request) {
       email: user.email || "(no email)",
       verified: user.emailVerified,
       createdAt: user.metadata.creationTime,
-      tier: documents[index]?.data()?.tier === "full" ? "full" : "pilot",
+      tier: documents[index]?.data()?.tier === "full" ? "full" : documents[index]?.data()?.tier === "pilot" ? "pilot" : "public",
     }));
     return NextResponse.json({ accounts, truncated: Boolean(users.pageToken) }, { headers: privateResponseHeaders() });
   } catch {
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   try {
     const actor = await ownerOrDeny(request);
     const body = await request.json() as { uid?: unknown; tier?: unknown };
-    if (typeof body.uid !== "string" || !body.uid || body.uid === studioOwnerUid() || !["full", "pilot"].includes(String(body.tier))) {
+    if (typeof body.uid !== "string" || !body.uid || body.uid === studioOwnerUid() || !["full", "pilot", "public"].includes(String(body.tier))) {
       return NextResponse.json({ error: "Invalid account or access level." }, { status: 400, headers: privateResponseHeaders() });
     }
     const { auth, db } = getFirebaseAdmin();
