@@ -25,5 +25,6 @@ export async function registeredTier(uid: string): Promise<PilotTier> {
   }
   const { db } = getFirebaseAdmin();
   const entitlement = await db.collection("pilotAccess").doc(uid).get();
-  return entitlement.data()?.tier === "full" ? "full" : "pilot";
+  const tier = entitlement.data()?.tier;
+  return tier === "full" || tier === "pilot" ? tier : "public";
 }
