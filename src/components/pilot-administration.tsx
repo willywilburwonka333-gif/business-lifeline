@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { firebaseAuth } from "@/lib/firebase-client";
 
-type Account = { uid: string; email: string; verified: boolean; createdAt: string; tier: "pilot" | "full" };
+type Account = { uid: string; email: string; verified: boolean; createdAt: string; tier: "public" | "pilot" | "full" };
 
 export function PilotAdministration() {
   const [open, setOpen] = useState(false);
@@ -12,7 +12,7 @@ export function PilotAdministration() {
   const [error, setError] = useState("");
   const [truncated, setTruncated] = useState(false);
 
-  const request = async (method: "GET" | "POST", body?: { uid: string; tier: "pilot" | "full" }) => {
+  const request = async (method: "GET" | "POST", body?: { uid: string; tier: "public" | "pilot" | "full" }) => {
     const user = firebaseAuth?.currentUser;
     if (!user) throw new Error("Sign in to manage access.");
     const response = await fetch("/api/pilot/accounts", {
@@ -39,9 +39,9 @@ export function PilotAdministration() {
 
   useEffect(() => { if (open) void refresh(); }, [open]);
 
-  const change = async (account: Account) => {
-    const tier = account.tier === "pilot" ? "full" : "pilot";
-    if (!window.confirm(`${tier === "full" ? "Approve full module access for" : "Return to pilot-only access for"} ${account.email}?`)) return;
+  const change = async (account: Account, tier: Account["tier"]) => {
+    const verb = tier === "public" ? "Return to demo-only access" : tier === "pilot" ? "Approve guided MRI + Recover pilot access" : "Grant advanced operating-system access";
+    if (!window.confirm(`${verb} for ${account.email}?`)) return;
     setBusyUid(account.uid);
     try {
       await request("POST", { uid: account.uid, tier });
@@ -55,14 +55,16 @@ export function PilotAdministration() {
     <button type="button" className="button ghost" onClick={() => setOpen(value => !value)}>{open ? "Close" : "Manage"} customer pilot approvals</button>
     {open && <div>
       <h2>Studio-only access approvals</h2>
-      <p>New accounts receive pilot access automatically. Only you can approve full module access. These controls do not charge customers or certify advice.</p>
+      <p>New accounts start with demonstration-only access. You explicitly approve MRI + Recover pilot access, and only grant advanced modules separately. Changing access does not charge a customer.</p>
       <button type="button" className="button ghost" onClick={() => void refresh()}>Refresh accounts</button>
       {error && <p role="alert">{error}</p>}
       {truncated && <p>Showing the first 1,000 accounts. Pagination is needed for more.</p>}
       {accounts.length === 0 && <p>No customer accounts found yet.</p>}
       {accounts.map(account => <article key={account.uid} className="pilot-account-row">
-        <strong>{account.email}</strong> · {account.tier === "full" ? "Full access" : "Pilot access"} · {account.verified ? "Verified email" : "Email not verified"}
-        <button type="button" className="button ghost" disabled={busyUid === account.uid || (account.tier === "pilot" && !account.verified)} onClick={() => void change(account)}>{account.tier === "full" ? "Revoke full access" : "Approve full access"}</button>
+        <strong>{account.email}</strong> · {account.tier === "full" ? "Full access" : account.tier === "pilot" ? "Guided pilot" : "Demo-only"} · {account.verified ? "Verified email" : "Email not verified"}
+        {account.tier !== "pilot" && <button type="button" className="button ghost" disabled={busyUid === account.uid || !account.verified} onClick={() => void change(account,"pilot")}>Approve guided pilot</button>}
+        {account.tier !== "public" && <button type="button" className="button ghost" disabled={busyUid === account.uid} onClick={() => void change(account,"public")}>Return to demo-only</button>}
+        {account.tier === "pilot" && <button type="button" className="button ghost" disabled={busyUid === account.uid || !account.verified} onClick={() => void change(account,"full")}>Grant advanced modules</button>}
       </article>)}
     </div>}
   </section>;
