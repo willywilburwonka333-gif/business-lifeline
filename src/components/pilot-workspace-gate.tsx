@@ -6,6 +6,7 @@ import { firebaseAuth } from "@/lib/firebase-client";
 import type { PilotEntitlement } from "@/lib/pilot-access";
 import { BusinessLifelineApp } from "@/components/business-lifeline-app";
 import { PilotPublicLanding } from "@/components/pilot-public-landing";
+import { PublicBusinessDemo } from "@/components/public-business-demo";
 import { PilotAdministration } from "@/components/pilot-administration";
 import { BetaSafetyCentre } from "@/components/beta-safety-centre";
 import { BusinessOsScrollAssist } from "@/components/business-os-scroll-assist";
@@ -51,6 +52,7 @@ export function PilotWorkspaceGate() {
   if (checking || !status) return <main className="cloud-auth-loading" role="status">{checking ? "Checking your account permissions…" : error || "Access temporarily unavailable."}<button type="button" className="button ghost" onClick={() => setRetry(n => n + 1)}>Retry</button></main>;
   if (!status.isStudioOwner && !status.emailVerified) return <main className="cloud-auth-loading"><h1>Verify your email to start your pilot.</h1><p>Open the verification link sent during registration. Use Account above to resend it if necessary.</p><button type="button" className="button primary" onClick={() => void reload(user).then(() => user.getIdToken(true)).then(() => { setRetry(n => n + 1); })}>I have verified my email</button></main>;
 
+  if (status.tier === "public") return <PublicBusinessDemo showBackLink />;
   const full = status.tier === "full";
   return <>
     {full && <FullPlatformServices />}
