@@ -77,7 +77,7 @@ export function PublicBusinessDemo({ showBackLink = false }: { showBackLink?: bo
                 <div className="public-demo-track"><span style={{ width: `${metrics.overallScore}%` }} /></div>
                 <p>{metrics.pressureLevel} pressure · Indicative result</p>
               </div>
-              <div className="public-demo-metric"><small>DATA CONFIDENCE</small><strong>{metrics.dataConfidence}%</strong><p>How complete the example's data is, not a guarantee</p></div>
+              <div className="public-demo-metric"><small>DATA CONFIDENCE</small><strong>{metrics.dataConfidence}%</strong><p>How complete the example&apos;s data is, not a guarantee</p></div>
               <div className="public-demo-metric"><small>MONTHLY REVENUE</small><strong>{fmt(data.monthlyRevenue)}</strong><p>Synthetic sample only</p></div>
               <div className="public-demo-metric"><small>OPERATING SURPLUS ESTIMATE</small><strong>{fmt(metrics.operatingSurplusEstimate)}</strong><p>Revenue minus supplied operating costs</p></div>
             </div>
@@ -86,7 +86,7 @@ export function PublicBusinessDemo({ showBackLink = false }: { showBackLink?: bo
                 {report.warnings.length ? <ul>{report.warnings.slice(0,4).map((warning,i)=><li key={i}>{warning}</li>)}</ul> :
                   <p>There are no immediate automated warnings in the chosen fictional example.</p>}
               </article>
-              <article className="public-demo-detail"><h3>What's working</h3>
+              <article className="public-demo-detail"><h3>What&apos;s working</h3>
                 {report.strengths.length ? <ul>{report.strengths.slice(0,4).map((strength,i)=><li key={i}>{strength}</li>)}</ul> :
                   <p>Further supporting records would help establish strengths.</p>}
               </article>
@@ -108,7 +108,7 @@ export function PublicBusinessDemo({ showBackLink = false }: { showBackLink?: bo
       <section className="public-demo-cta" aria-labelledby="public-demo-cta-heading">
         <div><span className="public-demo-kicker">STEP 03 / YOUR BUSINESS</span>
           <h2 id="public-demo-cta-heading">Want help with your own numbers?</h2>
-          <p>You've just seen what Business Lifeline can show. A real business review requires an agreed scope, verified information and a guided session with Dylan. Your own business details are not entered into this public demo.</p>
+          <p>You&apos;ve just seen what Business Lifeline can show. A real business review requires an agreed scope, verified information and a guided session with Dylan. Your own business details are not entered into this public demo.</p>
           <div className="public-demo-actions">
             <a className="public-demo-contact" href={messageLink}>Message Dylan about my business →</a>
             <a className="public-demo-secondary" href="https://businesslifeline.com.au/">Back to Business Lifeline</a>
